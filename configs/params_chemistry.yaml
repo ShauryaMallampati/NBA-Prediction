@@ -1,0 +1,27 @@
+# Player Chemistry GNN Parameters
+
+graph:
+  node_types: ["player", "lineup", "team"]
+  edge_types: ["plays_with", "assists_to", "social_link"]
+  time_decay_halflife: 30  # days
+  min_edge_weight: 0.1
+
+gnn:
+  type: "graphsage"  # or "gat"
+  hidden_channels: 128
+  num_layers: 2
+  dropout: 0.1
+  aggregation: "mean"
+  heads: 4  # for GAT
+
+training:
+  batch_size: 32
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  max_epochs: 100
+  early_stopping_patience: 15
+
+target:
+  metric: "net_rating"
+  window_days: 14
+  min_minutes: 50

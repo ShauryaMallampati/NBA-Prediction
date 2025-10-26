@@ -1,0 +1,16 @@
+app:
+  log_level: ${LOG_LEVEL}
+  require_real_data: ${REQUIRE_REAL_DATA}
+  allow_mock_data: ${ALLOW_MOCK_DATA}
+  simplified_mode: ${SIMPLIFIED_MODE}
+  enable_sentiment: ${ENABLE_SENTIMENT}
+  enable_chemistry: ${ENABLE_CHEMISTRY}
+  api_host: ${API_HOST}
+  api_port: ${API_PORT}
+data:
+  root: data
+  artifacts: artifacts
+  seasons: [2024]
+models:
+  device_preference: mps
+  seed: 42
