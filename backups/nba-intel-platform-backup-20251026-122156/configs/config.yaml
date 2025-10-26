@@ -1,0 +1,86 @@
+# NBA Intelligence Platform - Main Configuration
+
+project:
+  name: "nba-intel"
+  version: "0.1.0"
+  data_dir: "data"
+  artifacts_dir: "artifacts"
+  cache_dir: "data/cache"
+
+data:
+  seasons:
+    train: [2018, 2019, 2020, 2021]  # N-5 to N-2
+    validate: [2022]                  # N-1
+    test: [2023]                      # N
+  simplified_mode: true               # Use smaller slices for faster iteration
+  min_games_per_season: 50            # Minimum games to include a season
+
+features:
+  pregame:
+    rolling_windows: [3, 5, 10]
+    elo_k0: 32
+    elo_decay_rate: 0.95
+    elo_margin_multiplier: 0.05
+    home_bonus: 100
+  live:
+    sequence_length: 20
+    possession_features: ["score_diff", "time_remaining", "foul_trouble", "recent_run"]
+  chemistry:
+    time_decay_halflife: 30  # days
+    min_minutes_together: 50
+  social:
+    lookback_hours: 6
+    sentiment_alpha: 0.6
+    stance_beta: 0.4
+    social_decay_halflife: 14  # days
+
+models:
+  device: "mps"  # mps, cuda, or cpu
+  seed: 42
+  pregame:
+    model_type: "lightgbm"
+    n_estimators: 500
+    learning_rate: 0.05
+    max_depth: 7
+    calibration_method: "isotonic"
+  live:
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.2
+    learning_rate: 0.001
+  vision:
+    backbone: "mobilenet_v3_small"
+    num_frames: 16
+    input_size: 224
+    batch_size: 16
+  chemistry:
+    gnn_type: "graphsage"
+    hidden_channels: 128
+    num_layers: 2
+    dropout: 0.1
+
+training:
+  batch_size: 32
+  num_workers: 4
+  max_epochs: 50
+  early_stopping_patience: 10
+  validation_split: 0.2
+
+evaluation:
+  metrics: ["accuracy", "log_loss", "brier", "auroc", "ece"]
+  calibration_bins: 10
+  shap_samples: 100
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  reload: true
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:3001"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/nba_intel.log"
