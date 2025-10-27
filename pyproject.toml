@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Full-Stack NBA Intelligence Platform with ML predictions"
 authors = ["NBA Intel Team"]
 readme = "README.md"
+packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -19,8 +20,6 @@ torch-geometric = "^2.4.0"
 transformers = "^4.35.0"
 sentence-transformers = "^2.2.0"
 opencv-python = "^4.8.0"
-decord = "^0.6.0"
-ffmpeg-python = "^0.2.0"
 fastapi = "^0.104.0"
 pydantic = "^2.5.0"
 pydantic-settings = "^2.1.0"
