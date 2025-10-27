@@ -2,7 +2,7 @@
 
 import pickle
 from datetime import date
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException
@@ -12,6 +12,8 @@ from pydantic import BaseModel
 from src.common.config import settings
 from src.common.logger import setup_logger
 from src.common.paths import Paths
+from src.data.ingest.live_feature_extractor import LiveFeatureExtractor
+from src.services.live_prediction_service import LivePredictionService
 
 logger = setup_logger(__name__)
 
@@ -48,6 +50,44 @@ class HealthResponse(BaseModel):
     models_loaded: bool
 
 
+class PlayerPropPredictionRequest(BaseModel):
+    """Request model for player prop predictions."""
+    player_name: str
+    is_home: bool = True
+    rest_days: int = 1
+    is_back_to_back: bool = False
+    FG_pct: float = 0.44
+    FG3_pct: float = 0.35
+    FT_pct: float = 0.75
+    usage_pct: float = 0.24
+    games_played: int = 10
+    consistency_score: float = 0.7
+    recent_stats: Dict[str, Any] = {}
+    season_stats: Dict[str, Any] = {}
+    opponent_defense: Dict[str, Any] = {}
+
+
+class PlayerPropPredictionResponse(BaseModel):
+    """Response model for player prop predictions."""
+    player_name: str
+    predictions: Dict[str, Any]
+    ready_for_production: bool
+    error: Optional[str] = None
+
+
+# Global service cache
+_prediction_service = None
+
+
+def get_prediction_service():
+    """Get live prediction service (lazy load)."""
+    global _prediction_service
+    if _prediction_service is None:
+        _prediction_service = LivePredictionService()
+        logger.info("Initialized LivePredictionService")
+    return _prediction_service
+
+
 # Global model cache
 _model_cache = {}
 
@@ -69,6 +109,47 @@ async def health_check():
     """Health check endpoint."""
     models_exist = (Paths.MODELS / "pregame_lgbm.pkl").exists()
     return HealthResponse(status="healthy", version="0.1.0", models_loaded=models_exist)
+
+
+@app.post("/predict", response_model=PlayerPropPredictionResponse)
+async def predict_player_prop(request: PlayerPropPredictionRequest) -> PlayerPropPredictionResponse:
+    """Get live player prop predictions."""
+    try:
+        service = get_prediction_service()
+        
+        # Convert request to dict for service
+        player_data = {
+            'player_name': request.player_name,
+            'is_home': request.is_home,
+            'rest_days': request.rest_days,
+            'is_back_to_back': request.is_back_to_back,
+            'FG_pct': request.FG_pct,
+            'FG3_pct': request.FG3_pct,
+            'FT_pct': request.FT_pct,
+            'usage_pct': request.usage_pct,
+            'games_played': request.games_played,
+            'consistency_score': request.consistency_score,
+            'recent_stats': request.recent_stats or {},
+            'season_stats': request.season_stats or {},
+            'opponent_defense': request.opponent_defense or {},
+        }
+        
+        result = service.predict_player_prop(player_data)
+        
+        return PlayerPropPredictionResponse(
+            player_name=result['player_name'],
+            predictions=result['predictions'],
+            ready_for_production=result['ready_for_production'],
+            error=result.get('error')
+        )
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        return PlayerPropPredictionResponse(
+            player_name=request.player_name,
+            predictions={},
+            ready_for_production=False,
+            error=str(e)
+        )
 
 
 @app.get("/predictions", response_model=List[PredictionResponse])
