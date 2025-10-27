@@ -14,6 +14,7 @@ from src.common.logger import setup_logger
 from src.common.paths import Paths
 from src.data.ingest.live_feature_extractor import LiveFeatureExtractor
 from src.services.live_prediction_service import LivePredictionService
+from src.models.kelly_criterion import KellyCriterion
 
 logger = setup_logger(__name__)
 
@@ -72,6 +73,35 @@ class PlayerPropPredictionResponse(BaseModel):
     player_name: str
     predictions: Dict[str, Any]
     ready_for_production: bool
+    error: Optional[str] = None
+
+
+class KellyRecommendationRequest(BaseModel):
+    """Request model for Kelly Criterion betting recommendation."""
+    bankroll: float = 10000.0
+    kelly_fraction: float = 0.25
+    min_edge: float = 0.05
+    predictions: Dict[str, Any]  # {stat: {calibrated: float, confidence: float}}
+    odds_dict: Optional[Dict[str, float]] = None
+
+
+class BetRecommendation(BaseModel):
+    """Individual bet recommendation."""
+    stat: str
+    prediction: str
+    bet_size: float
+    confidence: float
+    expected_value: float
+    kelly_pct: float
+    prob: float
+
+
+class KellyRecommendationResponse(BaseModel):
+    """Response model for Kelly Criterion recommendation."""
+    recommendations: List[BetRecommendation] = []
+    total_allocation: float = 0.0
+    conservative_allocation: float = 0.0
+    portfolio_metrics: Dict[str, Any] = {}
     error: Optional[str] = None
 
 
@@ -148,6 +178,48 @@ async def predict_player_prop(request: PlayerPropPredictionRequest) -> PlayerPro
             player_name=request.player_name,
             predictions={},
             ready_for_production=False,
+            error=str(e)
+        )
+
+
+@app.post("/kelly", response_model=KellyRecommendationResponse)
+async def get_kelly_recommendation(request: KellyRecommendationRequest) -> KellyRecommendationResponse:
+    """Get Kelly Criterion betting recommendation."""
+    try:
+        kelly = KellyCriterion(
+            bankroll=request.bankroll,
+            kelly_fraction=request.kelly_fraction,
+            min_edge=request.min_edge,
+        )
+        
+        recommendation = kelly.get_kelly_recommendation(
+            predictions=request.predictions,
+            odds_dict=request.odds_dict,
+            use_conservative=True,
+        )
+        
+        # Convert to response format
+        recommendations = []
+        for rec in recommendation.get("recommendations", []):
+            recommendations.append(BetRecommendation(
+                stat=rec["stat"],
+                prediction=rec["prediction"],
+                bet_size=rec["bet_size"],
+                confidence=rec["confidence"],
+                expected_value=rec["expected_value"],
+                kelly_pct=rec["kelly_pct"],
+                prob=rec["prob"],
+            ))
+        
+        return KellyRecommendationResponse(
+            recommendations=recommendations,
+            total_allocation=recommendation.get("total_allocation", 0),
+            conservative_allocation=recommendation.get("conservative_allocation", 0),
+            portfolio_metrics=recommendation.get("portfolio_metrics", {}),
+        )
+    except Exception as e:
+        logger.error(f"Kelly recommendation error: {e}")
+        return KellyRecommendationResponse(
             error=str(e)
         )
 
