@@ -30,6 +30,13 @@ export default function HomePage() {
           </Link>
           <nav className="hidden md:flex items-center gap-8">
             <Link
+              href="/predictions"
+              className="text-sm font-semibold hover:text-primary transition-colors relative group"
+            >
+              Predictions
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
+            </Link>
+            <Link
               href="/schedule"
               className="text-sm font-semibold hover:text-primary transition-colors relative group"
             >
