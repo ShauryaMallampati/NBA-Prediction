@@ -1,16 +1,16 @@
-import Link from "next/link"
 import {
-  ArrowRight,
-  BarChart3,
-  Brain,
-  TrendingUp,
-  Users,
-  MessageSquare,
-  Calendar,
-  Zap,
-  Target,
-  Activity,
+    Activity,
+    ArrowRight,
+    BarChart3,
+    Brain,
+    Calendar,
+    MessageSquare,
+    Target,
+    TrendingUp,
+    Users,
+    Zap,
 } from "lucide-react"
+import Link from "next/link"
 
 export default function HomePage() {
   return (
@@ -37,6 +37,13 @@ export default function HomePage() {
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
             </Link>
             <Link
+              href="/analytics"
+              className="text-sm font-semibold hover:text-primary transition-colors relative group"
+            >
+              Analytics
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
+            </Link>
+            <Link
               href="/schedule"
               className="text-sm font-semibold hover:text-primary transition-colors relative group"
             >
@@ -59,13 +66,6 @@ export default function HomePage() {
               className="text-sm font-semibold hover:text-primary transition-colors relative group"
             >
               Sentiment
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
-            </Link>
-            <Link
-              href="/postgame"
-              className="text-sm font-semibold hover:text-primary transition-colors relative group"
-            >
-              Analytics
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
             </Link>
           </nav>
