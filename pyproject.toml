@@ -39,6 +39,7 @@ requests = "^2.31.0"
 tweepy = "^4.14.0"
 praw = "^7.7.0"
 google-api-python-client = "^2.108.0"
+nba-api = "1.5.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
