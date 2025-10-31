@@ -1,17 +1,25 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  RefreshCw, TrendingUp, TrendingDown, DollarSign, Target, 
-  TrendingUpIcon, Activity, BarChart3, Zap, Brain, Shield
-} from "lucide-react"
 import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+    Activity, BarChart3,
+    Brain,
+    DollarSign,
+    RefreshCw,
+    Shield,
+    Target,
+    TrendingDown,
+    TrendingUp,
+    TrendingUpIcon,
+    Zap
+} from "lucide-react"
+import { useEffect, useState } from "react"
 
 interface StatPrediction {
   raw: number

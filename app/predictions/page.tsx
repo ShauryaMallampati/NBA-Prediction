@@ -1,18 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
 import {
-  BarChart3,
-  Brain,
-  TrendingUp,
-  TrendingDown,
-  Target,
-  DollarSign,
-  RefreshCw,
-  AlertCircle,
-  CheckCircle2,
+    AlertCircle,
+    BarChart3,
+    Brain,
+    CheckCircle2,
+    DollarSign,
+    RefreshCw,
+    Target,
+    TrendingDown,
+    TrendingUp,
+    Users,
 } from "lucide-react"
+import Link from "next/link"
+import { useEffect, useState } from "react"
 
 interface StatPrediction {
   raw: number
@@ -116,14 +117,30 @@ export default function PredictionsPage() {
               <p className="text-xs text-muted-foreground font-medium">ML-Powered Analytics</p>
             </div>
           </Link>
-          <button
-            onClick={fetchPredictions}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold hover:scale-105 transition-all duration-300 glow-lg shadow-xl disabled:opacity-50"
-          >
-            <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
-            {loading ? "Loading..." : "Refresh"}
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/analytics"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl glass-strong border-2 border-primary/30 hover:bg-primary hover:text-primary-foreground font-bold transition-all duration-300"
+            >
+              <BarChart3 className="w-5 h-5" />
+              Analytics
+            </Link>
+            <Link
+              href="/compare"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl glass-strong border-2 border-primary/30 hover:bg-primary hover:text-primary-foreground font-bold transition-all duration-300"
+            >
+              <Users className="w-5 h-5" />
+              Compare
+            </Link>
+            <button
+              onClick={fetchPredictions}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold hover:scale-105 transition-all duration-300 glow-lg shadow-xl disabled:opacity-50"
+            >
+              <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
+              {loading ? "Loading..." : "Refresh"}
+            </button>
+          </div>
         </div>
       </header>
 
