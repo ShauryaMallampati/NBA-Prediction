@@ -37,6 +37,13 @@ export default function HomePage() {
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
             </Link>
             <Link
+              href="/betting"
+              className="text-sm font-semibold hover:text-primary transition-colors relative group"
+            >
+              Betting
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
+            </Link>
+            <Link
               href="/analytics"
               className="text-sm font-semibold hover:text-primary transition-colors relative group"
             >
