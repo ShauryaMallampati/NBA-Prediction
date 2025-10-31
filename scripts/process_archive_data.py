@@ -89,35 +89,22 @@ class ArchiveProcessor:
         """Standardize game data to common format"""
         logger.info(f"Standardizing format for {source}...")
         
-        # Common columns we need
-        standard_cols = {
-            'game_id': 'game_id',
-            'date': 'date',
-            'home_team': 'home_team',
-            'away_team': 'away_team',
-            'home_score': 'home_pts',
-            'away_score': 'away_pts',
-            'season': 'season',
-        }
-        
-        standardized = pd.DataFrame()
-        
         if source == 'sqlite':
             # SQLite format
+            standardized = pd.DataFrame()
             standardized['game_id'] = df['id']
             standardized['date'] = pd.to_datetime(df['date_time'])
             standardized['home_team'] = df['home_team']
             standardized['away_team'] = df['away_team']
             
         elif source == 'archive3':
-            # Archive 3 format (CSV from Basketball Reference)
-            standardized['date'] = pd.to_datetime(df['date'])
-            standardized['home_team'] = df['team']  # Home team in 'team' column
-            standardized['season'] = df['season']
+            # Archive 3 format (player-level CSV from Basketball Reference)
+            # Convert date first
+            df['date'] = pd.to_datetime(df['date'])
             
-            # Parse player stats to aggregate team stats
-            # Group by date and team to get game-level stats
-            game_stats = df.groupby(['date', 'team']).agg({
+            # Group by date and team to get TEAM-level stats (sum of all players)
+            logger.info("Aggregating player stats to team level...")
+            team_stats = df.groupby(['date', 'team', 'season']).agg({
                 'PTS': 'sum',  # Total points
                 'TRB': 'sum',  # Total rebounds
                 'AST': 'sum',  # Total assists
@@ -126,21 +113,25 @@ class ArchiveProcessor:
                 'TOV': 'sum',  # Total turnovers
             }).reset_index()
             
-            standardized = standardized.merge(
-                game_stats,
-                left_on=['date', 'home_team'],
-                right_on=['date', 'team'],
-                how='left'
-            )
+            logger.info(f"Aggregated to {len(team_stats)} team-game records")
             
-            standardized['home_pts'] = standardized['PTS']
+            # Since we don't know home/away from this data, just use it as-is
+            # Each row = one team's performance in a game
+            standardized = pd.DataFrame()
+            standardized['date'] = team_stats['date']
+            standardized['team'] = team_stats['team']
+            standardized['season'] = team_stats['season']
+            standardized['pts'] = team_stats['PTS']
+            standardized['reb'] = team_stats['TRB']
+            standardized['ast'] = team_stats['AST']
+            standardized['stl'] = team_stats['STL']
+            standardized['blk'] = team_stats['BLK']
+            standardized['tov'] = team_stats['TOV']
+            
+            # Note: Archive 3 doesn't distinguish home/away, so we'll just keep team stats
+            # For training, we'll pair these later or use SQLite for proper game data
         
-        # Add derived columns
-        if 'home_pts' in standardized.columns and 'away_pts' in standardized.columns:
-            standardized['home_win'] = (standardized['home_pts'] > standardized['away_pts']).astype(int)
-            standardized['point_diff'] = standardized['home_pts'] - standardized['away_pts']
-        
-        logger.info(f"Standardized {len(standardized)} games")
+        logger.info(f"Standardized {len(standardized)} records")
         return standardized
     
     def merge_with_nba_api(self, historical_games: pd.DataFrame) -> pd.DataFrame:
