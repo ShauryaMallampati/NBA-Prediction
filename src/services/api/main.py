@@ -310,6 +310,113 @@ async def explain_prediction(game_id: str):
     }
 
 
+# ============================================================================
+# REAL DATA ENDPOINTS (NEW)
+# ============================================================================
+
+@app.get("/api/teams")
+async def get_teams():
+    """Get all NBA teams (REAL DATA)."""
+    from src.data.ingest.nba_api_client import get_nba_client
+    
+    try:
+        client = get_nba_client()
+        teams = client.get_teams()
+        return {"success": True, "count": len(teams), "teams": teams}
+    except Exception as e:
+        logger.error(f"Failed to fetch teams: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/games")
+async def get_games(date: Optional[str] = None):
+    """Get games for a specific date (REAL DATA)."""
+    from src.data.ingest.game_fetcher import get_game_fetcher
+    
+    try:
+        fetcher = get_game_fetcher()
+        
+        if date:
+            games = fetcher.get_games_by_date(date)
+        else:
+            games = fetcher.get_today_games()
+        
+        return {"success": True, "count": len(games), "games": games}
+    except Exception as e:
+        logger.error(f"Failed to fetch games: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/games/live")
+async def get_live_games():
+    """Get live game scores (REAL DATA)."""
+    from src.data.ingest.game_fetcher import get_game_fetcher
+    
+    try:
+        fetcher = get_game_fetcher()
+        live_games = fetcher.get_live_scores()
+        return {"success": True, "count": len(live_games), "games": live_games}
+    except Exception as e:
+        logger.error(f"Failed to fetch live games: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/players/search")
+async def search_players(name: str, limit: int = 10):
+    """Search for players by name (REAL DATA)."""
+    from src.data.ingest.player_fetcher import get_player_fetcher
+    
+    try:
+        fetcher = get_player_fetcher()
+        players = fetcher.search_players(name)
+        return {"success": True, "count": len(players), "players": players[:limit]}
+    except Exception as e:
+        logger.error(f"Failed to search players: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/players/{player_id}/stats")
+async def get_player_stats(player_id: int, games: int = 10):
+    """Get player statistics (REAL DATA)."""
+    from src.data.ingest.player_fetcher import get_player_fetcher
+    
+    try:
+        fetcher = get_player_fetcher()
+        stats = fetcher.get_player_stats(player_id, last_n_games=games)
+        return {"success": True, "player_id": player_id, "games": len(stats), "stats": stats}
+    except Exception as e:
+        logger.error(f"Failed to fetch player stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/players/{player_id}/performance")
+async def get_player_performance(player_id: int, games: int = 5):
+    """Get player recent performance summary (REAL DATA)."""
+    from src.data.ingest.player_fetcher import get_player_fetcher
+    
+    try:
+        fetcher = get_player_fetcher()
+        performance = fetcher.get_recent_performance(player_id, games=games)
+        return {"success": True, "player_id": player_id, **performance}
+    except Exception as e:
+        logger.error(f"Failed to fetch player performance: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/odds")
+async def get_betting_odds():
+    """Get current betting odds (REAL DATA)."""
+    from src.data.ingest.odds_fetcher import get_odds_fetcher
+    
+    try:
+        fetcher = get_odds_fetcher()
+        odds = fetcher.get_current_odds()
+        return {"success": True, "count": len(odds), "odds": odds}
+    except Exception as e:
+        logger.error(f"Failed to fetch odds: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
 
