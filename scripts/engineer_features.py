@@ -168,39 +168,67 @@ class FeatureEngineer:
             
             # Check if we have NBA API format (with MATCHUP column)
             if 'MATCHUP' in df.columns:
-                # NBA API format - has home/away in MATCHUP
-                games = []
+                # NBA API format - each game has 2 rows (home and away perspective)
+                # We need to match them to get both scores
+                game_dict = {}  # Key: (date, home_team, away_team), Value: game data
+                
                 for _, row in df.iterrows():
                     if pd.isna(row.get('MATCHUP')) or pd.isna(row.get('PTS')):
                         continue
                     
                     matchup = str(row['MATCHUP'])
                     team = str(row.get('TEAM_ABBREVIATION', row.get('team', '')))
+                    date_str = row['date'].isoformat() if pd.notna(row['date']) else None
+                    pts = int(float(row['PTS']))
+                    season = str(row.get('SEASON_ID', row.get('season', '')))
                     
-                    # Parse matchup to determine home/away
+                    if date_str is None:
+                        continue
+                    
+                    # Parse matchup to determine home/away teams and score
                     if ' vs. ' in matchup:
-                        # Home game
+                        # Home game: "GSW vs. LAL" means GSW is home
                         home_team = team
                         away_team = matchup.split(' vs. ')[1] if len(matchup.split(' vs. ')) > 1 else 'Unknown'
+                        game_key = (date_str, home_team, away_team)
+                        
+                        if game_key not in game_dict:
+                            game_dict[game_key] = {
+                                'date': date_str,
+                                'home_team': home_team,
+                                'away_team': away_team,
+                                'home_score': pts,
+                                'away_score': None,
+                                'season': season
+                            }
+                        else:
+                            game_dict[game_key]['home_score'] = pts
+                            
                     elif ' @ ' in matchup:
-                        # Away game - skip for now, we'll get it from home game
-                        continue
-                    else:
-                        continue
-                    
-                    game = {
-                        'date': row['date'].isoformat() if pd.notna(row['date']) else None,
-                        'home_team': home_team,
-                        'away_team': away_team,
-                        'home_score': int(float(row['PTS'])),
-                        'away_score': 0,  # Will be filled from matching away game
-                        'season': str(row.get('SEASON_ID', row.get('season', '')))
-                    }
-                    
-                    if game['date'] is not None:
-                        games.append(game)
+                        # Away game: "LAL @ GSW" means LAL is away, GSW is home
+                        away_team = team
+                        home_team = matchup.split(' @ ')[1] if len(matchup.split(' @ ')) > 1 else 'Unknown'
+                        game_key = (date_str, home_team, away_team)
+                        
+                        if game_key not in game_dict:
+                            game_dict[game_key] = {
+                                'date': date_str,
+                                'home_team': home_team,
+                                'away_team': away_team,
+                                'home_score': None,
+                                'away_score': pts,
+                                'season': season
+                            }
+                        else:
+                            game_dict[game_key]['away_score'] = pts
                 
-                print(f"  📊 Loaded {len(games)} games from NBA API format")
+                # Convert to list and filter complete games (both scores present)
+                games = [
+                    game for game in game_dict.values() 
+                    if game['home_score'] is not None and game['away_score'] is not None
+                ]
+                
+                print(f"  📊 Loaded {len(games)} complete games from NBA API format")
             else:
                 # Archive 3 format - just team stats, need to pair them
                 # Group by date to find matchups
@@ -317,10 +345,10 @@ class FeatureEngineer:
         
         # Actual result (if available)
         if game.get('status', '').lower().find('final') >= 0 or 'home_score' in game:
-            home_score = self._get_score(game, 'home_team')
-            away_score = self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
+            home_score = game.get('home_score') or self._get_score(game, 'home_team')
+            away_score = game.get('away_score') or self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
             
-            if home_score is not None and away_score is not None and home_score != 0:
+            if home_score is not None and away_score is not None:
                 features['home_score'] = home_score
                 features['away_score'] = away_score
                 features['home_win'] = 1 if home_score > away_score else 0
@@ -343,10 +371,10 @@ class FeatureEngineer:
         wins = 0
         for game in recent_games:
             is_home = self._get_team_name(game, 'home_team') == team
-            home_score = self._get_score(game, 'home_team')
-            away_score = self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
+            home_score = game.get('home_score') or self._get_score(game, 'home_team')
+            away_score = game.get('away_score') or self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
             
-            if (game.get('status', '').lower().find('final') >= 0 or 'home_score' in game) and home_score != 0:
+            if (game.get('status', '').lower().find('final') >= 0 or 'home_score' in game) and home_score is not None and away_score is not None:
                 if is_home and home_score > away_score:
                     wins += 1
                 elif not is_home and away_score > home_score:
@@ -398,10 +426,10 @@ class FeatureEngineer:
         wins = 0
         for game in team_games:
             if game.get('status', '').lower().find('final') >= 0 or 'home_score' in game:
-                home_score = self._get_score(game, 'home_team')
-                away_score = self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
+                home_score = game.get('home_score') or self._get_score(game, 'home_team')
+                away_score = game.get('away_score') or self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
                 
-                if home_score != 0 and away_score is not None:
+                if home_score is not None and away_score is not None:
                     if is_home and home_score > away_score:
                         wins += 1
                     elif not is_home and away_score > home_score:
@@ -451,10 +479,12 @@ class FeatureEngineer:
             if game.get('status', '').lower().find('final') >= 0 or 'home_score' in game:
                 home_team = self._get_team_name(game, 'home_team')
                 away_team = self._get_team_name(game, 'away_team') or self._get_team_name(game, 'visitor_team')
-                home_score = self._get_score(game, 'home_team')
-                away_score = self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
                 
-                if home_team and away_team and home_score != 0:
+                # Try to get scores from different possible formats
+                home_score = game.get('home_score') or self._get_score(game, 'home_team')
+                away_score = game.get('away_score') or self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
+                
+                if home_team and away_team and home_score is not None and away_score is not None:
                     self.elo.update_ratings(
                         team_a=home_team,
                         team_b=away_team,
