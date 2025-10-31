@@ -136,20 +136,116 @@ class FeatureEngineer:
         self.team_records = defaultdict(lambda: {'wins': 0, 'losses': 0, 'games': []})
         self.h2h_records = defaultdict(lambda: defaultdict(lambda: {'wins': 0, 'losses': 0}))
     
+    def _get_team_name(self, game: Dict, key: str) -> str:
+        """Extract team name from game dict (handles both nested and flat formats)"""
+        if isinstance(game.get(key), dict):
+            return game.get(key, {}).get('abbreviation', '')
+        return game.get(key, '')
+    
+    def _get_score(self, game: Dict, key: str) -> int:
+        """Extract score from game dict (handles both nested and flat formats)"""
+        if isinstance(game.get(key), dict):
+            return game.get(key, {}).get('score', 0)
+        return game.get(f"{key}_score", 0)
+    
     def load_games(self, games_file: Path) -> List[Dict]:
         """
-        Load games from JSON file
+        Load games from CSV or JSON file
         
         Args:
-            games_file: Path to games JSON file
+            games_file: Path to games CSV or JSON file
         
         Returns:
             List of game dictionaries
         """
-        with open(games_file, 'r') as f:
-            data = json.load(f)
-        
-        return data.get('games', [])
+        if games_file.suffix == '.csv':
+            # Load CSV file
+            df = pd.read_csv(games_file, low_memory=False)
+            df['date'] = pd.to_datetime(df['date'], format='mixed', errors='coerce')
+            
+            # Drop rows with missing critical data
+            df = df.dropna(subset=['date'])
+            
+            # Check if we have NBA API format (with MATCHUP column)
+            if 'MATCHUP' in df.columns:
+                # NBA API format - has home/away in MATCHUP
+                games = []
+                for _, row in df.iterrows():
+                    if pd.isna(row.get('MATCHUP')) or pd.isna(row.get('PTS')):
+                        continue
+                    
+                    matchup = str(row['MATCHUP'])
+                    team = str(row.get('TEAM_ABBREVIATION', row.get('team', '')))
+                    
+                    # Parse matchup to determine home/away
+                    if ' vs. ' in matchup:
+                        # Home game
+                        home_team = team
+                        away_team = matchup.split(' vs. ')[1] if len(matchup.split(' vs. ')) > 1 else 'Unknown'
+                    elif ' @ ' in matchup:
+                        # Away game - skip for now, we'll get it from home game
+                        continue
+                    else:
+                        continue
+                    
+                    game = {
+                        'date': row['date'].isoformat() if pd.notna(row['date']) else None,
+                        'home_team': home_team,
+                        'away_team': away_team,
+                        'home_score': int(float(row['PTS'])),
+                        'away_score': 0,  # Will be filled from matching away game
+                        'season': str(row.get('SEASON_ID', row.get('season', '')))
+                    }
+                    
+                    if game['date'] is not None:
+                        games.append(game)
+                
+                print(f"  📊 Loaded {len(games)} games from NBA API format")
+            else:
+                # Archive 3 format - just team stats, need to pair them
+                # Group by date to find matchups
+                games = []
+                grouped = df.groupby('date')
+                
+                for date, group in grouped:
+                    teams = group[group['team'].notna()]
+                    if len(teams) >= 2:
+                        # Take first two teams as a matchup
+                        teams_list = teams.to_dict('records')
+                        for i in range(0, len(teams_list)-1, 2):
+                            team1 = teams_list[i]
+                            team2 = teams_list[i+1] if i+1 < len(teams_list) else None
+                            
+                            if team2 is None:
+                                continue
+                            
+                            pts1 = team1.get('pts', team1.get('PTS', 0))
+                            pts2 = team2.get('pts', team2.get('PTS', 0))
+                            
+                            if pd.isna(pts1) or pd.isna(pts2):
+                                continue
+                            
+                            game = {
+                                'date': date.isoformat() if pd.notna(date) else None,
+                                'home_team': str(team1.get('team', 'Unknown')),
+                                'away_team': str(team2.get('team', 'Unknown')),
+                                'home_score': int(float(pts1)),
+                                'away_score': int(float(pts2)),
+                                'season': str(team1.get('season', ''))
+                            }
+                            
+                            if game['date'] is not None:
+                                games.append(game)
+                
+                print(f"  📊 Loaded {len(games)} games from Archive 3 format")
+            
+            return games
+        else:
+            # Load JSON file (legacy format)
+            with open(games_file, 'r') as f:
+                data = json.load(f)
+            
+            return data.get('games', [])
     
     def engineer_game_features(self, game: Dict, previous_games: List[Dict]) -> Dict:
         """
@@ -162,15 +258,16 @@ class FeatureEngineer:
         Returns:
             Dictionary of engineered features
         """
-        home_team = game.get('home_team', {}).get('abbreviation')
-        away_team = game.get('visitor_team', {}).get('abbreviation')
+        # Extract team names using helper
+        home_team = self._get_team_name(game, 'home_team')
+        away_team = self._get_team_name(game, 'away_team') or self._get_team_name(game, 'visitor_team')
         game_date = game.get('date')
         
         if not home_team or not away_team:
             return {}
         
         features = {
-            'game_id': game.get('game_id'),
+            'game_id': game.get('game_id', f"{game_date}_{home_team}_{away_team}"),
             'date': game_date,
             'home_team': home_team,
             'away_team': away_team,
@@ -219,14 +316,15 @@ class FeatureEngineer:
         features['away_away_win_pct'] = away_away_record['win_pct']
         
         # Actual result (if available)
-        if game.get('status', '').lower().find('final') >= 0:
-            home_score = game.get('home_team', {}).get('score', 0)
-            away_score = game.get('visitor_team', {}).get('score', 0)
+        if game.get('status', '').lower().find('final') >= 0 or 'home_score' in game:
+            home_score = self._get_score(game, 'home_team')
+            away_score = self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
             
-            features['home_score'] = home_score
-            features['away_score'] = away_score
-            features['home_win'] = 1 if home_score > away_score else 0
-            features['score_diff'] = home_score - away_score
+            if home_score is not None and away_score is not None and home_score != 0:
+                features['home_score'] = home_score
+                features['away_score'] = away_score
+                features['home_win'] = 1 if home_score > away_score else 0
+                features['score_diff'] = home_score - away_score
         
         return features
     
@@ -234,8 +332,9 @@ class FeatureEngineer:
         """Get recent win/loss record for team"""
         team_games = [
             g for g in games
-            if (g.get('home_team', {}).get('abbreviation') == team or
-                g.get('visitor_team', {}).get('abbreviation') == team)
+            if (self._get_team_name(g, 'home_team') == team or
+                self._get_team_name(g, 'away_team') == team or
+                self._get_team_name(g, 'visitor_team') == team)
         ]
         
         # Take last N games
@@ -243,11 +342,11 @@ class FeatureEngineer:
         
         wins = 0
         for game in recent_games:
-            if game.get('status', '').lower().find('final') >= 0:
-                is_home = game.get('home_team', {}).get('abbreviation') == team
-                home_score = game.get('home_team', {}).get('score', 0)
-                away_score = game.get('visitor_team', {}).get('score', 0)
-                
+            is_home = self._get_team_name(game, 'home_team') == team
+            home_score = self._get_score(game, 'home_team')
+            away_score = self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
+            
+            if (game.get('status', '').lower().find('final') >= 0 or 'home_score' in game) and home_score != 0:
                 if is_home and home_score > away_score:
                     wins += 1
                 elif not is_home and away_score > home_score:
@@ -267,8 +366,9 @@ class FeatureEngineer:
         """Calculate days of rest since last game"""
         team_games = [
             g for g in games
-            if (g.get('home_team', {}).get('abbreviation') == team or
-                g.get('visitor_team', {}).get('abbreviation') == team) and
+            if (self._get_team_name(g, 'home_team') == team or
+                self._get_team_name(g, 'away_team') == team or
+                self._get_team_name(g, 'visitor_team') == team) and
                g.get('date', '') < game_date
         ]
         
@@ -286,24 +386,26 @@ class FeatureEngineer:
         if is_home:
             team_games = [
                 g for g in games
-                if g.get('home_team', {}).get('abbreviation') == team
+                if self._get_team_name(g, 'home_team') == team
             ]
         else:
             team_games = [
                 g for g in games
-                if g.get('visitor_team', {}).get('abbreviation') == team
+                if (self._get_team_name(g, 'away_team') == team or
+                    self._get_team_name(g, 'visitor_team') == team)
             ]
         
         wins = 0
         for game in team_games:
-            if game.get('status', '').lower().find('final') >= 0:
-                home_score = game.get('home_team', {}).get('score', 0)
-                away_score = game.get('visitor_team', {}).get('score', 0)
+            if game.get('status', '').lower().find('final') >= 0 or 'home_score' in game:
+                home_score = self._get_score(game, 'home_team')
+                away_score = self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
                 
-                if is_home and home_score > away_score:
-                    wins += 1
-                elif not is_home and away_score > home_score:
-                    wins += 1
+                if home_score != 0 and away_score is not None:
+                    if is_home and home_score > away_score:
+                        wins += 1
+                    elif not is_home and away_score > home_score:
+                        wins += 1
         
         games_played = len(team_games)
         win_pct = wins / games_played if games_played > 0 else 0.5
@@ -346,13 +448,13 @@ class FeatureEngineer:
                 all_features.append(features)
             
             # Update Elo ratings if game is final
-            if game.get('status', '').lower().find('final') >= 0:
-                home_team = game.get('home_team', {}).get('abbreviation')
-                away_team = game.get('visitor_team', {}).get('abbreviation')
-                home_score = game.get('home_team', {}).get('score', 0)
-                away_score = game.get('visitor_team', {}).get('score', 0)
+            if game.get('status', '').lower().find('final') >= 0 or 'home_score' in game:
+                home_team = self._get_team_name(game, 'home_team')
+                away_team = self._get_team_name(game, 'away_team') or self._get_team_name(game, 'visitor_team')
+                home_score = self._get_score(game, 'home_team')
+                away_score = self._get_score(game, 'away_team') or self._get_score(game, 'visitor_team')
                 
-                if home_team and away_team:
+                if home_team and away_team and home_score != 0:
                     self.elo.update_ratings(
                         team_a=home_team,
                         team_b=away_team,
@@ -380,9 +482,9 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='Engineer features from NBA game data')
-    parser.add_argument('--input', type=str, default='data/raw/games_2024_25.json',
-                       help='Input games JSON file')
-    parser.add_argument('--output', type=str, default='data/processed/features_2024_25.csv',
+    parser.add_argument('--input', type=str, default='data/processed/all_games_historical.csv',
+                       help='Input games CSV or JSON file')
+    parser.add_argument('--output', type=str, default='data/processed/engineered_features.csv',
                        help='Output features CSV file')
     parser.add_argument('--elo-k', type=float, default=20.0,
                        help='Elo K-factor')
