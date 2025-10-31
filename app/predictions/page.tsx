@@ -1,95 +1,60 @@
 "use client"
 
-import {
-    AlertCircle,
-    BarChart3,
-    Brain,
-    CheckCircle2,
-    DollarSign,
-    RefreshCw,
-    Target,
-    TrendingDown,
-    TrendingUp,
-    Users,
-} from "lucide-react"
-import Link from "next/link"
 import { useEffect, useState } from "react"
+import { RefreshCw, Calendar, TrendingUp, Users, AlertCircle } from "lucide-react"
+import Link from "next/link"
 
-interface StatPrediction {
-  raw: number
-  calibrated: number
-  over: boolean
-  confidence: number
+interface Team {
+  id: number
+  name: string
+  abbreviation: string
+  score: number
 }
 
-interface PlayerPrediction {
-  player_name: string
-  predictions: {
-    PTS: StatPrediction
-    AST: StatPrediction
-    REB: StatPrediction
-    STL: StatPrediction
-    BLK: StatPrediction
-  }
-  ready_for_production: boolean
-  error: string | null
+interface Game {
+  game_id: string
+  date: string
+  status: string
+  home_team: Team
+  visitor_team: Team
+  season?: string
 }
 
-const statLabels = {
-  PTS: "Points",
-  AST: "Assists",
-  REB: "Rebounds",
-  STL: "Steals",
-  BLK: "Blocks",
-}
-
-const statEmojis = {
-  PTS: "🔥",
-  AST: "🎯",
-  REB: "💪",
-  STL: "🛡️",
-  BLK: "🚫",
+interface GamesResponse {
+  success: boolean
+  count: number
+  games: Game[]
 }
 
 export default function PredictionsPage() {
-  const [predictions, setPredictions] = useState<PlayerPrediction | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [games, setGames] = useState<Game[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [playerName, setPlayerName] = useState("LeBron James")
-  const [team, setTeam] = useState("LAL")
-  const [opponent, setOpponent] = useState("GSW")
-  const [gameDate, setGameDate] = useState("2024-10-26")
-  const [bankroll, setBankroll] = useState(10000)
-  const [activeTab, setActiveTab] = useState("predictions")
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  )
 
-  const fetchPredictions = async () => {
+  const fetchGames = async (date?: string) => {
     setLoading(true)
     setError(null)
 
     try {
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-
-      const response = await fetch(`${backendUrl}/predict`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          player_name: playerName,
-          game_date: gameDate,
-          team: team,
-          opponent: opponent,
-        }),
-      })
+      const dateParam = date || selectedDate
+      const url = `${backendUrl}/api/games${dateParam ? `?date=${dateParam}` : ''}`
+      
+      const response = await fetch(url)
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data = await response.json()
-      setPredictions(data)
+      const data: GamesResponse = await response.json()
+      setGames(data.games || [])
+      setLastUpdate(new Date())
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch predictions")
+      setError(err instanceof Error ? err.message : "Failed to fetch games")
       console.error("Error:", err)
     } finally {
       setLoading(false)
@@ -97,318 +62,274 @@ export default function PredictionsPage() {
   }
 
   useEffect(() => {
-    fetchPredictions()
-    const interval = setInterval(fetchPredictions, 30000)
+    fetchGames()
+    // Auto-refresh every 5 minutes
+    const interval = setInterval(() => fetchGames(), 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [])
+  }, [selectedDate])
+
+  const getQuickDateOptions = () => {
+    const today = new Date()
+    const options = []
+    
+    // Yesterday
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    options.push({ label: 'Yesterday', date: yesterday.toISOString().split('T')[0] })
+    
+    // Today
+    options.push({ label: 'Today', date: today.toISOString().split('T')[0] })
+    
+    // Tomorrow
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    options.push({ label: 'Tomorrow', date: tomorrow.toISOString().split('T')[0] })
+    
+    return options
+  }
+
+  const getStatusBadge = (status: string) => {
+    const isLive = status && (
+      status.toLowerCase().includes('live') || 
+      status.toLowerCase().includes('q') || 
+      status.includes(':')
+    )
+    const isFinal = status && status.toLowerCase().includes('final')
+    
+    if (isLive) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/30">
+          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+          LIVE
+        </span>
+      )
+    } else if (isFinal) {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-500/20 text-gray-400 border border-gray-500/30">
+          FINAL
+        </span>
+      )
+    } else {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+          {status || 'SCHEDULED'}
+        </span>
+      )
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5">
-      <header className="glass-strong sticky top-0 z-50 border-b">
-        <div className="container mx-auto px-6 py-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-3xl glow-lg group-hover:scale-110 transition-transform duration-300">
-              🏀
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                NBA Intel
-              </h1>
-              <p className="text-xs text-muted-foreground font-medium">ML-Powered Analytics</p>
-            </div>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/analytics"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl glass-strong border-2 border-primary/30 hover:bg-primary hover:text-primary-foreground font-bold transition-all duration-300"
-            >
-              <BarChart3 className="w-5 h-5" />
-              Analytics
-            </Link>
-            <Link
-              href="/compare"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl glass-strong border-2 border-primary/30 hover:bg-primary hover:text-primary-foreground font-bold transition-all duration-300"
-            >
-              <Users className="w-5 h-5" />
-              Compare
-            </Link>
-            <button
-              onClick={fetchPredictions}
-              disabled={loading}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold hover:scale-105 transition-all duration-300 glow-lg shadow-xl disabled:opacity-50"
-            >
-              <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
-              {loading ? "Loading..." : "Refresh"}
-            </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-purple-950/20 to-gray-950 p-6">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent mb-2">
+              🏀 Game Predictions
+            </h1>
+            <p className="text-gray-400">
+              Real-time NBA games and ML-powered predictions
+            </p>
           </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-6 py-12">
-        {error && (
-          <div className="max-w-4xl mx-auto mb-8 p-6 rounded-2xl bg-destructive/10 border-2 border-destructive/50 flex items-center gap-4">
-            <AlertCircle className="w-6 h-6 text-destructive flex-shrink-0" />
-            <div>
-              <p className="font-bold text-destructive">Error loading predictions</p>
-              <p className="text-sm text-destructive/80">{error}</p>
-            </div>
-          </div>
-        )}
-
-        <div className="max-w-4xl mx-auto mb-12 p-8 rounded-3xl glass-strong border-2 border-primary/10">
-          <div className="flex items-center gap-3 mb-6">
-            <Brain className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold">Get Predictions</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-muted-foreground">Player</label>
-              <input
-                type="text"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-background border-2 border-border hover:border-primary/50 focus:border-primary focus:outline-none transition-colors"
-                placeholder="Player name"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-muted-foreground">Team</label>
-              <input
-                type="text"
-                value={team}
-                onChange={(e) => setTeam(e.target.value.toUpperCase())}
-                className="w-full px-4 py-3 rounded-xl bg-background border-2 border-border hover:border-primary/50 focus:border-primary focus:outline-none transition-colors"
-                placeholder="LAL"
-                maxLength={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-muted-foreground">Opponent</label>
-              <input
-                type="text"
-                value={opponent}
-                onChange={(e) => setOpponent(e.target.value.toUpperCase())}
-                className="w-full px-4 py-3 rounded-xl bg-background border-2 border-border hover:border-primary/50 focus:border-primary focus:outline-none transition-colors"
-                placeholder="GSW"
-                maxLength={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-muted-foreground">Date</label>
-              <input
-                type="date"
-                value={gameDate}
-                onChange={(e) => setGameDate(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-background border-2 border-border hover:border-primary/50 focus:border-primary focus:outline-none transition-colors"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-muted-foreground">Bankroll</label>
-              <input
-                type="number"
-                value={bankroll}
-                onChange={(e) => setBankroll(Number(e.target.value))}
-                className="w-full px-4 py-3 rounded-xl bg-background border-2 border-border hover:border-primary/50 focus:border-primary focus:outline-none transition-colors"
-                placeholder="10000"
-              />
-            </div>
-          </div>
-
+          
           <button
-            onClick={fetchPredictions}
+            onClick={() => fetchGames()}
             disabled={loading}
-            className="w-full px-8 py-4 rounded-2xl bg-gradient-to-r from-primary to-secondary text-primary-foreground font-bold text-lg hover:scale-105 transition-all duration-300 glow-lg shadow-xl disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
           >
-            {loading ? (
-              <>
-                <RefreshCw className="w-5 h-5 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Target className="w-5 h-5" />
-                Get Predictions
-              </>
-            )}
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
           </button>
         </div>
 
-        <div className="max-w-4xl mx-auto mb-8 flex gap-2 flex-wrap">
-          {[
-            { id: "predictions", label: "Predictions", icon: Target },
-            { id: "kelly", label: "Betting", icon: DollarSign },
-            { id: "stats", label: "Statistics", icon: BarChart3 },
-          ].map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
-                activeTab === id
-                  ? "bg-primary text-primary-foreground glow-lg"
-                  : "glass-strong border-2 border-transparent hover:border-primary/50"
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              {label}
-            </button>
-          ))}
+        {/* Date Filter */}
+        <div className="glass-strong rounded-2xl p-6 mb-6">
+          <div className="flex items-center gap-4 flex-wrap">
+            <Calendar className="w-5 h-5 text-purple-400" />
+            <span className="text-sm text-gray-400">Select Date:</span>
+            
+            {/* Quick date buttons */}
+            <div className="flex gap-2">
+              {getQuickDateOptions().map(option => (
+                <button
+                  key={option.date}
+                  onClick={() => setSelectedDate(option.date)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    selectedDate === option.date
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Date picker */}
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-purple-500 focus:outline-none"
+            />
+          </div>
+          
+          <div className="mt-4 text-xs text-gray-500">
+            Last updated: {lastUpdate.toLocaleTimeString()} • Auto-refresh every 5 minutes
+          </div>
         </div>
 
-        {loading && !predictions ? (
-          <div className="flex justify-center items-center py-24">
-            <div className="text-center space-y-4">
-              <RefreshCw className="w-16 h-16 animate-spin text-primary mx-auto" />
-              <p className="text-lg font-semibold">Analyzing player performance...</p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="glass-strong rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500/20 rounded-lg">
+                <Users className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{games.length}</p>
+                <p className="text-sm text-gray-400">Total Games</p>
+              </div>
             </div>
           </div>
-        ) : predictions ? (
-          <>
-            {activeTab === "predictions" && (
-              <div className="max-w-4xl mx-auto space-y-8">
-                <div className="p-8 rounded-3xl glass-strong border-2 border-primary/10">
-                  <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-                    <div>
-                      <h1 className="text-4xl font-black mb-2">{predictions.player_name}</h1>
-                      <p className="text-lg text-muted-foreground">
-                        {team} vs {opponent} • {gameDate}
-                      </p>
-                    </div>
-                    <div
-                      className={`px-6 py-3 rounded-xl font-bold text-lg flex items-center gap-2 ${
-                        predictions.ready_for_production
-                          ? "bg-chart-5/20 text-chart-5"
-                          : "bg-destructive/20 text-destructive"
-                      }`}
-                    >
-                      {predictions.ready_for_production ? (
-                        <>
-                          <CheckCircle2 className="w-6 h-6" />
-                          Ready
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="w-6 h-6" />
-                          Caution
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                  {Object.entries(predictions.predictions).map(([stat, pred]) => {
-                    const label = statLabels[stat as keyof typeof statLabels]
-                    const emoji = statEmojis[stat as keyof typeof statEmojis]
-                    const isOver = pred.over
-
-                    return (
-                      <div
-                        key={stat}
-                        className="group p-6 rounded-2xl glass-strong border-2 border-primary/10 hover:border-primary/50 transition-all duration-300 hover:scale-105"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="text-4xl">{emoji}</div>
-                          {isOver ? (
-                            <TrendingUp className="w-5 h-5 text-chart-5" />
-                          ) : (
-                            <TrendingDown className="w-5 h-5 text-destructive" />
-                          )}
-                        </div>
-
-                        <p className="text-sm font-semibold text-muted-foreground mb-1">{label}</p>
-                        <p className="text-3xl font-black mb-4" style={{ fontFamily: "var(--font-display)" }}>
-                          {isOver ? "OVER" : "UNDER"}
-                        </p>
-
-                        <div className="space-y-3">
-                          <div>
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-xs font-semibold text-muted-foreground">Confidence</span>
-                              <span className="font-bold text-sm">{(pred.confidence * 100).toFixed(0)}%</span>
-                            </div>
-                            <div className="h-2 rounded-full bg-muted overflow-hidden">
-                              <div
-                                className={`h-full transition-all duration-300 ${
-                                  isOver
-                                    ? "bg-gradient-to-r from-chart-5 to-chart-5/50"
-                                    : "bg-gradient-to-r from-destructive to-destructive/50"
-                                }`}
-                                style={{ width: `${pred.confidence * 100}%` }}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="pt-3 border-t border-border">
-                            <p className="text-xs text-muted-foreground font-semibold mb-1">Edge</p>
-                            <p className="font-bold text-primary">
-                              {((pred.confidence - 0.5) * 100).toFixed(1)}%
-                            </p>
-                          </div>
-
-                          <div className="pt-3 border-t border-border space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-xs text-muted-foreground">Raw</span>
-                              <span className="font-bold text-sm">{(pred.raw * 100).toFixed(1)}%</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-xs text-muted-foreground">Calibrated</span>
-                              <span className="font-bold text-sm text-primary">{(pred.calibrated * 100).toFixed(1)}%</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
+          <div className="glass-strong rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-500/20 rounded-lg">
+                <div className="w-5 h-5 flex items-center justify-center">
+                  <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
                 </div>
               </div>
-            )}
-
-            {activeTab === "kelly" && (
-              <div className="max-w-4xl mx-auto p-8 rounded-3xl glass-strong border-2 border-primary/10">
-                <h3 className="text-2xl font-black mb-6 flex items-center gap-3">
-                  <DollarSign className="w-6 h-6 text-primary" />
-                  Kelly Criterion Strategy
-                </h3>
-                <p className="text-center text-muted-foreground">
-                  Bankroll: ${bankroll.toLocaleString()} | Kelly Fraction: 25% | Min Edge: 5%
+              <div>
+                <p className="text-2xl font-bold text-white">
+                  {games.filter(g => g.status?.toLowerCase().includes('live') || g.status?.toLowerCase().includes('q')).length}
                 </p>
+                <p className="text-sm text-gray-400">Live Games</p>
               </div>
-            )}
+            </div>
+          </div>
 
-            {activeTab === "stats" && (
-              <div className="max-w-4xl mx-auto p-8 rounded-3xl glass-strong border-2 border-primary/10">
-                <h3 className="text-2xl font-black mb-6 flex items-center gap-3">
-                  <BarChart3 className="w-6 h-6 text-primary" />
-                  Model Statistics
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-xs text-muted-foreground font-semibold">Models Active</p>
-                    <p className="font-bold">5</p>
+          <div className="glass-strong rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-500/20 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">
+                  {games.filter(g => g.status?.toLowerCase().includes('final')).length}
+                </p>
+                <p className="text-sm text-gray-400">Completed</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Games List */}
+      <div className="max-w-7xl mx-auto">
+        {loading && games.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <RefreshCw className="w-12 h-12 text-purple-500 animate-spin mb-4" />
+            <p className="text-gray-400">Loading games...</p>
+          </div>
+        ) : error ? (
+          <div className="glass-strong rounded-2xl p-8 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-400 mb-2">Failed to load games</p>
+            <p className="text-gray-500 text-sm">{error}</p>
+            <button
+              onClick={() => fetchGames()}
+              className="mt-4 px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : games.length === 0 ? (
+          <div className="glass-strong rounded-2xl p-12 text-center">
+            <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <p className="text-xl text-gray-400 mb-2">No games scheduled</p>
+            <p className="text-gray-500">There are no NBA games on {selectedDate}</p>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {games.map((game) => (
+              <div
+                key={game.game_id}
+                className="glass-strong rounded-2xl p-6 hover:bg-white/5 transition-all duration-200 cursor-pointer group"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    {getStatusBadge(game.status)}
+                    <span className="text-sm text-gray-500">
+                      {new Date(game.date).toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
+                    </span>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-xs text-muted-foreground font-semibold">Feature Set</p>
-                    <p className="font-bold">53</p>
+                  
+                  <Link
+                    href={`/predictions/${game.game_id}`}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    View Details
+                  </Link>
+                </div>
+
+                {/* Teams */}
+                <div className="grid grid-cols-2 gap-8">
+                  {/* Away Team */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white font-bold">
+                        {game.visitor_team?.abbreviation || 'TBD'}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white">
+                          {game.visitor_team?.name || 'TBD'}
+                        </p>
+                        <p className="text-sm text-gray-500">Away</p>
+                      </div>
+                    </div>
+                    <div className="text-3xl font-bold text-white">
+                      {game.visitor_team?.score || '-'}
+                    </div>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-xs text-muted-foreground font-semibold">Calibration</p>
-                    <p className="font-bold">Isotonic</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-xs text-muted-foreground font-semibold">Status</p>
-                    <p className="font-bold text-chart-5">Healthy</p>
+
+                  {/* Home Team */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center text-white font-bold">
+                        {game.home_team?.abbreviation || 'TBD'}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white">
+                          {game.home_team?.name || 'TBD'}
+                        </p>
+                        <p className="text-sm text-gray-500">Home</p>
+                      </div>
+                    </div>
+                    <div className="text-3xl font-bold text-white">
+                      {game.home_team?.score || '-'}
+                    </div>
                   </div>
                 </div>
+
+                {/* ML Prediction Placeholder */}
+                {game.status?.toLowerCase().includes('scheduled') || !game.status && (
+                  <div className="mt-4 pt-4 border-t border-gray-800">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">ML Prediction:</span>
+                      <span className="text-purple-400">Coming soon...</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </>
-        ) : (
-          <div className="max-w-4xl mx-auto p-12 rounded-3xl glass-strong border-2 border-primary/10 text-center">
-            <p className="text-muted-foreground text-lg">Click "Get Predictions" to see results</p>
+            ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   )
 }
