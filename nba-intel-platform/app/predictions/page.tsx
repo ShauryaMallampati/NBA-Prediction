@@ -1,531 +1,290 @@
-"use client"
+'use client';
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-    Activity, BarChart3,
-    Brain,
-    DollarSign,
-    RefreshCw,
-    Shield,
-    Target,
-    TrendingDown,
-    TrendingUp,
-    TrendingUpIcon,
-    Zap
-} from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState, useEffect } from 'react';
+import { ArrowUpRight, Flame, Zap, TrendingUp, RefreshCw } from 'lucide-react';
 
-interface StatPrediction {
-  raw: number
-  calibrated: number
-  over: boolean
-  confidence: number
-}
-
-interface PlayerPrediction {
-  player_name: string
-  predictions: {
-    PTS: StatPrediction
-    AST: StatPrediction
-    REB: StatPrediction
-    STL: StatPrediction
-    BLK: StatPrediction
-  }
-  ready_for_production: boolean
-  error: string | null
-}
-
-interface KellyRecommendation {
-  stat: string
-  edge: number
-  kelly_fraction: number
-  bet_amount: number
-  recommendation: string
-}
-
-const statColors = {
-  PTS: { bg: "bg-gradient-to-br from-red-500 to-red-600", text: "text-red-600", border: "border-red-500" },
-  AST: { bg: "bg-gradient-to-br from-blue-500 to-blue-600", text: "text-blue-600", border: "border-blue-500" },
-  REB: { bg: "bg-gradient-to-br from-green-500 to-green-600", text: "text-green-600", border: "border-green-500" },
-  STL: { bg: "bg-gradient-to-br from-purple-500 to-purple-600", text: "text-purple-600", border: "border-purple-500" },
-  BLK: { bg: "bg-gradient-to-br from-yellow-500 to-yellow-600", text: "text-yellow-600", border: "border-yellow-500" },
-}
-
-const statLabels = {
-  PTS: "Points",
-  AST: "Assists",
-  REB: "Rebounds",
-  STL: "Steals",
-  BLK: "Blocks",
-}
-
-const statIcons = {
-  PTS: Target,
-  AST: Activity,
-  REB: BarChart3,
-  STL: Zap,
-  BLK: Shield,
+interface GamePrediction {
+  game_id: string;
+  date: string;
+  home_team: string;
+  away_team: string;
+  home_win_prob: number;
+  away_win_prob: number;
+  confidence: number;
+  top_features?: Array<{ name: string; importance: number }>;
+  model_version?: string;
+  accuracy?: number;
 }
 
 export default function PredictionsPage() {
-  const [predictions, setPredictions] = useState<PlayerPrediction | null>(null)
-  const [kellyRecs, setKellyRecs] = useState<KellyRecommendation[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [playerName, setPlayerName] = useState("LeBron James")
-  const [team, setTeam] = useState("LAL")
-  const [opponent, setOpponent] = useState("GSW")
-  const [gameDate, setGameDate] = useState("2024-10-26")
-  const [bankroll, setBankroll] = useState(10000)
-
-  const fetchPredictions = async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-      
-      // Fetch predictions
-      const response = await fetch(`${backendUrl}/predict`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          player_name: playerName,
-          game_date: gameDate,
-          team: team,
-          opponent: opponent,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      setPredictions(data)
-
-      // Fetch Kelly Criterion recommendations
-      const kellyResponse = await fetch(`${backendUrl}/kelly`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          bankroll: bankroll,
-          kelly_fraction: 0.25,
-          min_edge: 0.05,
-          predictions: Object.fromEntries(
-            Object.entries(data.predictions).map(([stat, pred]: [string, any]) => [
-              stat,
-              { calibrated: pred.calibrated }
-            ])
-          )
-        }),
-      })
-
-      if (kellyResponse.ok) {
-        const kellyData = await kellyResponse.json()
-        if (kellyData.recommendations) {
-          setKellyRecs(kellyData.recommendations)
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch predictions")
-      console.error("Error fetching predictions:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [games, setGames] = useState<GamePrediction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'high-confidence' | 'close'>('all');
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   useEffect(() => {
-    fetchPredictions()
-    const interval = setInterval(fetchPredictions, 30000)
-    return () => clearInterval(interval)
-  }, [])
+    const fetchPredictions = async () => {
+      try {
+        const response = await fetch(
+          `/api/predictions?date=${new Date().toISOString().split('T')[0]}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setGames(Array.isArray(data) ? data : data.games || []);
+          setLastUpdate(new Date());
+        }
+      } catch (error) {
+        console.error('Failed to load predictions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (error) {
+    fetchPredictions();
+    // Auto-refresh every 5 minutes
+    const interval = setInterval(fetchPredictions, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const filteredGames = games.filter((game) => {
+    if (filter === 'high-confidence') {
+      return game.confidence > 0.65;
+    } else if (filter === 'close') {
+      return Math.abs(game.home_win_prob - 0.5) < 0.1;
+    }
+    return true;
+  });
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-8">
-        <Card className="border-red-500 bg-slate-800/50 backdrop-blur">
-          <CardHeader>
-            <CardTitle className="text-red-500">Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-white">{error}</p>
-            <Button onClick={fetchPredictions} className="mt-4">
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (loading && !predictions) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="h-12 w-12 animate-spin text-purple-400 mx-auto mb-4" />
-          <p className="text-white text-lg">Loading predictions...</p>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Hero Section */}
-      <div className="border-b border-purple-500/20 bg-black/20 backdrop-blur-sm">
-        <div className="container mx-auto p-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <Brain className="h-10 w-10 text-purple-400" />
-                <h1 className="text-5xl font-bold text-white">NBA Intelligence Platform</h1>
-              </div>
-              <p className="text-purple-200 text-lg">AI-Powered Predictions & Betting Analytics</p>
-              <div className="flex gap-2 mt-3">
-                <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/50">
-                  <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
-                  Live
-                </Badge>
-                <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/50">
-                  5 Models Active
-                </Badge>
-                <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/50">
-                  Kelly Criterion
-                </Badge>
-              </div>
-            </div>
-            <Button 
-              onClick={fetchPredictions} 
-              disabled={loading} 
-              size="lg"
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-            >
-              <RefreshCw className={`mr-2 h-5 w-5 ${loading ? "animate-spin" : ""}`} />
-              Refresh Data
-            </Button>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <Zap className="w-12 h-12 text-cyan-400 mx-auto mb-4 animate-pulse" />
+            <p className="text-slate-400">Loading predictions...</p>
           </div>
         </div>
       </div>
+    );
+  }
 
-      <div className="container mx-auto p-8">
-        <Tabs defaultValue="predictions" className="space-y-8">
-          <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3 bg-slate-800/50 backdrop-blur">
-            <TabsTrigger value="predictions" className="data-[state=active]:bg-purple-600">
-              <Target className="h-4 w-4 mr-2" />
-              Predictions
-            </TabsTrigger>
-            <TabsTrigger value="kelly" className="data-[state=active]:bg-purple-600">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Betting
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-purple-600">
-              <Activity className="h-4 w-4 mr-2" />
-              Configure
-            </TabsTrigger>
-          </TabsList>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">🏀 NBA Predictions</h1>
+              <p className="text-slate-400">AI-powered predictions • 63.83% accuracy • Updated every 5 minutes</p>
+            </div>
+            <div className="bg-gradient-to-br from-cyan-500 to-blue-600 px-6 py-3 rounded-lg text-center">
+              <p className="text-white font-semibold text-lg">{filteredGames.length}</p>
+              <p className="text-cyan-100 text-sm">Games Today</p>
+            </div>
+          </div>
 
-          {/* Predictions Tab */}
-          <TabsContent value="predictions" className="space-y-6">
-            {predictions && (
-              <>
-                {/* Player Info Card */}
-                <Card className="bg-slate-800/50 backdrop-blur border-purple-500/20">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-3xl text-white">{predictions.player_name}</CardTitle>
-                        <CardDescription className="text-purple-200 text-lg mt-2">
-                          {team} vs {opponent} • {gameDate}
-                        </CardDescription>
-                      </div>
-                      <Badge 
-                        variant={predictions.ready_for_production ? "default" : "destructive"}
-                        className="text-lg px-4 py-2"
-                      >
-                        {predictions.ready_for_production ? "✓ Production Ready" : "⚠ Not Ready"}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                </Card>
+          {/* Filter Buttons */}
+          <div className="flex gap-3 mb-4">
+            {(['all', 'high-confidence', 'close'] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  filter === f
+                    ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/50'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                {f === 'all' ? '📊 All' : f === 'high-confidence' ? '🎯 High Confidence' : '⚖️ Close Games'}
+              </button>
+            ))}
+          </div>
 
-                {/* Stat Predictions Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-                  {Object.entries(predictions.predictions).map(([stat, prediction]) => {
-                    const Icon = statIcons[stat as keyof typeof statIcons]
-                    const colors = statColors[stat as keyof typeof statColors]
-                    
-                    return (
-                      <Card 
-                        key={stat} 
-                        className={`bg-slate-800/50 backdrop-blur border-2 ${colors.border} hover:scale-105 transition-transform`}
-                      >
-                        <CardHeader className={`${colors.bg} text-white rounded-t-lg`}>
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <Icon className="h-6 w-6" />
-                              <CardTitle className="text-xl">{statLabels[stat as keyof typeof statLabels]}</CardTitle>
-                            </div>
-                            {prediction.over ? (
-                              <TrendingUp className="h-6 w-6" />
-                            ) : (
-                              <TrendingDown className="h-6 w-6" />
-                            )}
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-6 space-y-4">
-                          {/* Prediction */}
-                          <div className="text-center">
-                            <p className="text-sm text-gray-400 mb-1">Prediction</p>
-                            <p className={`text-3xl font-bold ${prediction.over ? 'text-green-400' : 'text-red-400'}`}>
-                              {prediction.over ? "OVER" : "UNDER"}
-                            </p>
-                          </div>
+          {/* Last Update Info */}
+          <p className="text-xs text-slate-500">
+            ⏰ Last updated: {lastUpdate.toLocaleTimeString()}
+          </p>
+        </div>
 
-                          {/* Confidence Bar */}
-                          <div>
-                            <div className="flex justify-between text-sm mb-2">
-                              <span className="text-gray-400">Confidence</span>
-                              <span className="text-white font-bold">
-                                {(prediction.confidence * 100).toFixed(0)}%
-                              </span>
-                            </div>
-                            <Progress 
-                              value={prediction.confidence * 100} 
-                              className="h-3"
-                            />
-                          </div>
+        {/* Games Grid */}
+        <div className="grid gap-6 mb-8">
+          {filteredGames.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <Zap className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>No games match this filter</p>
+            </div>
+          ) : (
+            filteredGames.map((game) => (
+              <GameCard key={game.game_id} game={game} />
+            ))
+          )}
+        </div>
 
-                          {/* Stats Grid */}
-                          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-700">
-                            <div className="text-center">
-                              <p className="text-xs text-gray-400">Raw</p>
-                              <p className="font-bold text-white">{(prediction.raw * 100).toFixed(1)}%</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-xs text-gray-400">Calibrated</p>
-                              <p className="font-bold text-white">{(prediction.calibrated * 100).toFixed(1)}%</p>
-                            </div>
-                          </div>
-
-                          {/* Edge Indicator */}
-                          <div className="pt-2 border-t border-gray-700">
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs text-gray-400">Edge</span>
-                              <Badge variant="outline" className="bg-purple-500/10 text-purple-400">
-                                {((prediction.confidence - 0.5) * 100).toFixed(1)}%
-                              </Badge>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </div>
-
-                {/* Portfolio Summary */}
-                <Card className="bg-gradient-to-br from-slate-800 to-purple-900/20 backdrop-blur border-purple-500/20">
-                  <CardHeader>
-                    <CardTitle className="text-2xl text-white flex items-center gap-2">
-                      <TrendingUpIcon className="h-6 w-6 text-green-400" />
-                      Portfolio Summary
-                    </CardTitle>
-                    <CardDescription className="text-purple-200">
-                      Aggregate betting recommendations across all predictions
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                      <div className="text-center p-4 bg-slate-700/30 rounded-lg">
-                        <p className="text-sm text-gray-400 mb-1">Total Predictions</p>
-                        <p className="text-4xl font-bold text-white">5</p>
-                      </div>
-                      <div className="text-center p-4 bg-green-500/10 rounded-lg border border-green-500/30">
-                        <p className="text-sm text-gray-400 mb-1">OVER Picks</p>
-                        <p className="text-4xl font-bold text-green-400">
-                          {Object.values(predictions.predictions).filter((p) => p.over).length}
-                        </p>
-                      </div>
-                      <div className="text-center p-4 bg-red-500/10 rounded-lg border border-red-500/30">
-                        <p className="text-sm text-gray-400 mb-1">UNDER Picks</p>
-                        <p className="text-4xl font-bold text-red-400">
-                          {Object.values(predictions.predictions).filter((p) => !p.over).length}
-                        </p>
-                      </div>
-                      <div className="text-center p-4 bg-purple-500/10 rounded-lg border border-purple-500/30">
-                        <p className="text-sm text-gray-400 mb-1">Avg Confidence</p>
-                        <p className="text-4xl font-bold text-purple-400">
-                          {(
-                            (Object.values(predictions.predictions).reduce(
-                              (sum, p) => sum + p.confidence,
-                              0
-                            ) / 5) * 100
-                          ).toFixed(0)}%
-                        </p>
-                      </div>
-                      <div className="text-center p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
-                        <p className="text-sm text-gray-400 mb-1">Strong Edges</p>
-                        <p className="text-4xl font-bold text-blue-400">
-                          {Object.values(predictions.predictions).filter((p) => 
-                            Math.abs(p.confidence - 0.5) > 0.15
-                          ).length}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-          </TabsContent>
-
-          {/* Kelly Criterion Tab */}
-          <TabsContent value="kelly" className="space-y-6">
-            <Card className="bg-slate-800/50 backdrop-blur border-purple-500/20">
-              <CardHeader>
-                <CardTitle className="text-2xl text-white flex items-center gap-2">
-                  <DollarSign className="h-6 w-6 text-green-400" />
-                  Kelly Criterion Betting Strategy
-                </CardTitle>
-                <CardDescription className="text-purple-200">
-                  Optimal bet sizing based on edge and bankroll management
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div className="p-4 bg-slate-700/30 rounded-lg">
-                    <p className="text-sm text-gray-400 mb-1">Total Bankroll</p>
-                    <p className="text-3xl font-bold text-green-400">${bankroll.toLocaleString()}</p>
-                  </div>
-                  <div className="p-4 bg-slate-700/30 rounded-lg">
-                    <p className="text-sm text-gray-400 mb-1">Kelly Fraction</p>
-                    <p className="text-3xl font-bold text-purple-400">25%</p>
-                  </div>
-                  <div className="p-4 bg-slate-700/30 rounded-lg">
-                    <p className="text-sm text-gray-400 mb-1">Min Edge</p>
-                    <p className="text-3xl font-bold text-blue-400">5%</p>
-                  </div>
-                </div>
-
-                {kellyRecs.length > 0 ? (
-                  <div className="space-y-4">
-                    {kellyRecs.map((rec, idx) => (
-                      <Card key={idx} className="bg-slate-700/30 border-gray-700">
-                        <CardContent className="pt-6">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="text-lg font-bold text-white">{rec.stat}</p>
-                              <p className="text-sm text-gray-400">{rec.recommendation}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm text-gray-400">Recommended Bet</p>
-                              <p className="text-2xl font-bold text-green-400">
-                                ${rec.bet_amount.toFixed(2)}
-                              </p>
-                              <p className="text-xs text-purple-400">
-                                Edge: {(rec.edge * 100).toFixed(2)}%
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-gray-400">
-                    <DollarSign className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <p>No betting recommendations available. Fetch predictions first.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
-            <Card className="bg-slate-800/50 backdrop-blur border-purple-500/20">
-              <CardHeader>
-                <CardTitle className="text-2xl text-white">Configure Predictions</CardTitle>
-                <CardDescription className="text-purple-200">
-                  Customize player, game details, and betting parameters
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="playerName" className="text-white">Player Name</Label>
-                    <Input
-                      id="playerName"
-                      value={playerName}
-                      onChange={(e) => setPlayerName(e.target.value)}
-                      className="bg-slate-700 border-gray-600 text-white"
-                      placeholder="LeBron James"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="gameDate" className="text-white">Game Date</Label>
-                    <Input
-                      id="gameDate"
-                      type="date"
-                      value={gameDate}
-                      onChange={(e) => setGameDate(e.target.value)}
-                      className="bg-slate-700 border-gray-600 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="team" className="text-white">Team</Label>
-                    <Input
-                      id="team"
-                      value={team}
-                      onChange={(e) => setTeam(e.target.value)}
-                      className="bg-slate-700 border-gray-600 text-white"
-                      placeholder="LAL"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="opponent" className="text-white">Opponent</Label>
-                    <Input
-                      id="opponent"
-                      value={opponent}
-                      onChange={(e) => setOpponent(e.target.value)}
-                      className="bg-slate-700 border-gray-600 text-white"
-                      placeholder="GSW"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bankroll" className="text-white">Bankroll ($)</Label>
-                    <Input
-                      id="bankroll"
-                      type="number"
-                      value={bankroll}
-                      onChange={(e) => setBankroll(Number(e.target.value))}
-                      className="bg-slate-700 border-gray-600 text-white"
-                      placeholder="10000"
-                    />
-                  </div>
-                </div>
-                <Button 
-                  onClick={fetchPredictions} 
-                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                  size="lg"
-                >
-                  <RefreshCw className="mr-2 h-5 w-5" />
-                  Update Predictions
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {/* Model Info Footer */}
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 text-center text-sm text-slate-400">
+          <div className="flex items-center justify-center gap-2">
+            <Flame className="w-4 h-4 text-orange-400" />
+            <span>Model: XGBoost • ROC-AUC: 0.6701 • Sigmoid Calibrated</span>
+            <Flame className="w-4 h-4 text-orange-400" />
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
+}
+
+function GameCard({ game }: { game: GamePrediction }) {
+  const homeWinProb = game.home_win_prob;
+  const awayWinProb = game.away_win_prob;
+  const homeIsHigher = homeWinProb > 0.5;
+
+  return (
+    <div className="bg-gradient-to-br from-slate-800/70 to-slate-900/70 border border-slate-700/50 hover:border-cyan-500/50 transition-all p-6 rounded-lg shadow-lg hover:shadow-cyan-500/20">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Left: Teams */}
+        <div className="flex items-center justify-between md:justify-center gap-4">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-white mb-2">{game.home_team}</div>
+            <span className="inline-block px-3 py-1 bg-cyan-500/20 text-cyan-400 text-xs font-semibold rounded-full border border-cyan-500/30">
+              🏠 Home
+            </span>
+          </div>
+          <div className="text-xl text-slate-500 font-light">vs</div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-white mb-2">{game.away_team}</div>
+            <span className="inline-block px-3 py-1 bg-orange-500/20 text-orange-400 text-xs font-semibold rounded-full border border-orange-500/30">
+              ✈️ Away
+            </span>
+          </div>
+        </div>
+
+        {/* Center: Probability Bars */}
+        <div className="space-y-4">
+          {/* Home Team Probability */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-semibold text-white">{game.home_team} Win Probability</span>
+              <span className={`text-lg font-bold ${homeIsHigher ? 'text-cyan-400' : 'text-slate-400'}`}>
+                {(homeWinProb * 100).toFixed(1)}%
+              </span>
+            </div>
+            <div className="w-full bg-slate-700/30 rounded-full h-3 overflow-hidden border border-slate-600/50">
+              <div
+                className="bg-gradient-to-r from-cyan-400 to-blue-500 h-full rounded-full transition-all duration-500 shadow-lg shadow-cyan-500/50"
+                style={{ width: `${homeWinProb * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Away Team Probability */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-semibold text-white">{game.away_team} Win Probability</span>
+              <span className={`text-lg font-bold ${!homeIsHigher ? 'text-orange-400' : 'text-slate-400'}`}>
+                {(awayWinProb * 100).toFixed(1)}%
+              </span>
+            </div>
+            <div className="w-full bg-slate-700/30 rounded-full h-3 overflow-hidden border border-slate-600/50">
+              <div
+                className="bg-gradient-to-r from-orange-400 to-red-500 h-full rounded-full transition-all duration-500 shadow-lg shadow-orange-500/50"
+                style={{ width: `${awayWinProb * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Prediction & Confidence */}
+        <div className="space-y-4">
+          {/* Main Prediction */}
+          <div className={`rounded-lg p-4 border-2 ${
+            homeIsHigher 
+              ? 'bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border-cyan-500/50' 
+              : 'bg-gradient-to-br from-orange-500/20 to-red-600/20 border-orange-500/50'
+          }`}>
+            <div className="flex items-center gap-3 mb-2">
+              {homeIsHigher ? (
+                <>
+                  <ArrowUpRight className="w-5 h-5 text-cyan-400" />
+                  <span className="text-white font-bold text-lg">{game.home_team}</span>
+                </>
+              ) : (
+                <>
+                  <ArrowUpRight className="w-5 h-5 text-orange-400 transform scale-x-[-1]" />
+                  <span className="text-white font-bold text-lg">{game.away_team}</span>
+                </>
+              )}
+            </div>
+            <p className="text-xs text-slate-400">Expected to win</p>
+          </div>
+
+          {/* Confidence Score */}
+          <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 rounded-lg p-4 border border-slate-600/50">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-slate-400 font-medium">Model Confidence</span>
+              <Flame className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="text-2xl font-bold text-white mb-2">
+              {(game.confidence * 100).toFixed(0)}%
+            </div>
+            <div className="w-full bg-slate-700/50 rounded-full h-2 overflow-hidden border border-slate-600/50">
+              <div
+                className="bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 h-full transition-all duration-500"
+                style={{ width: `${game.confidence * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Top Feature */}
+          {game.top_features && game.top_features.length > 0 && (
+            <div className="bg-slate-700/30 rounded-lg p-3 border border-slate-600/50">
+              <p className="text-xs text-slate-500 mb-1">🔝 Top Factor</p>
+              <p className="text-sm font-semibold text-white">{game.top_features[0].name}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Expandable Details */}
+      <details className="mt-6 pt-6 border-t border-slate-700/50 cursor-pointer group">
+        <summary className="text-sm text-slate-400 hover:text-cyan-400 font-semibold flex items-center gap-2 select-none">
+          <span className="group-open:rotate-180 transition-transform">▶</span>
+          <TrendingUp className="w-4 h-4" />
+          View All Factors ({game.top_features?.length || 0})
+        </summary>
+        <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {game.top_features?.map((feature, idx) => (
+            <div key={idx} className="bg-slate-700/20 rounded-lg p-3 border border-slate-600/30 hover:border-slate-600/60 transition-all">
+              <p className="text-xs text-slate-500 truncate mb-1">{feature.name}</p>
+              <div className="w-full bg-slate-700/30 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-cyan-400 to-blue-500 h-full rounded-full"
+                  style={{ width: `${Math.min((feature.importance * 100), 100)}%` }}
+                />
+              </div>
+              <p className="text-xs font-semibold text-white mt-1">{(feature.importance * 100).toFixed(1)}%</p>
+            </div>
+          ))}
+        </div>
+      </details>
+
+      {/* Game Time */}
+      <div className="mt-6 pt-6 border-t border-slate-700/50 flex items-center justify-between">
+        <p className="text-xs text-slate-500">
+          📅 {new Date(game.date).toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+          })} at {new Date(game.date).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          })}
+        </p>
+        <span className="text-xs px-2 py-1 bg-slate-700/50 text-slate-400 rounded-full border border-slate-600/50">
+          ID: {game.game_id.substring(0, 8)}
+        </span>
+      </div>
+    </div>
+  );
 }
