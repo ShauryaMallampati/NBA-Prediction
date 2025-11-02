@@ -14,6 +14,7 @@ from src.common.logger import setup_logger
 from src.common.paths import Paths
 from src.data.ingest.live_feature_extractor import LiveFeatureExtractor
 from src.services.live_prediction_service import LivePredictionService
+from src.services.pregame_prediction_service import PregamePredictionService
 from src.models.kelly_criterion import KellyCriterion
 
 logger = setup_logger(__name__)
@@ -225,61 +226,62 @@ async def get_kelly_recommendation(request: KellyRecommendationRequest) -> Kelly
 
 
 @app.get("/predictions", response_model=List[PredictionResponse])
-async def get_predictions(date: Optional[str] = None):
-    """Get pregame predictions for a date."""
-    if date is None:
-        date = str(date.today())
-
-    logger.info(f"Fetching predictions for {date}")
-
-    # Load games for date (simplified - would query DB in production)
-    games_df = pd.read_parquet(Paths.RAW / "games.parquet")
-    games_df = games_df[games_df["date"] == date]
-
-    if games_df.empty:
-        return []
-
-    # Load model
+async def get_predictions(date: Optional[str] = None, home_team: Optional[str] = None, away_team: Optional[str] = None):
+    """Get pregame predictions using trained XGBoost model.
+    
+    Args:
+        date: Optional date in YYYY-MM-DD format (defaults to today)
+        home_team: Optional home team abbreviation for specific game prediction
+        away_team: Optional away team abbreviation for specific game prediction
+    
+    Returns:
+        List of predictions with probabilities
+    """
     try:
-        model = load_model("pregame_lgbm")
-    except FileNotFoundError:
-        raise HTTPException(status_code=503, detail="Model not trained yet. Run 'make train-pregame'")
-
-    # Generate predictions (simplified - would use full feature pipeline)
-    predictions = []
-    for _, game in games_df.iterrows():
-        # Mock features for demo
-        features = pd.DataFrame(
-            [
-                {
-                    "is_home": 1,
-                    "days_rest": 2,
-                    "is_back_to_back": 0,
-                    "pts_last_3": 110,
-                    "pts_last_5": 108,
-                    "pts_last_10": 107,
-                    "margin_last_3": 5,
-                    "margin_last_5": 3,
-                    "margin_last_10": 2,
-                }
-            ]
-        )
-
-        home_win_prob = float(model.predict_proba(features)[0][1])
-
-        predictions.append(
-            PredictionResponse(
-                game_id=str(game["game_id"]),
-                date=date,
-                home_team=game["home_team_name"],
-                away_team=game["away_team_name"],
-                home_win_prob=home_win_prob,
-                away_win_prob=1 - home_win_prob,
-            )
-        )
-
-    logger.info(f"Generated {len(predictions)} predictions")
-    return predictions
+        # Initialize prediction service
+        pred_service = PregamePredictionService()
+        
+        if pred_service.model is None:
+            raise HTTPException(status_code=503, detail="Prediction model not loaded. Please run training first.")
+        
+        # Single game prediction
+        if home_team and away_team:
+            pred = pred_service.predict_game(home_team, away_team, date)
+            return [PredictionResponse(
+                game_id=pred.get('game_id', f'{home_team}_vs_{away_team}'),
+                date=pred.get('date', date or str(date.today())),
+                home_team=home_team,
+                away_team=away_team,
+                home_win_prob=pred['home_win_prob'],
+                away_win_prob=pred['away_win_prob'],
+                top_features=pred.get('top_features'),
+            )]
+        
+        # Get all games for date
+        predictions = pred_service.predict_games_for_date(date)
+        
+        if not predictions:
+            logger.warning(f"No games found for {date or 'today'}")
+            return []
+        
+        result = []
+        for pred in predictions:
+            result.append(PredictionResponse(
+                game_id=pred.get('game_id'),
+                date=pred.get('date', date or str(date.today())),
+                home_team=pred['home_team'],
+                away_team=pred['away_team'],
+                home_win_prob=pred['home_win_prob'],
+                away_win_prob=pred['away_win_prob'],
+                top_features=pred.get('top_features'),
+            ))
+        
+        logger.info(f"Generated {len(result)} predictions")
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error in /predictions: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/game/{game_id}/live")
