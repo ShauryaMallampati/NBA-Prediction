@@ -52,6 +52,9 @@ class EnhancedNBAPregameModel:
         df = pd.read_csv(data_path)
         logger.info(f"Loaded {len(df)} games with engineered features")
         
+        # Convert date to datetime
+        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        
         return df
     
     def create_advanced_features(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -83,32 +86,21 @@ class EnhancedNBAPregameModel:
         
         # 4. Clutch performance (close games)
         df['home_clutch_record'] = df.groupby('home_team').apply(
-            lambda x: x[abs(x['point_diff']) <= 5]['home_win'].mean()
+            lambda x: x[abs(x['score_diff']) <= 5]['home_win'].mean()
         ).to_dict()
         df['home_clutch_record'] = df['home_team'].map(df['home_clutch_record'])
         
-        # 5. Fatigue factor (games in last 7 days)
-        df['date'] = pd.to_datetime(df['date'])
-        df['home_games_last_7d'] = df.groupby('home_team')['date'].transform(
-            lambda x: x.rolling('7D').count() - 1
-        )
-        df['away_games_last_7d'] = df.groupby('away_team')['date'].transform(
-            lambda x: x.rolling('7D').count() - 1
-        )
+        # 5. Fatigue factor (games in last N games, simpler approach)
+        df['home_games_last_5'] = df.groupby('home_team').cumcount()
+        df['away_games_last_5'] = df.groupby('away_team').cumcount()
+        df['home_games_last_5'] = df['home_games_last_5'].apply(lambda x: min(x, 5))
+        df['away_games_last_5'] = df['away_games_last_5'].apply(lambda x: min(x, 5))
         
-        # 6. Playoff experience (if available)
-        df['home_playoff_exp'] = df.groupby('home_team')['season'].transform(
-            lambda x: x.value_counts().max() if len(x) > 0 else 0
-        )
-        df['away_playoff_exp'] = df.groupby('away_team')['season'].transform(
-            lambda x: x.value_counts().max() if len(x) > 0 else 0
-        )
-        
-        # 7. Recent point differential trend
-        df['home_recent_pt_diff'] = df.groupby('home_team')['point_diff'].transform(
+        # 6. Recent point differential trend
+        df['home_recent_pt_diff'] = df.groupby('home_team')['score_diff'].transform(
             lambda x: x.rolling(5, min_periods=1).mean().shift(1)
         )
-        df['away_recent_pt_diff'] = df.groupby('away_team')['point_diff'].transform(
+        df['away_recent_pt_diff'] = df.groupby('away_team')['score_diff'].transform(
             lambda x: -x.rolling(5, min_periods=1).mean().shift(1)
         )
         
@@ -122,14 +114,14 @@ class EnhancedNBAPregameModel:
         # Add advanced features
         df = self.create_advanced_features(df)
         
-        # Remove rows with missing values
-        df = df.dropna()
-        logger.info(f"Data shape after dropna: {df.shape}")
+        # Fill NaN values from rolling features with 0
+        df = df.fillna(0)
+        logger.info(f"Data shape after fillna: {df.shape}")
         
         # Define features (exclude target and metadata)
         exclude_cols = [
-            'game_id', 'date', 'home_team', 'away_team', 'home_win',
-            'home_pts', 'away_pts', 'point_diff', 'season'
+            'game_id', 'date', 'home_team', 'away_team', 'home_win', 'away_win',
+            'home_score', 'away_score', 'score_diff'
         ]
         
         feature_cols = [col for col in df.columns if col not in exclude_cols]

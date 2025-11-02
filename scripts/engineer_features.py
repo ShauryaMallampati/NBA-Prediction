@@ -352,6 +352,7 @@ class FeatureEngineer:
                 features['home_score'] = home_score
                 features['away_score'] = away_score
                 features['home_win'] = 1 if home_score > away_score else 0
+                features['away_win'] = 1 if away_score > home_score else 0
                 features['score_diff'] = home_score - away_score
         
         return features
