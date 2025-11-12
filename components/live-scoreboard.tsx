@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { RefreshCw, Activity, Clock } from "lucide-react"
+import { Activity, Clock, RefreshCw } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
 interface Team {
   id: number

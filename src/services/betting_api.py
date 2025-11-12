@@ -279,9 +279,47 @@ async def get_player_props(
                 
                 logger.debug(f"[{source}] {line.player_name} {line.stat_type}: {predicted_prob:.1%}")
                 
+                # Calculate rest risk (if game context available)
+                rest_predictor = get_rest_predictor()
+                rest_risk = 0.0
+                adjusted_prob = predicted_prob
+                
+                try:
+                    # Create default game context (pre-game assumptions)
+                    # In production, would fetch actual game state from live data
+                    game_context = GameContext(
+                        score_diff=0.0,  # Pre-game: no score diff
+                        quarter=1,  # Pre-game: Q1
+                        time_remaining_sec=12 * 60,  # Pre-game: full quarter
+                        player_minutes_today=0.0,  # Pre-game: no minutes yet
+                        player_minutes_yesterday=0.0,  # TODO: Fetch from player data
+                        is_back_to_back=False,  # TODO: Check schedule
+                        travel_fatigue_score=0.0,  # TODO: Calculate from travel data
+                        team_leading=False,  # Pre-game: no leader
+                    )
+                    
+                    # Calculate rest risk
+                    risk_assessment = rest_predictor.predict_rest_risk(game_context)
+                    rest_risk = risk_assessment.combined_risk
+                    
+                    # Adjust prediction: adjusted = model_prob * (1 - rest_risk)
+                    adjusted_prob = predicted_prob * (1 - rest_risk)
+                    
+                    logger.debug(
+                        f"Rest risk for {line.player_name}: {rest_risk:.1%} "
+                        f"(adjusted: {predicted_prob:.1%} → {adjusted_prob:.1%})"
+                    )
+                except Exception as e:
+                    logger.warning(f"Error calculating rest risk for {line.player_name}: {e}")
+                    # Continue with unadjusted probability if rest risk fails
+                    rest_risk = 0.0
+                    adjusted_prob = predicted_prob
+                
                 # Convert market odds to probability
                 market_prob = odds_engine.american_to_probability(line.over_odds)
-                edge = predicted_prob - market_prob
+                
+                # Use adjusted probability for edge calculation
+                edge = adjusted_prob - market_prob
                 
                 # Classify confidence
                 if edge >= 0.08:
@@ -305,8 +343,8 @@ async def get_player_props(
                     market_prob=market_prob,
                     edge=edge,
                     confidence=confidence,
-                    rest_risk=0.0,  # TODO: Integrate rest risk predictor
-                    adjusted_prob=predicted_prob,
+                    rest_risk=rest_risk,
+                    adjusted_prob=adjusted_prob,
                     sportsbook=line.sportsbook,
                 ))
                 
@@ -356,9 +394,47 @@ async def get_bet_opportunities(
                     model_prob = get_baseline_prediction(line.stat_type)
                     source = "Baseline"
                 
+                # Calculate rest risk (if game context available)
+                rest_predictor = get_rest_predictor()
+                rest_risk = 0.0
+                adjusted_prob = model_prob
+                
+                try:
+                    # Create default game context (pre-game assumptions)
+                    # In production, would fetch actual game state from live data
+                    game_context = GameContext(
+                        score_diff=0.0,  # Pre-game: no score diff
+                        quarter=1,  # Pre-game: Q1
+                        time_remaining_sec=12 * 60,  # Pre-game: full quarter
+                        player_minutes_today=0.0,  # Pre-game: no minutes yet
+                        player_minutes_yesterday=0.0,  # TODO: Fetch from player data
+                        is_back_to_back=False,  # TODO: Check schedule
+                        travel_fatigue_score=0.0,  # TODO: Calculate from travel data
+                        team_leading=False,  # Pre-game: no leader
+                    )
+                    
+                    # Calculate rest risk
+                    risk_assessment = rest_predictor.predict_rest_risk(game_context)
+                    rest_risk = risk_assessment.combined_risk
+                    
+                    # Adjust prediction: adjusted = model_prob * (1 - rest_risk)
+                    adjusted_prob = model_prob * (1 - rest_risk)
+                    
+                    logger.debug(
+                        f"Rest risk for {line.player_name}: {rest_risk:.1%} "
+                        f"(adjusted: {model_prob:.1%} → {adjusted_prob:.1%})"
+                    )
+                except Exception as e:
+                    logger.warning(f"Error calculating rest risk for {line.player_name}: {e}")
+                    # Continue with unadjusted probability if rest risk fails
+                    rest_risk = 0.0
+                    adjusted_prob = model_prob
+                
                 # Convert market odds to implied probability
                 market_prob = odds_engine.american_to_probability(line.over_odds)
-                edge = model_prob - market_prob
+                
+                # Use adjusted probability for edge calculation
+                edge = adjusted_prob - market_prob
                 
                 # Skip bets that don't meet minimum edge threshold
                 if edge < min_edge:
@@ -381,15 +457,15 @@ async def get_bet_opportunities(
                 opportunities.append(BetOpportunity(
                     player_name=line.player_name,
                     stat_type=line.stat_type,
-                    bet_direction="OVER",  # Based on model_prob > 0.5
+                    bet_direction="OVER",  # Based on adjusted_prob > 0.5
                     market_line=line.line,
                     odds=int(line.over_odds),
                     edge=edge,
                     confidence=conf,
                     predicted_prob=model_prob,
                     market_prob=market_prob,
-                    rest_risk=0.0,  # TODO: Calculate rest risk based on game context
-                    adjusted_prob=model_prob,
+                    rest_risk=rest_risk,
+                    adjusted_prob=adjusted_prob,
                     sportsbook=line.sportsbook,
                 ))
                 

@@ -1,4 +1,3 @@
-import { TrendingUp, TrendingDown, Activity } from "lucide-react"
 
 interface PlayerStats {
   ppg: number

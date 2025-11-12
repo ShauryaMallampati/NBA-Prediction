@@ -1,17 +1,14 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
 import {
-  Users,
-  TrendingUp,
-  TrendingDown,
-  Target,
-  Activity,
-  BarChart3,
-  ArrowRight,
-  Zap,
+    Activity,
+    ArrowRight,
+    BarChart3,
+    Target,
+    Users
 } from "lucide-react"
+import Link from "next/link"
+import { useState } from "react"
 
 interface PlayerStats {
   name: string
