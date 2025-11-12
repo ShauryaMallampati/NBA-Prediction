@@ -75,6 +75,17 @@ export default function PredictionsPage() {
             <p className="text-gray-400">
               AI-powered predictions using ensemble machine learning
             </p>
+            <div className="flex gap-4 mt-2">
+              <span className="text-xs text-gray-500">
+                Model: <span className="text-purple-400 font-semibold">XGBoost + LightGBM + CatBoost</span>
+              </span>
+              <span className="text-xs text-gray-500">
+                Accuracy: <span className="text-green-400 font-semibold">81.0%</span>
+              </span>
+              <span className="text-xs text-gray-500">
+                AUC: <span className="text-green-400 font-semibold">0.912</span>
+              </span>
+            </div>
           </div>
           
           <button
@@ -102,6 +113,56 @@ export default function PredictionsPage() {
             </span>
           </div>
         </div>
+
+        {/* Model Performance Stats */}
+        {predictions.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="glass-strong rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">High Confidence</p>
+                  <p className="text-2xl font-bold text-green-400">
+                    {predictions.filter(p => p.confidence >= 0.65).length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-green-400" />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">≥65% confidence</p>
+            </div>
+
+            <div className="glass-strong rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Medium Confidence</p>
+                  <p className="text-2xl font-bold text-yellow-400">
+                    {predictions.filter(p => p.confidence >= 0.55 && p.confidence < 0.65).length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-yellow-400" />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">55-64% confidence</p>
+            </div>
+
+            <div className="glass-strong rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Close Games</p>
+                  <p className="text-2xl font-bold text-orange-400">
+                    {predictions.filter(p => p.confidence < 0.55).length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-orange-400" />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">&lt;55% confidence</p>
+            </div>
+          </div>
+        )}
 
         {/* Error State */}
         {error && (
