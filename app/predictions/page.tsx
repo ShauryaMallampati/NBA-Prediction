@@ -65,30 +65,30 @@ export default function PredictionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
       {/* Navigation Bar */}
-      <nav className="glass-strong border-b border-gray-800 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
+      <nav className="bg-slate-900/95 backdrop-blur-lg border-b border-slate-700/50 sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                 🏀
               </div>
               <div>
-                <h1 className="text-xl font-black tracking-tight">NBA Intel</h1>
-                <p className="text-xs text-gray-400">ML-Powered Analytics</p>
+                <h1 className="text-xl font-black tracking-tight text-white">NBA Intel</h1>
+                <p className="text-xs text-slate-400">ML-Powered Analytics</p>
               </div>
             </Link>
             
             <div className="flex items-center gap-6">
-              <Link href="/" className="flex items-center gap-2 text-sm text-gray-400 hover:text-purple-400 transition-colors">
+              <Link href="/" className="flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors">
                 <ArrowLeft className="w-4 h-4" />
                 Back to Home
               </Link>
-              <Link href="/schedule" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
+              <Link href="/schedule" className="text-sm text-slate-300 hover:text-blue-400 transition-colors">
                 Schedule
               </Link>
-              <Link href="/live" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
+              <Link href="/live" className="text-sm text-slate-300 hover:text-blue-400 transition-colors">
                 Live
               </Link>
             </div>
@@ -96,61 +96,59 @@ export default function PredictionsPage() {
         </div>
       </nav>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-6 py-12">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
-              <Target className="w-8 h-8 text-white" />
+        <div className="mb-12 text-center">
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/50">
+              <Target className="w-10 h-10 text-white" />
             </div>
-            <div className="flex-1">
-              <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Game Predictions
-              </h1>
-              <p className="text-gray-400 text-lg">
-                AI-powered predictions using ensemble machine learning
-              </p>
-            </div>
-            
-            <button
-              onClick={fetchPredictions}
-              disabled={loading}
-              className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 text-white rounded-xl transition-colors shadow-lg hover:shadow-purple-500/50"
-            >
-              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
           </div>
+          <h1 className="text-6xl font-black mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            Game Predictions
+          </h1>
+          <p className="text-slate-300 text-xl mb-8">
+            AI-powered predictions using ensemble machine learning
+          </p>
           
-          <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/20 border border-purple-400/30">
-              <Brain className="w-4 h-4 text-purple-400" />
-              <span className="text-sm text-purple-300 font-semibold">XGBoost + LightGBM + CatBoost</span>
+          <div className="flex flex-wrap justify-center gap-3 mb-6">
+            <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-purple-600/30 border border-purple-400/50">
+              <Brain className="w-5 h-5 text-purple-300" />
+              <span className="text-sm text-white font-semibold">XGBoost + LightGBM + CatBoost</span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 border border-green-400/30">
-              <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-sm text-green-300 font-semibold">81.0% Accuracy</span>
+            <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-green-600/30 border border-green-400/50">
+              <TrendingUp className="w-5 h-5 text-green-300" />
+              <span className="text-sm text-white font-semibold">81.0% Accuracy</span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/20 border border-blue-400/30">
-              <span className="text-sm text-blue-300 font-semibold">0.912 AUC</span>
+            <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600/30 border border-blue-400/50">
+              <span className="text-sm text-white font-semibold">0.912 AUC</span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500/20 border border-yellow-400/30">
-              <span className="text-sm text-yellow-300 font-semibold">63% CV Accuracy</span>
+            <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-yellow-600/30 border border-yellow-400/50">
+              <span className="text-sm text-white font-semibold">63% CV Accuracy</span>
             </div>
           </div>
+            
+          <button
+            onClick={fetchPredictions}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-slate-700 disabled:to-slate-700 text-white rounded-xl transition-all shadow-lg hover:shadow-blue-500/50 font-semibold"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Predictions
+          </button>
         </div>
 
         {/* Date Selector */}
-        <div className="glass-strong rounded-xl p-4 mb-6">
+        <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-6 mb-8 border border-slate-700/50">
           <div className="flex items-center gap-4">
-            <Calendar className="w-5 h-5 text-purple-400" />
+            <Calendar className="w-6 h-6 text-blue-400" />
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-purple-500 focus:outline-none"
+              className="px-6 py-3 bg-slate-900 text-white rounded-lg border-2 border-slate-700 focus:border-blue-500 focus:outline-none font-semibold text-lg"
             />
-            <span className="text-sm text-gray-400">
+            <span className="text-lg text-slate-300 font-semibold">
               {predictions.length} predictions available
             </span>
           </div>
@@ -158,50 +156,50 @@ export default function PredictionsPage() {
 
         {/* Model Performance Stats */}
         {predictions.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="glass-strong rounded-xl p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">High Confidence</p>
-                  <p className="text-2xl font-bold text-green-400">
+                  <p className="text-sm text-slate-400 mb-2 font-semibold">High Confidence</p>
+                  <p className="text-4xl font-black text-green-400">
                     {predictions.filter(p => p.confidence >= 0.65).length}
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-green-400" />
+                <div className="w-16 h-16 rounded-2xl bg-green-600/30 border border-green-400/50 flex items-center justify-center">
+                  <TrendingUp className="w-8 h-8 text-green-400" />
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">≥65% confidence</p>
+              <p className="text-sm text-slate-500 mt-3 font-medium">≥65% confidence</p>
             </div>
 
-            <div className="glass-strong rounded-xl p-4">
+            <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Medium Confidence</p>
-                  <p className="text-2xl font-bold text-yellow-400">
+                  <p className="text-sm text-slate-400 mb-2 font-semibold">Medium Confidence</p>
+                  <p className="text-4xl font-black text-yellow-400">
                     {predictions.filter(p => p.confidence >= 0.55 && p.confidence < 0.65).length}
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-yellow-400" />
+                <div className="w-16 h-16 rounded-2xl bg-yellow-600/30 border border-yellow-400/50 flex items-center justify-center">
+                  <TrendingUp className="w-8 h-8 text-yellow-400" />
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">55-64% confidence</p>
+              <p className="text-sm text-slate-500 mt-3 font-medium">55-64% confidence</p>
             </div>
 
-            <div className="glass-strong rounded-xl p-4">
+            <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Close Games</p>
-                  <p className="text-2xl font-bold text-orange-400">
+                  <p className="text-sm text-slate-400 mb-2 font-semibold">Close Games</p>
+                  <p className="text-4xl font-black text-orange-400">
                     {predictions.filter(p => p.confidence < 0.55).length}
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6 text-orange-400" />
+                <div className="w-16 h-16 rounded-2xl bg-orange-600/30 border border-orange-400/50 flex items-center justify-center">
+                  <AlertCircle className="w-8 h-8 text-orange-400" />
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">&lt;55% confidence</p>
+              <p className="text-sm text-slate-500 mt-3 font-medium">&lt;55% confidence</p>
             </div>
           </div>
         )}
@@ -224,9 +222,9 @@ export default function PredictionsPage() {
 
         {/* Loading State */}
         {loading && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto"></div>
-            <p className="text-gray-400 mt-4">Loading predictions...</p>
+          <div className="text-center py-20">
+            <div className="inline-block w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-slate-300 mt-6 text-lg">Loading predictions...</p>
           </div>
         )}
 
@@ -236,58 +234,58 @@ export default function PredictionsPage() {
             {predictions.map((pred) => (
               <div
                 key={pred.game_id}
-                className="glass-strong rounded-2xl p-8 hover:shadow-xl hover:shadow-purple-500/20 transition-all border border-gray-800 hover:border-purple-500/50"
+                className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-8 hover:shadow-xl hover:shadow-blue-500/20 transition-all border-2 border-slate-700/50 hover:border-blue-500/50"
               >
                 {/* Matchup */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-8">
                   <div className="text-center flex-1">
-                    <div className="text-3xl font-bold text-white mb-1">{pred.away_team}</div>
-                    <div className="text-sm text-gray-500 uppercase tracking-wider">Away</div>
+                    <div className="text-4xl font-black text-white mb-2">{pred.away_team}</div>
+                    <div className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Away</div>
                   </div>
                   
                   <div className="px-6">
-                    <div className="text-2xl font-bold text-gray-600">@</div>
+                    <div className="text-3xl font-black text-slate-600">@</div>
                   </div>
                   
                   <div className="text-center flex-1">
-                    <div className="text-3xl font-bold text-white mb-1">{pred.home_team}</div>
-                    <div className="text-sm text-gray-500 uppercase tracking-wider">Home</div>
+                    <div className="text-4xl font-black text-white mb-2">{pred.home_team}</div>
+                    <div className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Home</div>
                   </div>
                 </div>
 
                 {/* Probabilities */}
-                <div className="grid grid-cols-2 gap-6 mb-6">
-                  <div className="text-center p-4 rounded-xl bg-gray-800/50">
-                    <div className={`text-4xl font-bold mb-2 ${pred.predicted_winner === pred.away_team ? 'text-purple-400' : 'text-gray-600'}`}>
+                <div className="grid grid-cols-2 gap-6 mb-8">
+                  <div className="text-center p-6 rounded-xl bg-slate-900/80 border border-slate-700/50">
+                    <div className={`text-5xl font-black mb-3 ${pred.predicted_winner === pred.away_team ? 'text-blue-400' : 'text-slate-600'}`}>
                       {(pred.away_win_prob * 100).toFixed(1)}%
                     </div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider">Win Probability</div>
+                    <div className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Win Probability</div>
                   </div>
                   
-                  <div className="text-center p-4 rounded-xl bg-gray-800/50">
-                    <div className={`text-4xl font-bold mb-2 ${pred.predicted_winner === pred.home_team ? 'text-purple-400' : 'text-gray-600'}`}>
+                  <div className="text-center p-6 rounded-xl bg-slate-900/80 border border-slate-700/50">
+                    <div className={`text-5xl font-black mb-3 ${pred.predicted_winner === pred.home_team ? 'text-blue-400' : 'text-slate-600'}`}>
                       {(pred.home_win_prob * 100).toFixed(1)}%
                     </div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider">Win Probability</div>
+                    <div className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Win Probability</div>
                   </div>
                 </div>
 
                 {/* Prediction */}
-                <div className={`${getConfidenceBg(pred.confidence)} rounded-xl p-4 mb-6 border ${
-                  pred.confidence >= 0.70 ? 'border-green-500/30' : 
-                  pred.confidence >= 0.60 ? 'border-yellow-500/30' : 
-                  'border-orange-500/30'
+                <div className={`rounded-xl p-6 mb-6 border-2 ${
+                  pred.confidence >= 0.70 ? 'bg-green-600/20 border-green-400/50' : 
+                  pred.confidence >= 0.60 ? 'bg-yellow-600/20 border-yellow-400/50' : 
+                  'bg-orange-600/20 border-orange-400/50'
                 }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-400 font-medium">Predicted Winner:</span>
-                    <span className={`text-xl font-bold ${getConfidenceColor(pred.confidence)}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm text-slate-300 font-semibold uppercase tracking-wider">Predicted Winner:</span>
+                    <span className="text-2xl font-black text-white">
                       {pred.predicted_winner}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">Model Confidence:</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <span className="text-sm text-slate-400 font-semibold">Model Confidence:</span>
+                    <div className="flex items-center gap-3">
+                      <div className="w-40 h-4 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
                         <div 
                           className={`h-full ${
                             pred.confidence >= 0.70 ? 'bg-green-500' : 
@@ -297,7 +295,11 @@ export default function PredictionsPage() {
                           style={{ width: `${pred.confidence * 100}%` }}
                         />
                       </div>
-                      <span className={`text-sm font-bold ${getConfidenceColor(pred.confidence)}`}>
+                      <span className={`text-lg font-black ${
+                        pred.confidence >= 0.70 ? 'text-green-400' : 
+                        pred.confidence >= 0.60 ? 'text-yellow-400' : 
+                        'text-orange-400'
+                      }`}>
                         {(pred.confidence * 100).toFixed(1)}%
                       </span>
                     </div>
@@ -306,18 +308,18 @@ export default function PredictionsPage() {
 
                 {/* Key Factors */}
                 {pred.top_feature_1 && (
-                  <div className="border-t border-gray-800 pt-4">
+                  <div className="border-t border-slate-700/50 pt-6">
                     <div className="flex items-start gap-3">
-                      <TrendingUp className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                      <TrendingUp className="w-6 h-6 text-blue-400 flex-shrink-0 mt-0.5" />
                       <div className="flex-1">
-                        <p className="text-xs text-gray-400 mb-2 uppercase tracking-wider font-semibold">Key Factors:</p>
+                        <p className="text-sm text-slate-300 mb-3 uppercase tracking-wider font-bold">Key Factors:</p>
                         <div className="flex flex-wrap gap-2">
                           {[pred.top_feature_1, pred.top_feature_2, pred.top_feature_3]
                             .filter(Boolean)
                             .map((feature, idx) => (
                               <span
                                 key={idx}
-                                className="text-xs bg-gray-800 px-3 py-1.5 rounded-lg text-gray-300 border border-gray-700 font-medium"
+                                className="text-sm bg-slate-900 px-4 py-2 rounded-lg text-white border border-slate-700 font-semibold"
                               >
                                 {feature?.replace(/_/g, ' ')}
                               </span>
