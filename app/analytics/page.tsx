@@ -1,55 +1,96 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
 import {
-  TrendingUp,
-  Target,
-  DollarSign,
-  Activity,
-  BarChart3,
-  LineChart,
-  PieChart,
-  Calendar,
-  Award,
-  AlertTriangle,
+    Activity,
+    AlertTriangle,
+    Award,
+    BarChart3,
+    Target,
+    TrendingUp,
+    Brain,
+    Zap,
 } from "lucide-react"
+import Link from "next/link"
+import { useEffect, useState } from "react"
 
 interface ModelMetrics {
-  stat: string
-  accuracy: number
-  precision: number
-  recall: number
-  f1_score: number
-  roc_auc: number
-  calibration_score: number
+  overall: {
+    training_accuracy: number
+    cv_accuracy: number
+    auc: number
+    calibration: number
+  }
+  by_model: {
+    xgboost: { accuracy: number; auc: number }
+    lightgbm: { accuracy: number; auc: number }
+    catboost: { accuracy: number; auc: number }
+  }
+  feature_importance: Array<{
+    feature: string
+    importance: number
+  }>
 }
 
 export default function AnalyticsPage() {
-  const [metrics, setMetrics] = useState<ModelMetrics[]>([])
+  const [metrics, setMetrics] = useState<ModelMetrics | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock data for now - will be replaced with real API calls
   useEffect(() => {
-    const mockMetrics: ModelMetrics[] = [
-      { stat: "PTS", accuracy: 0.712, precision: 0.698, recall: 0.745, f1_score: 0.721, roc_auc: 0.782, calibration_score: 0.891 },
-      { stat: "AST", accuracy: 0.689, precision: 0.671, recall: 0.712, f1_score: 0.691, roc_auc: 0.756, calibration_score: 0.867 },
-      { stat: "REB", accuracy: 0.701, precision: 0.688, recall: 0.723, f1_score: 0.705, roc_auc: 0.769, calibration_score: 0.879 },
-      { stat: "STL", accuracy: 0.678, precision: 0.662, recall: 0.698, f1_score: 0.679, roc_auc: 0.741, calibration_score: 0.854 },
-      { stat: "BLK", accuracy: 0.685, precision: 0.669, recall: 0.705, f1_score: 0.686, roc_auc: 0.748, calibration_score: 0.861 },
-    ]
-    
-    setMetrics(mockMetrics)
-    setLoading(false)
+    fetchAnalytics()
   }, [])
 
-  const avgAccuracy = metrics.length > 0 
-    ? (metrics.reduce((sum, m) => sum + m.accuracy, 0) / metrics.length * 100).toFixed(1)
-    : "0.0"
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const response = await fetch('/api/analytics')
+      const data = await response.json()
+      
+      if (data.success && data.metrics) {
+        setMetrics(data.metrics)
+      } else {
+        setError(data.message || 'Failed to load analytics')
+      }
+    } catch (err) {
+      console.error('Error fetching analytics:', err)
+      setError('Failed to fetch analytics data')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const avgCalibration = metrics.length > 0
-    ? (metrics.reduce((sum, m) => sum + m.calibration_score, 0) / metrics.length * 100).toFixed(1)
-    : "0.0"
+  const formatPercent = (value: number) => (value * 100).toFixed(1) + '%'
+  const formatFeatureName = (name: string) => {
+    return name
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading analytics...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !metrics) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+          <p className="text-xl font-semibold text-foreground mb-2">Error Loading Analytics</p>
+          <p className="text-muted-foreground">{error || 'Unknown error occurred'}</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5">
@@ -85,9 +126,9 @@ export default function AnalyticsPage() {
               <Target className="w-8 h-8 text-primary" />
               <TrendingUp className="w-5 h-5 text-chart-5" />
             </div>
-            <p className="text-sm text-muted-foreground font-semibold mb-1">Avg Accuracy</p>
+            <p className="text-sm text-muted-foreground font-semibold mb-1">Training Accuracy</p>
             <p className="text-4xl font-black" style={{ fontFamily: "var(--font-display)" }}>
-              {avgAccuracy}%
+              {formatPercent(metrics.overall.training_accuracy)}
             </p>
           </div>
 
@@ -96,203 +137,168 @@ export default function AnalyticsPage() {
               <Activity className="w-8 h-8 text-chart-4" />
               <Award className="w-5 h-5 text-chart-5" />
             </div>
-            <p className="text-sm text-muted-foreground font-semibold mb-1">Calibration</p>
+            <p className="text-sm text-muted-foreground font-semibold mb-1">CV Accuracy</p>
             <p className="text-4xl font-black text-chart-4" style={{ fontFamily: "var(--font-display)" }}>
-              {avgCalibration}%
+              {formatPercent(metrics.overall.cv_accuracy)}
             </p>
           </div>
 
           <div className="p-6 rounded-2xl glass-strong border-2 border-primary/10 hover:border-primary/30 transition-all">
             <div className="flex items-center justify-between mb-4">
               <BarChart3 className="w-8 h-8 text-chart-2" />
-              <CheckCircle2 className="w-5 h-5 text-chart-5" />
+              <Zap className="w-5 h-5 text-chart-5" />
             </div>
-            <p className="text-sm text-muted-foreground font-semibold mb-1">Total Predictions</p>
+            <p className="text-sm text-muted-foreground font-semibold mb-1">AUC Score</p>
             <p className="text-4xl font-black text-chart-2" style={{ fontFamily: "var(--font-display)" }}>
-              2.4K
+              {formatPercent(metrics.overall.auc)}
             </p>
           </div>
 
           <div className="p-6 rounded-2xl glass-strong border-2 border-primary/10 hover:border-primary/30 transition-all">
             <div className="flex items-center justify-between mb-4">
-              <DollarSign className="w-8 h-8 text-chart-5" />
+              <Brain className="w-8 h-8 text-chart-5" />
               <TrendingUp className="w-5 h-5 text-chart-5" />
             </div>
-            <p className="text-sm text-muted-foreground font-semibold mb-1">ROI (Simulated)</p>
+            <p className="text-sm text-muted-foreground font-semibold mb-1">Calibration</p>
             <p className="text-4xl font-black text-chart-5" style={{ fontFamily: "var(--font-display)" }}>
-              +12.3%
+              {formatPercent(metrics.overall.calibration)}
             </p>
           </div>
         </div>
 
-        {/* Model Performance Table */}
+        {/* Model Comparison */}
         <div className="mb-12 p-8 rounded-3xl glass-strong border-2 border-primary/10">
           <div className="flex items-center gap-3 mb-6">
-            <BarChart3 className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold">Model Performance by Stat</h2>
+            <Brain className="w-6 h-6 text-primary" />
+            <h2 className="text-2xl font-bold">Ensemble Model Comparison</h2>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-4 px-4 text-sm font-bold text-muted-foreground">Stat</th>
-                  <th className="text-right py-4 px-4 text-sm font-bold text-muted-foreground">Accuracy</th>
-                  <th className="text-right py-4 px-4 text-sm font-bold text-muted-foreground">Precision</th>
-                  <th className="text-right py-4 px-4 text-sm font-bold text-muted-foreground">Recall</th>
-                  <th className="text-right py-4 px-4 text-sm font-bold text-muted-foreground">F1 Score</th>
-                  <th className="text-right py-4 px-4 text-sm font-bold text-muted-foreground">ROC AUC</th>
-                  <th className="text-right py-4 px-4 text-sm font-bold text-muted-foreground">Calibration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {metrics.map((metric) => (
-                  <tr key={metric.stat} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                    <td className="py-4 px-4">
-                      <span className="font-bold text-lg">{metric.stat}</span>
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="w-16 h-2 rounded-full bg-muted overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-primary to-chart-5"
-                            style={{ width: `${metric.accuracy * 100}%` }}
-                          />
-                        </div>
-                        <span className="font-bold w-12">{(metric.accuracy * 100).toFixed(1)}%</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-right font-bold">{(metric.precision * 100).toFixed(1)}%</td>
-                    <td className="py-4 px-4 text-right font-bold">{(metric.recall * 100).toFixed(1)}%</td>
-                    <td className="py-4 px-4 text-right font-bold">{(metric.f1_score * 100).toFixed(1)}%</td>
-                    <td className="py-4 px-4 text-right font-bold text-primary">{(metric.roc_auc * 100).toFixed(1)}%</td>
-                    <td className="py-4 px-4 text-right">
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-chart-5/20 text-chart-5 font-bold">
-                        <Award className="w-4 h-4" />
-                        {(metric.calibration_score * 100).toFixed(1)}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* XGBoost */}
+            <div className="p-6 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20">
+              <h3 className="text-lg font-bold mb-4 text-blue-400">XGBoost</h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Accuracy</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500"
+                        style={{ width: formatPercent(metrics.by_model.xgboost.accuracy) }}
+                      />
+                    </div>
+                    <span className="text-sm font-bold">{formatPercent(metrics.by_model.xgboost.accuracy)}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">AUC</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500"
+                        style={{ width: formatPercent(metrics.by_model.xgboost.auc) }}
+                      />
+                    </div>
+                    <span className="text-sm font-bold">{formatPercent(metrics.by_model.xgboost.auc)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* LightGBM */}
+            <div className="p-6 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20">
+              <h3 className="text-lg font-bold mb-4 text-green-400">LightGBM</h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Accuracy</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                      <div 
+                        className="h-full bg-green-500"
+                        style={{ width: formatPercent(metrics.by_model.lightgbm.accuracy) }}
+                      />
+                    </div>
+                    <span className="text-sm font-bold">{formatPercent(metrics.by_model.lightgbm.accuracy)}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">AUC</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                      <div 
+                        className="h-full bg-green-500"
+                        style={{ width: formatPercent(metrics.by_model.lightgbm.auc) }}
+                      />
+                    </div>
+                    <span className="text-sm font-bold">{formatPercent(metrics.by_model.lightgbm.auc)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CatBoost */}
+            <div className="p-6 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20">
+              <h3 className="text-lg font-bold mb-4 text-purple-400">CatBoost</h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Accuracy</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                      <div 
+                        className="h-full bg-purple-500"
+                        style={{ width: formatPercent(metrics.by_model.catboost.accuracy) }}
+                      />
+                    </div>
+                    <span className="text-sm font-bold">{formatPercent(metrics.by_model.catboost.accuracy)}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">AUC</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                      <div 
+                        className="h-full bg-purple-500"
+                        style={{ width: formatPercent(metrics.by_model.catboost.auc) }}
+                      />
+                    </div>
+                    <span className="text-sm font-bold">{formatPercent(metrics.by_model.catboost.auc)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Feature Importance & Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Features */}
-          <div className="p-8 rounded-3xl glass-strong border-2 border-primary/10">
-            <div className="flex items-center gap-3 mb-6">
-              <LineChart className="w-6 h-6 text-primary" />
-              <h3 className="text-xl font-bold">Top Features</h3>
-            </div>
-            
-            <div className="space-y-4">
-              {[
-                { name: "Recent Performance (L5)", importance: 0.18 },
-                { name: "Matchup History", importance: 0.15 },
-                { name: "Home/Away", importance: 0.12 },
-                { name: "Minutes per Game", importance: 0.11 },
-                { name: "Team Pace", importance: 0.09 },
-                { name: "Rest Days", importance: 0.08 },
-                { name: "Usage Rate", importance: 0.07 },
-                { name: "Opponent Defense", importance: 0.06 },
-              ].map((feature, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-muted-foreground w-48">{feature.name}</span>
-                  <div className="flex-1 h-6 rounded-full bg-muted overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-primary to-chart-5 flex items-center justify-end px-2"
-                      style={{ width: `${feature.importance * 100}%` }}
-                    >
-                      <span className="text-xs font-bold text-white">{(feature.importance * 100).toFixed(0)}%</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Feature Importance */}
+        <div className="p-8 rounded-3xl glass-strong border-2 border-primary/10">
+          <div className="flex items-center gap-3 mb-6">
+            <TrendingUp className="w-6 h-6 text-primary" />
+            <h2 className="text-2xl font-bold">Top 10 Most Important Features</h2>
           </div>
 
-          {/* Recent Insights */}
-          <div className="p-8 rounded-3xl glass-strong border-2 border-primary/10">
-            <div className="flex items-center gap-3 mb-6">
-              <PieChart className="w-6 h-6 text-primary" />
-              <h3 className="text-xl font-bold">Recent Insights</h3>
-            </div>
-
-            <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-chart-5/10 border-2 border-chart-5/20">
-                <div className="flex items-start gap-3">
-                  <Award className="w-5 h-5 text-chart-5 flex-shrink-0 mt-1" />
-                  <div>
-                    <p className="font-bold text-chart-5 mb-1">High Confidence Week</p>
-                    <p className="text-sm text-muted-foreground">
-                      Last 7 days showed 8.2% improvement in calibration scores across all models.
-                    </p>
+          <div className="space-y-4">
+            {metrics.feature_importance.map((feature, idx) => (
+              <div key={feature.feature} className="flex items-center gap-4">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold">
+                  {idx + 1}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold">{formatFeatureName(feature.feature)}</span>
+                    <span className="text-sm font-bold text-muted-foreground">{formatPercent(feature.importance)}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-primary to-secondary"
+                      style={{ width: formatPercent(feature.importance / metrics.feature_importance[0].importance) }}
+                    />
                   </div>
                 </div>
               </div>
-
-              <div className="p-4 rounded-xl bg-chart-2/10 border-2 border-chart-2/20">
-                <div className="flex items-start gap-3">
-                  <Activity className="w-5 h-5 text-chart-2 flex-shrink-0 mt-1" />
-                  <div>
-                    <p className="font-bold text-chart-2 mb-1">PTS Model Leading</p>
-                    <p className="text-sm text-muted-foreground">
-                      Points predictions maintaining 71.2% accuracy with excellent calibration.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-chart-4/10 border-2 border-chart-4/20">
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-chart-4 flex-shrink-0 mt-1" />
-                  <div>
-                    <p className="font-bold text-chart-4 mb-1">2,431 Predictions Made</p>
-                    <p className="text-sm text-muted-foreground">
-                      Successfully processed predictions for 487 unique players this season.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-destructive/10 border-2 border-destructive/20">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-1" />
-                  <div>
-                    <p className="font-bold text-destructive mb-1">Monitor STL Model</p>
-                    <p className="text-sm text-muted-foreground">
-                      Steals predictions showing slight variance - may need recalibration.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </main>
     </div>
-  )
-}
-
-function CheckCircle2(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
   )
 }

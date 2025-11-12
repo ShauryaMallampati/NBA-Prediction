@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ArrowUpRight, Flame, Zap, TrendingUp, RefreshCw } from 'lucide-react';
+import { ArrowUpRight, Flame, TrendingUp, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface GamePrediction {
   game_id: string;

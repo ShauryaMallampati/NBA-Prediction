@@ -1,17 +1,17 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
 import {
-  DollarSign,
-  TrendingUp,
-  Target,
-  Calculator,
-  PieChart,
-  AlertTriangle,
-  CheckCircle2,
-  Info,
+    AlertTriangle,
+    Calculator,
+    CheckCircle2,
+    DollarSign,
+    Info,
+    PieChart,
+    Target,
+    TrendingUp,
 } from "lucide-react"
+import Link from "next/link"
+import { useState } from "react"
 
 interface BetRecommendation {
   stat: string

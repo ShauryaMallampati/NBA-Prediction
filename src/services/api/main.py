@@ -227,7 +227,7 @@ async def get_kelly_recommendation(request: KellyRecommendationRequest) -> Kelly
 
 @app.get("/predictions", response_model=List[PredictionResponse])
 async def get_predictions(date: Optional[str] = None, home_team: Optional[str] = None, away_team: Optional[str] = None):
-    """Get pregame predictions using trained XGBoost model.
+    """Get pregame predictions using trained ensemble model (XGBoost + LightGBM + CatBoost).
     
     Args:
         date: Optional date in YYYY-MM-DD format (defaults to today)
@@ -235,48 +235,75 @@ async def get_predictions(date: Optional[str] = None, home_team: Optional[str] =
         away_team: Optional away team abbreviation for specific game prediction
     
     Returns:
-        List of predictions with probabilities
+        List of predictions with probabilities and feature importance
     """
     try:
-        # Initialize prediction service
-        pred_service = PregamePredictionService()
+        # Load ensemble predictor
+        from src.models.pregame.predictor import EnsemblePredictor
+        predictor = EnsemblePredictor(str(Paths.MODELS / "pregame"))
         
-        if pred_service.model is None:
-            raise HTTPException(status_code=503, detail="Prediction model not loaded. Please run training first.")
+        # Load features
+        features_path = Paths.ARTIFACTS / "features" / "pregame.parquet"
+        if not features_path.exists():
+            raise HTTPException(
+                status_code=503,
+                detail="Features not found. Run feature engineering first."
+            )
         
-        # Single game prediction
+        df = pd.read_parquet(features_path)
+        
+        # Convert dates to string format for comparison (handle both ISO and simple date formats)
+        if 'date' in df.columns:
+            df['date_str'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
+        
+        # Filter by date if provided
+        if date:
+            df = df[df['date_str'] == date] if 'date_str' in df.columns else df
+        else:
+            # Get today's games or latest games
+            if 'date_str' in df.columns:
+                from datetime import date as date_obj
+                today_str = str(date_obj.today())
+                df = df[df['date_str'] == today_str]
+        
+        # Filter by teams if provided
         if home_team and away_team:
-            pred = pred_service.predict_game(home_team, away_team, date)
-            return [PredictionResponse(
-                game_id=pred.get('game_id', f'{home_team}_vs_{away_team}'),
-                date=pred.get('date', date or str(date.today())),
-                home_team=home_team,
-                away_team=away_team,
-                home_win_prob=pred['home_win_prob'],
-                away_win_prob=pred['away_win_prob'],
-                top_features=pred.get('top_features'),
-            )]
+            df = df[
+                (df['home_team'] == home_team) & (df['away_team'] == away_team)
+            ]
         
-        # Get all games for date
-        predictions = pred_service.predict_games_for_date(date)
-        
-        if not predictions:
+        if df.empty:
             logger.warning(f"No games found for {date or 'today'}")
             return []
         
+        # Get predictions with feature importance
+        predictions = predictor.predict_with_features(df, top_n=5)
+        
+        # Build response
         result = []
-        for pred in predictions:
+        for i, (_, row) in enumerate(df.iterrows()):
+            pred_data = predictions[i]
+            
+            # Format top features as dict
+            top_features = {
+                feat['feature']: {
+                    'importance': feat['importance'],
+                    'value': feat['value']
+                }
+                for feat in pred_data['top_features']
+            }
+            
             result.append(PredictionResponse(
-                game_id=pred.get('game_id'),
-                date=pred.get('date', date or str(date.today())),
-                home_team=pred['home_team'],
-                away_team=pred['away_team'],
-                home_win_prob=pred['home_win_prob'],
-                away_win_prob=pred['away_win_prob'],
-                top_features=pred.get('top_features'),
+                game_id=row.get('game_id', f"game_{i}"),
+                date=row.get('date', date or str(date_obj.today())),
+                home_team=row.get('home_team', row.get('home', 'Unknown')),
+                away_team=row.get('away_team', row.get('away', 'Unknown')),
+                home_win_prob=float(pred_data['prediction']),
+                away_win_prob=float(1 - pred_data['prediction']),
+                top_features=top_features,
             ))
         
-        logger.info(f"Generated {len(result)} predictions")
+        logger.info(f"Generated {len(result)} predictions using ensemble model")
         return result
     
     except Exception as e:
