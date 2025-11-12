@@ -1,4 +1,4 @@
-"use client""use client""use client""use client""use client"
+"use client""use client""use client""use client""use client""use client"
 
 
 
@@ -30,7 +30,7 @@ interface Game {import Link from "next/link"
 
 interface GamesByDate {
 
-  [date: string]: Game[]  date: stringimport { ArrowLeft, Calendar, ChevronLeft, ChevronRight, RefreshCw, Clock, MapPin } from "lucide-react"import { useEffect, useState } from "react"import { useState } from "react"
+  [date: string]: Game[]  date: stringimport { ArrowLeft, Calendar, ChevronLeft, ChevronRight, RefreshCw, Clock, MapPin } from "lucide-react"import { useState, useEffect } from "react"
 
 }
 
@@ -46,7 +46,7 @@ export default function SchedulePage() {
 
   const [currentMonth, setCurrentMonth] = useState<string>(new Date().toISOString().slice(0, 7))
 
-    season: stringinterface Game {import { Calendar, ChevronLeft, ChevronRight, RefreshCw, AlertCircle } from "lucide-react"import Link from "next/link"
+    season: stringinterface Game {import Link from "next/link"
 
   const monthNames = [
 
@@ -62,7 +62,7 @@ export default function SchedulePage() {
 
     fetchSchedule()
 
-  }, [currentMonth])  [date: string]: Game[]  date: stringimport Link from "next/link"import { ArrowLeft, Calendar, TrendingUp, TrendingDown, Minus } from "lucide-react"
+  }, [currentMonth])  [date: string]: Game[]  date: stringimport { ArrowLeft, Calendar, ChevronLeft, ChevronRight, RefreshCw, Clock, MapPin } from "lucide-react"import { useEffect, useState } from "react"import { useState } from "react"
 
 
 
@@ -78,7 +78,7 @@ export default function SchedulePage() {
 
       
 
-      if (data.error) {  const [gamesByDate, setGamesByDate] = useState<GamesByDate>({})  away_team: stringimport { Card } from "@/components/ui/card"
+      if (data.error) {  const [gamesByDate, setGamesByDate] = useState<GamesByDate>({})  away_team: string
 
         console.error('Error fetching schedule:', data.error)
 
@@ -94,179 +94,449 @@ export default function SchedulePage() {
 
     } catch (error) {
 
-      console.error('Error:', error)  season: stringinterface Team {
+      console.error('Error:', error)    season: stringinterface Game {import { Calendar, ChevronLeft, ChevronRight, RefreshCw, AlertCircle } from "lucide-react"import Link from "next/link"
 
     } finally {
 
-      setLoading(false)  const fetchSchedule = async (month: string) => {
+      setLoading(false)  const monthNames = [
 
     }
 
-  }    setLoading(true)}
+  }    "January", "February", "March", "April", "May", "June",}
 
 
 
-  const changeMonth = (direction: 'prev' | 'next') => {    try {
+  const changeMonth = (direction: 'prev' | 'next') => {    "July", "August", "September", "October", "November", "December"
 
     const [year, month] = currentMonth.split('-').map(Number)
 
-    let newYear = year      const response = await fetch(`/api/schedule?month=${month}`)  id: numberconst mockGames = [
+    let newYear = year  ]  game_id: string
 
     let newMonth = month
 
-      const data = await response.json()
+
 
     if (direction === 'prev') {
 
-      newMonth -= 1      interface GamesByDate {
+      newMonth -= 1  useEffect(() => {interface GamesByDate {
 
       if (newMonth < 1) {
 
-        newMonth = 12      if (data.success) {
+        newMonth = 12    fetchSchedule()
 
         newYear -= 1
 
-      }        setGamesByDate(data.gamesByDate || {})  [date: string]: Game[]  name: string  {
+      }  }, [currentMonth])  [date: string]: Game[]  date: stringimport Link from "next/link"import { ArrowLeft, Calendar, TrendingUp, TrendingDown, Minus } from "lucide-react"
 
     } else {
 
-      newMonth += 1        setDates(data.dates || [])
+      newMonth += 1
 
       if (newMonth > 12) {
 
-        newMonth = 1      }}
+        newMonth = 1  const fetchSchedule = async () => {}
 
         newYear += 1
 
-      }    } catch (error) {
+      }    try {
 
     }
 
-      console.error('Failed to fetch schedule:', error)  abbreviation: string    id: "1",
+      setLoading(true)  home_team: string
 
     setCurrentMonth(`${newYear}-${String(newMonth).padStart(2, '0')}`)
 
-  }    } finally {
+  }      const response = await fetch(`/api/schedule?month=${currentMonth}`)
 
 
 
-  const formatDate = (dateStr: string) => {      setLoading(false)export default function SchedulePage() {
+  const formatDate = (dateStr: string) => {      const data = await response.json()export default function SchedulePage() {
 
     const date = new Date(dateStr + 'T00:00:00')
 
-    return date.toLocaleDateString('en-US', {     }
+    return date.toLocaleDateString('en-US', {       
 
       weekday: 'short',
 
-      month: 'short',   }  const [gamesByDate, setGamesByDate] = useState<GamesByDate>({})  score: number    date: "2025-10-27",
+      month: 'short',       if (data.error) {  const [gamesByDate, setGamesByDate] = useState<GamesByDate>({})  away_team: stringimport { Card } from "@/components/ui/card"
 
       day: 'numeric',
 
-      year: 'numeric'
+      year: 'numeric'        console.error('Error fetching schedule:', data.error)
 
     })
 
-  }  useEffect(() => {  const [dates, setDates] = useState<string[]>([])
+  }        return  const [dates, setDates] = useState<string[]>([])
 
 
 
-  const isToday = (dateStr: string) => {    fetchSchedule(currentMonth)
+  const isToday = (dateStr: string) => {      }
 
     const today = new Date()
 
-    today.setHours(today.getHours() - 8) // Adjust to PST  }, [currentMonth])  const [loading, setLoading] = useState(true)}    time: "7:30 PM ET",
+    today.setHours(today.getHours() - 8)  const [loading, setLoading] = useState(true)  game_time: string
 
     const todayStr = today.toISOString().split('T')[0]
 
-    return dateStr === todayStr
+    return dateStr === todayStr      setGamesByDate(data.games_by_date || {})
 
   }
 
-  const changeMonth = (direction: 'prev' | 'next') => {  const [currentMonth, setCurrentMonth] = useState<string>(new Date().toISOString().slice(0, 7))
+      setDates(data.dates || [])  const [currentMonth, setCurrentMonth] = useState<string>(new Date().toISOString().slice(0, 7))
 
   const getCurrentMonthName = () => {
 
-    const [year, month] = currentMonth.split('-').map(Number)    const [year, month] = currentMonth.split('-').map(Number)
+    const [year, month] = currentMonth.split('-').map(Number)    } catch (error) {
 
     return `${monthNames[month - 1]} ${year}`
 
-  }    let newYear = year    homeTeam: "Los Angeles Lakers",
+  }      console.error('Error:', error)  season: stringinterface Team {
 
 
 
-  return (    let newMonth = month
+  return (    } finally {
 
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
 
-      {/* Header */}  const fetchSchedule = async (month: string) => {
+      {/* Header */}      setLoading(false)  const fetchSchedule = async (month: string) => {
 
       <div className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-10">
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">    if (direction === 'prev') {
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">    }
 
           <div className="flex items-center justify-between">
 
-            <div className="flex items-center space-x-4">      newMonth--    setLoading(true)interface Game {    awayTeam: "Boston Celtics",
+            <div className="flex items-center space-x-4">  }    setLoading(true)}
 
               <Link 
 
-                href="/"      if (newMonth < 1) {
+                href="/"
 
                 className="text-slate-400 hover:text-white transition-colors flex items-center space-x-2"
 
-              >        newMonth = 12    try {
+              >  const changeMonth = (direction: 'prev' | 'next') => {    try {
 
                 <ArrowLeft className="w-5 h-5" />
 
-                <span className="text-sm font-medium">Back</span>        newYear--
+                <span className="text-sm font-medium">Back</span>    const [year, month] = currentMonth.split('-').map(Number)
 
               </Link>
 
-              <div className="h-6 w-px bg-slate-700"></div>      }      const response = await fetch(`/api/schedule?month=${month}`)  game_id: string    homeWinProb: 0.4,
+              <div className="h-6 w-px bg-slate-700"></div>    let newYear = year      const response = await fetch(`/api/schedule?month=${month}`)  id: numberconst mockGames = [
 
               <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
 
-                <Calendar className="w-6 h-6 text-blue-400" />    } else {
+                <Calendar className="w-6 h-6 text-blue-400" />    let newMonth = month
 
                 <span>NBA Schedule</span>
 
-              </h1>      newMonth++      const data = await response.json()
+              </h1>      const data = await response.json()
 
             </div>
 
-          </div>      if (newMonth > 12) {
+          </div>    if (direction === 'prev') {
 
         </div>
 
-      </div>        newMonth = 1        date: string    awayWinProb: 0.6,
+      </div>      newMonth -= 1      interface GamesByDate {
 
 
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">        newYear++
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">      if (newMonth < 1) {
 
         {/* Month Navigation */}
 
-        <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-slate-700/50">      }      if (data.success) {
+        <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-slate-700/50">        newMonth = 12      if (data.success) {
 
           <div className="flex items-center justify-between">
 
-            <button    }
+            <button        newYear -= 1
 
               onClick={() => changeMonth('prev')}
 
-              className="flex items-center space-x-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-colors"        setGamesByDate(data.gamesByDate || {})  status: string    homeElo: 1620,
+              className="flex items-center space-x-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-colors"      }        setGamesByDate(data.gamesByDate || {})  [date: string]: Game[]  name: string  {
 
             >
 
-              <ChevronLeft className="w-5 h-5" />    setCurrentMonth(`${newYear}-${String(newMonth).padStart(2, '0')}`)
+              <ChevronLeft className="w-5 h-5" />    } else {
 
               <span>Previous</span>
 
-            </button>  }        setDates(data.dates || [])
+            </button>      newMonth += 1        setDates(data.dates || [])
 
             
 
-            <div className="text-center">
+            <div className="text-center">      if (newMonth > 12) {
+
+              <h2 className="text-2xl font-bold text-white mb-1">
+
+                {getCurrentMonthName()}        newMonth = 1      }}
+
+              </h2>
+
+              <p className="text-slate-400 text-sm">        newYear += 1
+
+                {dates.length} game days • {Object.values(gamesByDate).flat().length} games
+
+              </p>      }    } catch (error) {
+
+            </div>
+
+    }
+
+            <button
+
+              onClick={() => changeMonth('next')}      console.error('Failed to fetch schedule:', error)  abbreviation: string    id: "1",
+
+              className="flex items-center space-x-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-colors"
+
+            >    setCurrentMonth(`${newYear}-${String(newMonth).padStart(2, '0')}`)
+
+              <span>Next</span>
+
+              <ChevronRight className="w-5 h-5" />  }    } finally {
+
+            </button>
+
+          </div>
+
+
+
+          <button  const formatDate = (dateStr: string) => {      setLoading(false)export default function SchedulePage() {
+
+            onClick={fetchSchedule}
+
+            className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"    const date = new Date(dateStr + 'T00:00:00')
+
+          >
+
+            <RefreshCw className="w-4 h-4" />    return date.toLocaleDateString('en-US', {     }
+
+            <span>Refresh</span>
+
+          </button>      weekday: 'short',
+
+        </div>
+
+      month: 'short',   }  const [gamesByDate, setGamesByDate] = useState<GamesByDate>({})  score: number    date: "2025-10-27",
+
+        {/* Loading State */}
+
+        {loading && (      day: 'numeric',
+
+          <div className="text-center py-12">
+
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>      year: 'numeric'
+
+            <p className="text-slate-400 mt-4">Loading schedule...</p>
+
+          </div>    })
+
+        )}
+
+  }  useEffect(() => {  const [dates, setDates] = useState<string[]>([])
+
+        {/* No Games State */}
+
+        {!loading && dates.length === 0 && (
+
+          <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-slate-700/50">
+
+            <Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" />  const isToday = (dateStr: string) => {    fetchSchedule(currentMonth)
+
+            <h3 className="text-xl font-semibold text-white mb-2">No Games Scheduled</h3>
+
+            <p className="text-slate-400">There are no games scheduled for {getCurrentMonthName()}</p>    const today = new Date()
+
+          </div>
+
+        )}    today.setHours(today.getHours() - 8) // Adjust to PST  }, [currentMonth])  const [loading, setLoading] = useState(true)}    time: "7:30 PM ET",
+
+
+
+        {/* Games by Date */}    const todayStr = today.toISOString().split('T')[0]
+
+        {!loading && dates.map((date) => {
+
+          const games = gamesByDate[date] || []    return dateStr === todayStr
+
+          const today = isToday(date)
+
+            }
+
+          return (
+
+            <div key={date} className="mb-8">  const changeMonth = (direction: 'prev' | 'next') => {  const [currentMonth, setCurrentMonth] = useState<string>(new Date().toISOString().slice(0, 7))
+
+              {/* Date Header */}
+
+              <div className={`flex items-center space-x-3 mb-4 pb-2 border-b ${  const getCurrentMonthName = () => {
+
+                today 
+
+                  ? 'border-blue-500/50'     const [year, month] = currentMonth.split('-').map(Number)    const [year, month] = currentMonth.split('-').map(Number)
+
+                  : 'border-slate-700/50'
+
+              }`}>    return `${monthNames[month - 1]} ${year}`
+
+                <div className={`px-4 py-2 rounded-lg font-semibold ${
+
+                  today   }    let newYear = year    homeTeam: "Los Angeles Lakers",
+
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50' 
+
+                    : 'bg-slate-700/50 text-slate-200'
+
+                }`}>
+
+                  {today ? 'TODAY' : formatDate(date)}  return (    let newMonth = month
+
+                </div>
+
+                <span className="text-slate-400 text-sm">    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
+
+                  {games.length} {games.length === 1 ? 'game' : 'games'}
+
+                </span>      {/* Header */}  const fetchSchedule = async (month: string) => {
+
+              </div>
+
+      <div className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-10">
+
+              {/* Games Grid */}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">    if (direction === 'prev') {
+
+                {games.map((game) => (
+
+                  <Link          <div className="flex items-center justify-between">
+
+                    key={game.game_id}
+
+                    href={`/predictions?date=${date}`}            <div className="flex items-center space-x-4">      newMonth--    setLoading(true)interface Game {    awayTeam: "Boston Celtics",
+
+                    className="block"
+
+                  >              <Link 
+
+                    <div className="bg-slate-800/80 hover:bg-slate-800 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-200 group">
+
+                      {/* Time */}                href="/"      if (newMonth < 1) {
+
+                      <div className="flex items-center space-x-2 mb-4">
+
+                        <Clock className="w-4 h-4 text-blue-400" />                className="text-slate-400 hover:text-white transition-colors flex items-center space-x-2"
+
+                        <span className="text-slate-400 text-sm">{game.game_time}</span>
+
+                      </div>              >        newMonth = 12    try {
+
+
+
+                      {/* Teams */}                <ArrowLeft className="w-5 h-5" />
+
+                      <div className="space-y-3">
+
+                        {/* Away Team */}                <span className="text-sm font-medium">Back</span>        newYear--
+
+                        <div className="flex items-center justify-between">
+
+                          <div className="flex items-center space-x-3">              </Link>
+
+                            <MapPin className="w-4 h-4 text-slate-500" />
+
+                            <span className="text-white font-semibold text-lg">              <div className="h-6 w-px bg-slate-700"></div>      }      const response = await fetch(`/api/schedule?month=${month}`)  game_id: string    homeWinProb: 0.4,
+
+                              {game.away_team}
+
+                            </span>              <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
+
+                          </div>
+
+                          <span className="text-slate-500 text-sm">Away</span>                <Calendar className="w-6 h-6 text-blue-400" />    } else {
+
+                        </div>
+
+                <span>NBA Schedule</span>
+
+                        {/* VS Divider */}
+
+                        <div className="flex items-center">              </h1>      newMonth++      const data = await response.json()
+
+                          <div className="flex-1 h-px bg-slate-700/50"></div>
+
+                          <span className="px-3 text-slate-500 text-xs font-semibold">VS</span>            </div>
+
+                          <div className="flex-1 h-px bg-slate-700/50"></div>
+
+                        </div>          </div>      if (newMonth > 12) {
+
+
+
+                        {/* Home Team */}        </div>
+
+                        <div className="flex items-center justify-between">
+
+                          <div className="flex items-center space-x-3">      </div>        newMonth = 1        date: string    awayWinProb: 0.6,
+
+                            <MapPin className="w-4 h-4 text-blue-400" />
+
+                            <span className="text-white font-semibold text-lg">
+
+                              {game.home_team}
+
+                            </span>      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">        newYear++
+
+                          </div>
+
+                          <span className="text-blue-400 text-sm">Home</span>        {/* Month Navigation */}
+
+                        </div>
+
+                      </div>        <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-slate-700/50">      }      if (data.success) {
+
+
+
+                      {/* View Prediction Link */}          <div className="flex items-center justify-between">
+
+                      <div className="mt-4 pt-4 border-t border-slate-700/50">
+
+                        <span className="text-blue-400 text-sm group-hover:text-blue-300 transition-colors flex items-center justify-center">            <button    }
+
+                          View Prediction
+
+                          <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">              onClick={() => changeMonth('prev')}
+
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+
+                          </svg>              className="flex items-center space-x-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-colors"        setGamesByDate(data.gamesByDate || {})  status: string    homeElo: 1620,
+
+                        </span>
+
+                      </div>            >
+
+                    </div>
+
+                  </Link>              <ChevronLeft className="w-5 h-5" />    setCurrentMonth(`${newYear}-${String(newMonth).padStart(2, '0')}`)
+
+                ))}
+
+              </div>              <span>Previous</span>
+
+            </div>
+
+          )            </button>  }        setDates(data.dates || [])
+
+        })}
+
+      </div>            
+
+    </div>
+
+  )            <div className="text-center">
+
+}
 
               <h2 className="text-2xl font-bold text-white mb-1">
 
