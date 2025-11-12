@@ -22,9 +22,12 @@ export default function PredictionsPage() {
   const [predictions, setPredictions] = useState<Prediction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  )
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    // Always default to today (2025-11-12 in PST)
+    const today = new Date()
+    today.setHours(today.getHours() - 8) // Adjust to PST
+    return today.toISOString().split('T')[0]
+  })
 
   const fetchPredictions = async () => {
     setLoading(true)
@@ -36,8 +39,9 @@ export default function PredictionsPage() {
       
       if (data.success) {
         setPredictions(data.predictions || [])
+        setError(null)
       } else {
-        setError(data.message || "No predictions available")
+        setError(data.message || "No predictions available for this date")
         setPredictions([])
       }
     } catch (err) {
@@ -205,16 +209,48 @@ export default function PredictionsPage() {
         )}
 
         {/* Error State */}
-        {error && (
-          <div className="glass-strong rounded-xl p-6 mb-6 border border-red-500/50">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-red-400 font-medium">Unable to load predictions</p>
-                <p className="text-sm text-gray-400 mt-1">{error}</p>
-                <p className="text-xs text-gray-500 mt-2">
-                  Run: <code className="bg-gray-800 px-2 py-1 rounded">poetry run python scripts/generate_todays_predictions.py</code>
-                </p>
+        {error && !loading && (
+          <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-yellow-500/50">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="w-8 h-8 text-yellow-400 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <p className="text-yellow-400 font-bold text-xl mb-3">Predictions Not Yet Available</p>
+                <p className="text-slate-300 text-lg mb-4">{error}</p>
+                <div className="bg-slate-900/80 rounded-xl p-6 border border-slate-700/50">
+                  <p className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-blue-400" />
+                    Automated Prediction Schedule
+                  </p>
+                  <ul className="space-y-2 text-slate-300">
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-400 font-bold">•</span>
+                      <span>Predictions are automatically generated every day at <strong className="text-white">9:00 AM PST</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-400 font-bold">•</span>
+                      <span>Predictions include all NBA games scheduled for that day</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-400 font-bold">•</span>
+                      <span>Check back after 9 AM to see today's predictions</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="mt-6 flex items-center gap-4">
+                  <button
+                    onClick={fetchPredictions}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl font-semibold transition-all flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-5 h-5" />
+                    Retry
+                  </button>
+                  <Link
+                    href="/schedule"
+                    className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-semibold transition-all"
+                  >
+                    View Schedule
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
