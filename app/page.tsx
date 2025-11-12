@@ -102,11 +102,19 @@ export default function HomePage() {
 
           <div className="flex flex-wrap items-center justify-center gap-6 pt-8">
             <Link
-              href="/schedule"
-              className="group inline-flex items-center gap-3 px-10 py-5 rounded-2xl bg-primary text-primary-foreground font-bold text-lg hover:scale-105 transition-all duration-300 glow-lg shadow-2xl"
+              href="/predictions"
+              className="group inline-flex items-center gap-3 px-10 py-5 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg hover:scale-105 transition-all duration-300 glow-lg shadow-2xl hover:shadow-purple-500/50"
             >
-              View Schedule
+              <Target className="w-6 h-6" />
+              View Predictions
               <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+            </Link>
+            <Link
+              href="/schedule"
+              className="inline-flex items-center gap-3 px-10 py-5 rounded-2xl glass-strong font-bold text-lg hover:bg-accent hover:scale-105 transition-all duration-300 border-2"
+            >
+              <Calendar className="w-5 h-5" />
+              Schedule
             </Link>
             <Link
               href="/live"
@@ -120,16 +128,52 @@ export default function HomePage() {
 
         <div className="max-w-7xl mx-auto grid md:grid-cols-6 gap-6 mb-24">
           <Link
+            href="/predictions"
+            className="group md:col-span-6 p-12 rounded-3xl bg-gradient-to-br from-purple-600/20 via-pink-600/20 to-purple-600/20 hover:from-purple-600/30 hover:via-pink-600/30 hover:to-purple-600/30 transition-all duration-500 hover:scale-[1.02] border-2 border-purple-500/50 hover:border-purple-400 hover:shadow-2xl hover:shadow-purple-500/30"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-purple-500/20 border border-purple-400/50 mb-6">
+                  <Brain className="w-5 h-5 text-purple-400" />
+                  <span className="text-sm font-bold text-purple-300">AI-Powered Predictions</span>
+                </div>
+                <h3 className="text-6xl font-black mb-6 text-balance bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent" style={{ fontFamily: "var(--font-display)" }}>
+                  Today's Game Predictions
+                </h3>
+                <p className="text-xl text-gray-300 leading-relaxed mb-8 max-w-3xl">
+                  Ensemble ML model (XGBoost + LightGBM + CatBoost) with <span className="text-green-400 font-bold">81% accuracy</span> and <span className="text-green-400 font-bold">0.912 AUC</span>. 
+                  Get win probabilities, confidence scores, and key factors for every NBA game.
+                </p>
+                <div className="flex flex-wrap gap-4 mb-8">
+                  <div className="px-4 py-2 rounded-lg bg-green-500/20 border border-green-400/30">
+                    <span className="text-green-400 font-bold text-sm">81.0% Training Accuracy</span>
+                  </div>
+                  <div className="px-4 py-2 rounded-lg bg-blue-500/20 border border-blue-400/30">
+                    <span className="text-blue-400 font-bold text-sm">0.912 AUC-ROC</span>
+                  </div>
+                  <div className="px-4 py-2 rounded-lg bg-yellow-500/20 border border-yellow-400/30">
+                    <span className="text-yellow-400 font-bold text-sm">63% CV Accuracy</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-purple-400 font-bold text-lg">
+                  View Today's Predictions
+                  <ArrowRight className="w-6 h-6 group-hover:translate-x-3 transition-transform" />
+                </div>
+              </div>
+              <Target className="w-24 h-24 text-purple-400 opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all glow" />
+            </div>
+          </Link>
+
+          <Link
             href="/schedule"
             className="group md:col-span-4 p-12 rounded-3xl glass-strong hover:bg-accent/50 transition-all duration-500 hover:scale-[1.02] border-2 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20"
           >
             <Calendar className="w-16 h-16 text-primary mb-8 group-hover:scale-110 transition-transform glow" />
             <h3 className="text-5xl font-black mb-6 text-balance" style={{ fontFamily: "var(--font-display)" }}>
-              Game Schedule & Predictions
+              Game Schedule & Analysis
             </h3>
             <p className="text-xl text-muted-foreground leading-relaxed mb-8 max-w-2xl">
-              Pregame win probabilities powered by Elo ratings and LightGBM ensemble models with comprehensive feature
-              engineering
+              Complete season schedule with pregame analytics, Elo ratings, and comprehensive feature engineering
             </p>
             <div className="flex items-center gap-3 text-primary font-bold text-lg">
               Explore Schedule
