@@ -3,6 +3,7 @@ Sports Betting Odds Scraper
 Fetches odds from multiple sportsbooks (DraftKings, FanDuel, BetMGM)
 """
 
+import os
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -12,6 +13,10 @@ from pathlib import Path
 import time
 from typing import Dict, List, Optional
 import re
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 class OddsScraper:
     """Scraper for sports betting odds"""
