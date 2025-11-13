@@ -1,450 +1,247 @@
-"use client""use client"
+"use client"
 
+import { useEffect, useState } from "react"
+import { NavHeader } from "@/components/nav-header"
+import { RefreshCw, Activity, Clock, TrendingUp, AlertCircle } from "lucide-react"
+import { Card } from "@/components/ui/card"
+import Link from "next/link"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
-
-import { useEffect, useState } from "react"import { NavHeader } from "@/components/nav-header"
-
-import { RefreshCw, Activity, Clock, TrendingUp, AlertCircle } from "lucide-react"import { Card } from "@/components/ui/card"
-
-import Link from "next/link"import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-
-
-
-interface Team {// Mock data for demonstration
-
-  id: numberconst mockData = [
-
-  name: string  { possession: 0, homeWinProb: 0.52 },
-
-  abbreviation: string  { possession: 10, homeWinProb: 0.55 },
-
-  score: number  { possession: 20, homeWinProb: 0.58 },
-
-}  { possession: 30, homeWinProb: 0.62 },
-
-  { possession: 40, homeWinProb: 0.59 },
-
-interface Game {  { possession: 50, homeWinProb: 0.65 },
-
-  game_id: string  { possession: 60, homeWinProb: 0.68 },
-
-  date: string]
-
-  status: string
-
-  home_team: Teamexport default function LivePage() {
-
-  visitor_team: Team  return (
-
-  period?: number    <div className="min-h-screen bg-background">
-
-  time_remaining?: string      <NavHeader />
-
+interface Team {
+  id: number
+  name: string
+  abbreviation: string
+  score: number
+  timeouts: number
 }
 
-      <main className="container mx-auto px-4 py-8">
-
-interface LiveGamesResponse {        <div className="mb-8">
-
-  success: boolean          <h1 className="text-4xl font-bold mb-2">📊 Live Game Center</h1>
-
-  count: number          <p className="text-muted-foreground text-lg">Real-time win probability powered by GRU sequences</p>
-
-  games: Game[]        </div>
-
+interface LiveGame {
+  id: string
+  homeTeam: Team
+  awayTeam: Team
+  quarter: number
+  time: string
+  homeWinProbability: number
+  lastUpdated: string
+  scoreHistory: Array<{ time: string; homeScore: number; awayScore: number }>
 }
 
-        <div className="grid lg:grid-cols-3 gap-6">
+const mockLiveGames: LiveGame[] = [
+  {
+    id: "game-1",
+    homeTeam: { id: 1, name: "Los Angeles Lakers", abbreviation: "LAL", score: 58, timeouts: 2 },
+    awayTeam: { id: 2, name: "Boston Celtics", abbreviation: "BOS", score: 55, timeouts: 3 },
+    quarter: 2,
+    time: "6:24",
+    homeWinProbability: 0.62,
+    lastUpdated: "2:14 PM",
+    scoreHistory: [
+      { time: "Q1", homeScore: 28, awayScore: 25 },
+      { time: "Q2-4m", homeScore: 58, awayScore: 55 }
+    ]
+  },
+  {
+    id: "game-2",
+    homeTeam: { id: 3, name: "Golden State Warriors", abbreviation: "GSW", score: 45, timeouts: 3 },
+    awayTeam: { id: 4, name: "Denver Nuggets", abbreviation: "DEN", score: 48, timeouts: 2 },
+    quarter: 2,
+    time: "3:10",
+    homeWinProbability: 0.38,
+    lastUpdated: "2:08 PM",
+    scoreHistory: [
+      { time: "Q1", homeScore: 24, awayScore: 26 },
+      { time: "Q2-8m", homeScore: 45, awayScore: 48 }
+    ]
+  }
+]
 
-export default function LivePage() {          <div className="lg:col-span-2 space-y-6">
+export default function LivePage() {
+  const [games, setGames] = useState<LiveGame[]>(mockLiveGames)
+  const [selectedGame, setSelectedGame] = useState<LiveGame | null>(mockLiveGames[0])
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const [liveGames, setLiveGames] = useState<Game[]>([])            <Card className="p-6">
-
-  const [loading, setLoading] = useState(true)              <div className="flex items-center justify-between mb-6">
-
-  const [error, setError] = useState<string | null>(null)                <div>
-
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())                  <h2 className="text-2xl font-bold">Lakers vs Warriors</h2>
-
-                  <div className="flex items-center gap-2 mt-1">
-
-  const fetchLiveGames = async () => {                    <p className="text-muted-foreground">Q3 • 5:23 remaining</p>
-
-    try {                    <span className="px-2 py-1 text-xs font-medium bg-destructive/20 text-destructive rounded-full animate-pulse">
-
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"                      LIVE
-
-      const response = await fetch(`${backendUrl}/api/games/live`)                    </span>
-
-                  </div>
-
-      if (!response.ok) {                </div>
-
-        throw new Error(`HTTP error! status: ${response.status}`)                <div className="text-right">
-
-      }                  <div className="text-4xl font-bold">98 - 94</div>
-
-                </div>
-
-      const data: LiveGamesResponse = await response.json()              </div>
-
-      setLiveGames(data.games || [])
-
-      setLastUpdate(new Date())              <div className="mb-2 flex justify-between text-sm">
-
-      setError(null)                <span>Lakers Win Probability</span>
-
-    } catch (err) {                <span className="font-bold text-primary text-lg">68%</span>
-
-      setError(err instanceof Error ? err.message : "Failed to fetch live games")              </div>
-
-      console.error("Error:", err)              <div className="h-3 bg-muted rounded-full overflow-hidden">
-
-    } finally {                <div className="h-full bg-primary transition-all duration-500" style={{ width: "68%" }} />
-
-      setLoading(false)              </div>
-
-    }            </Card>
-
+  const handleRefresh = () => {
+    setIsRefreshing(true)
+    setTimeout(() => setIsRefreshing(false), 1000)
   }
 
-            <Card className="p-6">
-
-  useEffect(() => {              <h3 className="text-xl font-semibold mb-4">Win Probability Chart</h3>
-
-    fetchLiveGames()              <ResponsiveContainer width="100%" height={350}>
-
-    // Auto-refresh every 30 seconds for live data                <LineChart data={mockData}>
-
-    const interval = setInterval(() => fetchLiveGames(), 30 * 1000)                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-
-    return () => clearInterval(interval)                  <XAxis
-
-  }, [])                    dataKey="possession"
-
-                    className="text-muted-foreground"
-
-  const getQuarter = (period: number | undefined) => {                    label={{ value: "Possession", position: "insideBottom", offset: -5 }}
-
-    if (!period) return 'N/A'                  />
-
-    if (period <= 4) return `Q${period}`                  <YAxis
-
-    return `OT${period - 4}`                    className="text-muted-foreground"
-
-  }                    domain={[0, 1]}
-
-                    tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
-
-  const calculateScoreDiff = (game: Game) => {                  />
-
-    const homeScore = game.home_team?.score || 0                  <Tooltip
-
-    const awayScore = game.visitor_team?.score || 0                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-
-    return Math.abs(homeScore - awayScore)                    formatter={(value: number) => [`${(value * 100).toFixed(1)}%`, "Win Probability"]}
-
-  }                  />
-
-                  <Line
-
-  const getLeadingTeam = (game: Game) => {                    type="monotone"
-
-    const homeScore = game.home_team?.score || 0                    dataKey="homeWinProb"
-
-    const awayScore = game.visitor_team?.score || 0                    stroke="hsl(var(--primary))"
-
-                        strokeWidth={3}
-
-    if (homeScore > awayScore) return 'home'                    dot={false}
-
-    if (awayScore > homeScore) return 'away'                  />
-
-    return 'tie'                </LineChart>
-
-  }              </ResponsiveContainer>
-
-            </Card>
-
-  return (          </div>
-
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-red-950/20 to-gray-950 p-6">
-
-      {/* Header */}          <div className="space-y-6">
-
-      <div className="max-w-7xl mx-auto mb-8">            <Card className="p-6">
-
-        <div className="flex items-center justify-between mb-6">              <h3 className="text-lg font-semibold mb-4">Play-by-Play</h3>
-
-          <div>              <div className="space-y-3 text-sm max-h-96 overflow-y-auto">
-
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-red-400 to-orange-600 bg-clip-text text-transparent mb-2 flex items-center gap-3">                <div className="pb-3 border-b border-border">
-
-              <Activity className="w-10 h-10 text-red-500" />                  <p className="font-medium">5:23 Q3</p>
-
-              Live Game Center                  <p className="text-muted-foreground">LeBron James makes 3-pt shot</p>
-
-            </h1>                  <p className="text-xs text-primary mt-1">Win prob: 68% (+3%)</p>
-
-            <p className="text-gray-400">                </div>
-
-              Real-time scores and updates • Refreshing every 30 seconds                <div className="pb-3 border-b border-border">
-
-            </p>                  <p className="font-medium">5:45 Q3</p>
-
-          </div>                  <p className="text-muted-foreground">Stephen Curry misses jumper</p>
-
-                            <p className="text-xs text-muted-foreground mt-1">Win prob: 65%</p>
-
-          <button                </div>
-
-            onClick={() => fetchLiveGames()}                <div className="pb-3 border-b border-border">
-
-            disabled={loading}                  <p className="font-medium">6:12 Q3</p>
-
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors"                  <p className="text-muted-foreground">Anthony Davis defensive rebound</p>
-
-          >                  <p className="text-xs text-muted-foreground mt-1">Win prob: 65%</p>
-
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />                </div>
-
-            Refresh                <div className="pb-3 border-b border-border">
-
-          </button>                  <p className="font-medium">6:34 Q3</p>
-
-        </div>                  <p className="text-muted-foreground">Klay Thompson makes 2-pt shot</p>
-
-                  <p className="text-xs text-destructive mt-1">Win prob: 62% (-3%)</p>
-
-        {/* Stats Cards */}                </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">              </div>
-
-          <div className="glass-strong rounded-xl p-4">            </Card>
-
-            <div className="flex items-center gap-3">
-
-              <div className="p-2 bg-red-500/20 rounded-lg">            <Card className="p-6">
-
-                <Activity className="w-5 h-5 text-red-400" />              <h3 className="text-lg font-semibold mb-4">Key Factors (SHAP)</h3>
-
-              </div>              <div className="space-y-3 text-sm">
-
-              <div>                <div className="flex justify-between items-center">
-
-                <p className="text-2xl font-bold text-white">{liveGames.length}</p>                  <span className="text-muted-foreground">Recent momentum</span>
-
-                <p className="text-sm text-gray-400">Live Games</p>                  <span className="font-medium text-primary">+12%</span>
-
-              </div>                </div>
-
-            </div>                <div className="flex justify-between items-center">
-
-          </div>                  <span className="text-muted-foreground">Foul trouble</span>
-
-                  <span className="font-medium text-destructive">-3%</span>
-
-          <div className="glass-strong rounded-xl p-4">                </div>
-
-            <div className="flex items-center gap-3">                <div className="flex justify-between items-center">
-
-              <div className="p-2 bg-orange-500/20 rounded-lg">                  <span className="text-muted-foreground">Lineup strength</span>
-
-                <TrendingUp className="w-5 h-5 text-orange-400" />                  <span className="font-medium text-primary">+8%</span>
-
-              </div>                </div>
-
-              <div>                <div className="flex justify-between items-center">
-
-                <p className="text-2xl font-bold text-white">                  <span className="text-muted-foreground">Time remaining</span>
-
-                  {liveGames.filter(g => calculateScoreDiff(g) <= 5).length}                  <span className="font-medium">+5%</span>
-
-                </p>                </div>
-
-                <p className="text-sm text-gray-400">Close Games</p>              </div>
-
-              </div>            </Card>
-
-            </div>          </div>
-
-          </div>        </div>
-
-      </main>
-
-          <div className="glass-strong rounded-xl p-4">    </div>
-
-            <div className="flex items-center gap-3">  )
-
-              <div className="p-2 bg-yellow-500/20 rounded-lg">}
-
-                <Clock className="w-5 h-5 text-yellow-400" />
-              </div>
-              <div>
-                <p className="text-sm font-mono text-white">
-                  {lastUpdate.toLocaleTimeString()}
-                </p>
-                <p className="text-sm text-gray-400">Last Update</p>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
+      <NavHeader />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2 flex items-center space-x-3">
+              <Activity className="w-8 h-8 text-blue-400" />
+              <span>Live Games</span>
+            </h1>
+            <p className="text-slate-400">Real-time game tracking and win probability updates</p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-50"
+          >
+            <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            {selectedGame && (
+              <Card className="bg-slate-800/60 border-slate-700/50 overflow-hidden">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-white mb-2">
+                        {selectedGame.awayTeam.abbreviation} @ {selectedGame.homeTeam.abbreviation}
+                      </h2>
+                      <div className="flex items-center space-x-4 text-slate-400">
+                        <span className="flex items-center space-x-1">
+                          <Clock className="w-4 h-4" />
+                          <span>Q{selectedGame.quarter} - {selectedGame.time}</span>
+                        </span>
+                        <span>{selectedGame.lastUpdated}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6 mb-8">
+                    <div className="bg-slate-900/50 rounded-lg p-6">
+                      <div className="text-slate-400 text-sm mb-2">{selectedGame.awayTeam.name}</div>
+                      <div className="text-5xl font-bold text-white">{selectedGame.awayTeam.score}</div>
+                    </div>
+                    <div className="bg-blue-600/20 rounded-lg p-6 border border-blue-500/30">
+                      <div className="text-blue-400 text-sm mb-2">{selectedGame.homeTeam.name}</div>
+                      <div className="text-5xl font-bold text-blue-400">{selectedGame.homeTeam.score}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900/50 rounded-lg p-6 mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-white font-semibold flex items-center space-x-2">
+                        <TrendingUp className="w-5 h-5 text-blue-400" />
+                        <span>Win Probability</span>
+                      </h3>
+                    </div>
+                    <div className="flex items-end space-x-4">
+                      <div className="flex-1">
+                        <div className="text-slate-400 text-sm mb-2">{selectedGame.awayTeam.abbreviation}</div>
+                        <div className="w-full bg-slate-700/50 rounded-full h-8 overflow-hidden">
+                          <div 
+                            className="bg-slate-500 h-full flex items-center justify-center text-white font-semibold text-sm"
+                            style={{ width: `${(1 - selectedGame.homeWinProbability) * 100}%` }}
+                          >
+                            {((1 - selectedGame.homeWinProbability) * 100).toFixed(0)}%
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-blue-400 text-sm mb-2">{selectedGame.homeTeam.abbreviation}</div>
+                        <div className="w-full bg-slate-700/50 rounded-full h-8 overflow-hidden">
+                          <div 
+                            className="bg-blue-600 h-full flex items-center justify-center text-white font-semibold text-sm"
+                            style={{ width: `${selectedGame.homeWinProbability * 100}%` }}
+                          >
+                            {(selectedGame.homeWinProbability * 100).toFixed(0)}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-white font-semibold mb-4">Score History</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={selectedGame.scoreHistory}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(100,116,139,0.2)" />
+                        <XAxis dataKey="time" stroke="rgba(148,163,184,0.6)" />
+                        <YAxis stroke="rgba(148,163,184,0.6)" />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'rgba(15,23,42,0.9)',
+                            border: '1px solid rgba(100,116,139,0.5)',
+                            borderRadius: '8px'
+                          }}
+                          formatter={(value) => value}
+                          labelStyle={{ color: '#fff' }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="awayScore" 
+                          stroke="rgba(148,163,184,0.8)" 
+                          dot={{ fill: 'rgba(148,163,184,0.8)' }}
+                          name={selectedGame.awayTeam.abbreviation}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="homeScore" 
+                          stroke="#3b82f6" 
+                          dot={{ fill: '#3b82f6' }}
+                          name={selectedGame.homeTeam.abbreviation}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-white font-semibold mb-4">Live Games</h3>
+            <div className="space-y-3">
+              {games.map((game) => (
+                <button
+                  key={game.id}
+                  onClick={() => setSelectedGame(game)}
+                  className={`w-full text-left p-4 rounded-lg transition-all ${
+                    selectedGame?.id === game.id
+                      ? 'bg-blue-600 border border-blue-500'
+                      : 'bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-semibold text-white">
+                      {game.awayTeam.abbreviation} @ {game.homeTeam.abbreviation}
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300">
+                      Q{game.quarter}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className={selectedGame?.id === game.id ? 'text-white' : 'text-slate-400'}>
+                      {game.awayTeam.score} - {game.homeTeam.score}
+                    </span>
+                    <span className={`flex items-center space-x-1 ${selectedGame?.id === game.id ? 'text-white' : 'text-blue-400'}`}>
+                      <TrendingUp className="w-4 h-4" />
+                      <span>{(game.homeWinProbability * 100).toFixed(0)}%</span>
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-6 p-4 bg-blue-600/20 border border-blue-500/30 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-blue-400 mb-1">Real-Time Updates</h4>
+                  <p className="text-sm text-blue-300">Win probabilities update every 30 seconds during live games</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Live Games List */}
-      <div className="max-w-7xl mx-auto">
-        {loading && liveGames.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <RefreshCw className="w-12 h-12 text-red-500 animate-spin mb-4" />
-            <p className="text-gray-400">Loading live games...</p>
-          </div>
-        ) : error ? (
-          <div className="glass-strong rounded-2xl p-8 text-center">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <p className="text-red-400 mb-2">Failed to load live games</p>
-            <p className="text-gray-500 text-sm">{error}</p>
-            <button
-              onClick={() => fetchLiveGames()}
-              className="mt-4 px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
-            >
-              Try Again
-            </button>
-          </div>
-        ) : liveGames.length === 0 ? (
-          <div className="glass-strong rounded-2xl p-12 text-center">
-            <Activity className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-xl text-gray-400 mb-2">No live games right now</p>
-            <p className="text-gray-500 mb-6">Check back when games are in progress</p>
-            <Link
-              href="/predictions"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-            >
-              View All Games
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {liveGames.map((game) => {
-              const leadingTeam = getLeadingTeam(game)
-              const scoreDiff = calculateScoreDiff(game)
-              const isCloseGame = scoreDiff <= 5
-
-              return (
-                <div
-                  key={game.game_id}
-                  className="glass-strong rounded-2xl p-6 hover:bg-white/5 transition-all duration-200 group relative overflow-hidden"
-                >
-                  {/* Live indicator pulse effect */}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
-                  
-                  <div className="relative">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-4">
-                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30">
-                          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                          LIVE • {getQuarter(game.period)}
-                        </span>
-                        {game.time_remaining && (
-                          <span className="text-sm text-gray-400 font-mono">
-                            {game.time_remaining}
-                          </span>
-                        )}
-                        {isCloseGame && (
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                            🔥 CLOSE
-                          </span>
-                        )}
-                      </div>
-                      
-                      <Link
-                        href={`/live/${game.game_id}`}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        Watch Live
-                      </Link>
-                    </div>
-
-                    {/* Teams */}
-                    <div className="grid gap-4">
-                      {/* Away Team */}
-                      <div className={`flex items-center justify-between p-4 rounded-xl transition-all ${
-                        leadingTeam === 'away' ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/30'
-                      }`}>
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                            {game.visitor_team?.abbreviation || 'TBD'}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-white text-lg">
-                              {game.visitor_team?.name || 'TBD'}
-                            </p>
-                            <p className="text-sm text-gray-500">Away</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          {leadingTeam === 'away' && (
-                            <span className="text-sm text-green-400 font-medium">
-                              +{scoreDiff}
-                            </span>
-                          )}
-                          <div className="text-4xl font-bold text-white">
-                            {game.visitor_team?.score || 0}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Home Team */}
-                      <div className={`flex items-center justify-between p-4 rounded-xl transition-all ${
-                        leadingTeam === 'home' ? 'bg-green-500/10 border border-green-500/30' : 'bg-gray-800/30'
-                      }`}>
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                            {game.home_team?.abbreviation || 'TBD'}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-white text-lg">
-                              {game.home_team?.name || 'TBD'}
-                            </p>
-                            <p className="text-sm text-gray-500">Home</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          {leadingTeam === 'home' && (
-                            <span className="text-sm text-green-400 font-medium">
-                              +{scoreDiff}
-                            </span>
-                          )}
-                          <div className="text-4xl font-bold text-white">
-                            {game.home_team?.score || 0}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* ML Win Probability (placeholder) */}
-                    <div className="mt-6 pt-4 border-t border-gray-800">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-400">Live Win Probability</span>
-                        <span className="text-sm text-gray-500">Powered by GRU Model</span>
-                      </div>
-                      <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
-                          style={{ width: "65%" }}
-                        />
-                      </div>
-                      <div className="flex justify-between mt-1 text-xs text-gray-500">
-                        <span>{game.visitor_team?.abbreviation} 35%</span>
-                        <span>{game.home_team?.abbreviation} 65%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        <div className="mt-12">
+          <Link href="/predictions" className="text-blue-400 hover:text-blue-300 transition-colors flex items-center space-x-2">
+            <span>←</span>
+            <span>Back to Predictions</span>
+          </Link>
+        </div>
       </div>
     </div>
   )
