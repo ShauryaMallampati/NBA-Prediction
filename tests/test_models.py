@@ -125,7 +125,7 @@ class TestPregameEnsembleModel:
                 'home_score': 110,
                 'away_score': 105,
                 'home_win': True
-            },
+            },3
             {
                 'date': pd.Timestamp('2025-01-02'),
                 'home_team': 'BOS',
