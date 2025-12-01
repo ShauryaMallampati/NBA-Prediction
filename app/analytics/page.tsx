@@ -5,9 +5,9 @@ import {
     AlertTriangle,
     Award,
     BarChart3,
+    Brain,
     Target,
     TrendingUp,
-    Brain,
     Zap,
 } from "lucide-react"
 import Link from "next/link"

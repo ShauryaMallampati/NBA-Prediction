@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Clock, MapPin, RefreshCw } from "lucide-react"
 import Link from "next/link"
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, RefreshCw, Clock, MapPin } from "lucide-react"
+import { useEffect, useState } from "react"
 
 interface Game {
   game_id: string

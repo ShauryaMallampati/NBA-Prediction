@@ -10,23 +10,14 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from src.models.live.dataset import LiveSeqDataset
+from src.models.live.model import GRUWinProb
 from src.common.hardware import pick_device
 
+# Define constants
 DEVICE = pick_device("mps")
-DATA = "artifacts/features/live_sequences.parquet"
-OUT = Path("artifacts/models").resolve()
+DATA = Path("data/live_sequences.parquet")
+OUT = Path("artifacts/models")
 OUT.mkdir(parents=True, exist_ok=True)
-
-class GRUWinProb(nn.Module):
-    def __init__(self, input_size=1, hidden=96):
-        super().__init__()
-        self.gru = nn.GRU(input_size, hidden, batch_first=True)
-        self.fc = nn.Linear(hidden, 1)
-
-    def forward(self, x):
-        out, _ = self.gru(x)
-        logits = self.fc(out[:, -1, :])
-        return torch.sigmoid(logits)
 
 def main() -> None:
     print("\n" + "="*80)
@@ -51,9 +42,19 @@ def main() -> None:
     
     print(f"\n🚀 Training for 50 epochs...")
     model.train()
-    for epoch in range(50):
+    
+    from tqdm import tqdm
+    
+    # Use tqdm for epoch progress
+    epoch_pbar = tqdm(range(50), desc="Training Epochs", unit="epoch")
+    
+    for epoch in epoch_pbar:
         total_loss = 0
         num_batches = 0
+        
+        # Use tqdm for batch progress (optional, might be too fast for small datasets)
+        # batch_pbar = tqdm(dl, desc=f"Epoch {epoch+1}", leave=False)
+        
         for x, y in dl:
             x, y = x.to(DEVICE), y.to(DEVICE)
             p = model(x)
@@ -63,8 +64,9 @@ def main() -> None:
             num_batches += 1
         
         avg_loss = total_loss / num_batches
-        if (epoch + 1) % 5 == 0 or epoch == 0:
-            print(f"   Epoch {epoch + 1}/50 - Loss: {avg_loss:.4f}")
+        
+        # Update progress bar description with loss
+        epoch_pbar.set_postfix({"Loss": f"{avg_loss:.4f}"})
     
     print(f"\n💾 Saving model...")
     model_path = OUT / "live_gru_winprob.pt"

@@ -1,51 +1,72 @@
 "use client"
 
-import { AlertCircle, Calendar, RefreshCw, TrendingUp, ArrowLeft, Brain, Target } from "lucide-react"
-import { useEffect, useState } from "react"
+import { AlertCircle, ArrowLeft, Brain, RefreshCw, Target, TrendingUp, Users } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
-interface Prediction {
+interface ModelVotes {
+  [key: string]: string
+}
+
+interface EnsemblePrediction {
   game_id: string
-  date: string
   home_team: string
   away_team: string
-  home_win_prob: number
-  away_win_prob: number
-  predicted_winner: string
+  commence_time: string
+  prediction: string
+  home_win_probability: number
+  away_win_probability: number
   confidence: number
-  top_feature_1: string | null
-  top_feature_2: string | null
-  top_feature_3: string | null
+  models_agree: string
+  consensus_percentage: number
+  individual_votes: ModelVotes
+  home_odds: number
+  away_odds: number
+  home_spread: number
+  away_spread: number
+}
+
+interface PredictionsResponse {
+  timestamp: string
+  total_games: number
+  predictions: EnsemblePrediction[]
 }
 
 export default function PredictionsPage() {
-  const [predictions, setPredictions] = useState<Prediction[]>([])
+  const [data, setData] = useState<PredictionsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    // Always default to today (2025-11-12 in PST)
-    const today = new Date()
-    today.setHours(today.getHours() - 8) // Adjust to PST
-    return today.toISOString().split('T')[0]
-  })
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
-  const fetchPredictions = async () => {
+  const fetchPredictions = async (dateParam?: string) => {
     setLoading(true)
     setError(null)
 
     try {
-      const response = await fetch(`/api/predictions?date=${selectedDate}`)
-      const data = await response.json()
+      const response = await fetch('http://localhost:8000/predictions')
       
-      if (data.success) {
-        setPredictions(data.predictions || [])
-        setError(null)
-      } else {
-        setError(data.message || "No predictions available for this date")
-        setPredictions([])
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
+      
+      const result = await response.json()
+      
+      // If a specific date is selected, filter predictions for that date
+      if (dateParam) {
+        const filteredPredictions = result.predictions.filter(
+          (p: EnsemblePrediction) => p.commence_time.startsWith(dateParam)
+        )
+        setData({
+          ...result,
+          predictions: filteredPredictions
+        })
+        setSelectedDate(dateParam)
+      } else {
+        setData(result)
+      }
+      setError(null)
     } catch (err) {
-      setError("Failed to fetch predictions")
+      setError("Failed to fetch predictions. Is the API server running at localhost:8000?")
       console.error(err)
     } finally {
       setLoading(false)
@@ -53,20 +74,40 @@ export default function PredictionsPage() {
   }
 
   useEffect(() => {
-    fetchPredictions()
-  }, [selectedDate])
+    // Check if date is in URL params
+    const params = new URLSearchParams(window.location.search)
+    const dateParam = params.get('date')
+    
+    if (dateParam) {
+      fetchPredictions(dateParam)
+    } else {
+      fetchPredictions()
+    }
+    
+    // Refresh every 5 minutes
+    const interval = setInterval(() => {
+      if (dateParam) {
+        fetchPredictions(dateParam)
+      } else {
+        fetchPredictions()
+      }
+    }, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.70) return "text-green-400"
-    if (confidence >= 0.60) return "text-yellow-400"
+    if (confidence >= 70) return "text-green-400"
+    if (confidence >= 60) return "text-yellow-400"
     return "text-orange-400"
   }
 
   const getConfidenceBg = (confidence: number) => {
-    if (confidence >= 0.70) return "bg-green-500/20"
-    if (confidence >= 0.60) return "bg-yellow-500/20"
-    return "bg-orange-500/20"
+    if (confidence >= 70) return "bg-green-500/20 border-green-400/50"
+    if (confidence >= 60) return "bg-yellow-500/20 border-yellow-400/50"
+    return "bg-orange-500/20 border-orange-400/50"
   }
+
+  const predictions = data?.predictions || []
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
@@ -89,11 +130,8 @@ export default function PredictionsPage() {
                 <ArrowLeft className="w-4 h-4" />
                 Back to Home
               </Link>
-              <Link href="/schedule" className="text-sm text-slate-300 hover:text-blue-400 transition-colors">
-                Schedule
-              </Link>
-              <Link href="/live" className="text-sm text-slate-300 hover:text-blue-400 transition-colors">
-                Live
+              <Link href="/ensemble-predictions" className="text-sm text-slate-300 hover:text-blue-400 transition-colors">
+                Detailed View
               </Link>
             </div>
           </div>
@@ -112,28 +150,26 @@ export default function PredictionsPage() {
             Game Predictions
           </h1>
           <p className="text-slate-300 text-xl mb-8">
-            AI-powered predictions using ensemble machine learning
+            AI-powered predictions using 6-model ensemble voting
           </p>
           
           <div className="flex flex-wrap justify-center gap-3 mb-6">
             <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-purple-600/30 border border-purple-400/50">
-              <Brain className="w-5 h-5 text-purple-300" />
-              <span className="text-sm text-white font-semibold">XGBoost + LightGBM + CatBoost</span>
+              <Users className="w-5 h-5 text-purple-300" />
+              <span className="text-sm text-white font-semibold">6 Models Voting</span>
             </div>
             <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-green-600/30 border border-green-400/50">
               <TrendingUp className="w-5 h-5 text-green-300" />
-              <span className="text-sm text-white font-semibold">81.0% Accuracy</span>
+              <span className="text-sm text-white font-semibold">100% Train Accuracy</span>
             </div>
             <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600/30 border border-blue-400/50">
-              <span className="text-sm text-white font-semibold">0.912 AUC</span>
-            </div>
-            <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-yellow-600/30 border border-yellow-400/50">
-              <span className="text-sm text-white font-semibold">63% CV Accuracy</span>
+              <Brain className="w-5 h-5 text-blue-300" />
+              <span className="text-sm text-white font-semibold">Real-time Updates</span>
             </div>
           </div>
             
           <button
-            onClick={fetchPredictions}
+            onClick={() => fetchPredictions(selectedDate || undefined)}
             disabled={loading}
             className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-slate-700 disabled:to-slate-700 text-white rounded-xl transition-all shadow-lg hover:shadow-blue-500/50 font-semibold"
           >
@@ -142,31 +178,15 @@ export default function PredictionsPage() {
           </button>
         </div>
 
-        {/* Date Selector */}
-        <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-6 mb-8 border border-slate-700/50">
-          <div className="flex items-center gap-4">
-            <Calendar className="w-6 h-6 text-blue-400" />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-6 py-3 bg-slate-900 text-white rounded-lg border-2 border-slate-700 focus:border-blue-500 focus:outline-none font-semibold text-lg"
-            />
-            <span className="text-lg text-slate-300 font-semibold">
-              {predictions.length} predictions available
-            </span>
-          </div>
-        </div>
-
         {/* Model Performance Stats */}
-        {predictions.length > 0 && (
+        {!loading && predictions.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-slate-400 mb-2 font-semibold">High Confidence</p>
                   <p className="text-4xl font-black text-green-400">
-                    {predictions.filter(p => p.confidence >= 0.65).length}
+                    {predictions.filter((p: EnsemblePrediction) => p.confidence >= 65).length}
                   </p>
                 </div>
                 <div className="w-16 h-16 rounded-2xl bg-green-600/30 border border-green-400/50 flex items-center justify-center">
@@ -181,7 +201,7 @@ export default function PredictionsPage() {
                 <div>
                   <p className="text-sm text-slate-400 mb-2 font-semibold">Medium Confidence</p>
                   <p className="text-4xl font-black text-yellow-400">
-                    {predictions.filter(p => p.confidence >= 0.55 && p.confidence < 0.65).length}
+                    {predictions.filter((p: EnsemblePrediction) => p.confidence >= 55 && p.confidence < 65).length}
                   </p>
                 </div>
                 <div className="w-16 h-16 rounded-2xl bg-yellow-600/30 border border-yellow-400/50 flex items-center justify-center">
@@ -196,7 +216,7 @@ export default function PredictionsPage() {
                 <div>
                   <p className="text-sm text-slate-400 mb-2 font-semibold">Close Games</p>
                   <p className="text-4xl font-black text-orange-400">
-                    {predictions.filter(p => p.confidence < 0.55).length}
+                    {predictions.filter((p: EnsemblePrediction) => p.confidence < 55).length}
                   </p>
                 </div>
                 <div className="w-16 h-16 rounded-2xl bg-orange-600/30 border border-orange-400/50 flex items-center justify-center">
@@ -214,43 +234,32 @@ export default function PredictionsPage() {
             <div className="flex items-start gap-4">
               <AlertCircle className="w-8 h-8 text-yellow-400 flex-shrink-0 mt-1" />
               <div className="flex-1">
-                <p className="text-yellow-400 font-bold text-xl mb-3">Predictions Not Yet Available</p>
+                <p className="text-yellow-400 font-bold text-xl mb-3">Connection Error</p>
                 <p className="text-slate-300 text-lg mb-4">{error}</p>
-                <div className="bg-slate-900/80 rounded-xl p-6 border border-slate-700/50">
-                  <p className="text-white font-semibold mb-3 flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-blue-400" />
-                    Automated Prediction Schedule
-                  </p>
-                  <ul className="space-y-2 text-slate-300">
+                <div className="bg-slate-900/80 rounded-xl p-6 border border-slate-700/50 mb-4">
+                  <p className="text-white font-semibold mb-3">To use this feature:</p>
+                  <ul className="space-y-2 text-slate-300 text-sm">
                     <li className="flex items-start gap-2">
-                      <span className="text-blue-400 font-bold">•</span>
-                      <span>Predictions are automatically generated every day at <strong className="text-white">9:00 AM PST</strong></span>
+                      <span className="text-blue-400 font-bold mt-1">1.</span>
+                      <span>Start the API server: <code className="bg-slate-950 px-2 py-1 rounded text-blue-300">poetry run python src/api/ensemble_predictions.py</code></span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-blue-400 font-bold">•</span>
-                      <span>Predictions include all NBA games scheduled for that day</span>
+                      <span className="text-blue-400 font-bold mt-1">2.</span>
+                      <span>Ensure it's running on <code className="bg-slate-950 px-2 py-1 rounded text-blue-300">localhost:8000</code></span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-blue-400 font-bold">•</span>
-                      <span>Check back after 9 AM to see today's predictions</span>
+                      <span className="text-blue-400 font-bold mt-1">3.</span>
+                      <span>Click "Refresh Predictions" to load the data</span>
                     </li>
                   </ul>
                 </div>
-                <div className="mt-6 flex items-center gap-4">
-                  <button
-                    onClick={fetchPredictions}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl font-semibold transition-all flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-5 h-5" />
-                    Retry
-                  </button>
-                  <Link
-                    href="/schedule"
-                    className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-semibold transition-all"
-                  >
-                    View Schedule
-                  </Link>
-                </div>
+                <button
+                  onClick={() => fetchPredictions(selectedDate || undefined)}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl font-semibold transition-all flex items-center gap-2"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  Retry
+                </button>
               </div>
             </div>
           </div>
@@ -265,9 +274,9 @@ export default function PredictionsPage() {
         )}
 
         {/* Predictions Grid */}
-        {!loading && predictions.length > 0 && (
+        {!loading && !error && predictions.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {predictions.map((pred) => (
+            {predictions.map((pred: EnsemblePrediction) => (
               <div
                 key={pred.game_id}
                 className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-8 hover:shadow-xl hover:shadow-blue-500/20 transition-all border-2 border-slate-700/50 hover:border-blue-500/50"
@@ -292,79 +301,67 @@ export default function PredictionsPage() {
                 {/* Probabilities */}
                 <div className="grid grid-cols-2 gap-6 mb-8">
                   <div className="text-center p-6 rounded-xl bg-slate-900/80 border border-slate-700/50">
-                    <div className={`text-5xl font-black mb-3 ${pred.predicted_winner === pred.away_team ? 'text-blue-400' : 'text-slate-600'}`}>
-                      {(pred.away_win_prob * 100).toFixed(1)}%
+                    <div className={`text-5xl font-black mb-3 ${pred.prediction === pred.away_team ? 'text-blue-400' : 'text-slate-600'}`}>
+                      {(pred.away_win_probability).toFixed(1)}%
                     </div>
                     <div className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Win Probability</div>
+                    <div className="mt-4 pt-4 border-t border-slate-800 grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <div className="text-slate-500">Odds</div>
+                        <div className="text-white font-mono">{pred.away_odds}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-500">Spread</div>
+                        <div className="text-white font-mono">{pred.away_spread > 0 ? '+' : ''}{pred.away_spread}</div>
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="text-center p-6 rounded-xl bg-slate-900/80 border border-slate-700/50">
-                    <div className={`text-5xl font-black mb-3 ${pred.predicted_winner === pred.home_team ? 'text-blue-400' : 'text-slate-600'}`}>
-                      {(pred.home_win_prob * 100).toFixed(1)}%
+                    <div className={`text-5xl font-black mb-3 ${pred.prediction === pred.home_team ? 'text-blue-400' : 'text-slate-600'}`}>
+                      {(pred.home_win_probability).toFixed(1)}%
                     </div>
                     <div className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Win Probability</div>
+                    <div className="mt-4 pt-4 border-t border-slate-800 grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <div className="text-slate-500">Odds</div>
+                        <div className="text-white font-mono">{pred.home_odds}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-500">Spread</div>
+                        <div className="text-white font-mono">{pred.home_spread > 0 ? '+' : ''}{pred.home_spread}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Prediction */}
-                <div className={`rounded-xl p-6 mb-6 border-2 ${
-                  pred.confidence >= 0.70 ? 'bg-green-600/20 border-green-400/50' : 
-                  pred.confidence >= 0.60 ? 'bg-yellow-600/20 border-yellow-400/50' : 
-                  'bg-orange-600/20 border-orange-400/50'
-                }`}>
+                <div className={`rounded-xl p-6 mb-6 border-2 ${getConfidenceBg(pred.confidence)}`}>
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm text-slate-300 font-semibold uppercase tracking-wider">Predicted Winner:</span>
                     <span className="text-2xl font-black text-white">
-                      {pred.predicted_winner}
+                      {pred.prediction}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-400 font-semibold">Model Confidence:</span>
+                    <span className="text-sm text-slate-400 font-semibold">Ensemble Confidence:</span>
                     <div className="flex items-center gap-3">
                       <div className="w-40 h-4 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
                         <div 
                           className={`h-full ${
-                            pred.confidence >= 0.70 ? 'bg-green-500' : 
-                            pred.confidence >= 0.60 ? 'bg-yellow-500' : 
+                            pred.confidence >= 70 ? 'bg-green-500' : 
+                            pred.confidence >= 60 ? 'bg-yellow-500' : 
                             'bg-orange-500'
                           }`}
-                          style={{ width: `${pred.confidence * 100}%` }}
+                          style={{ width: `${Math.min(pred.confidence, 100)}%` }}
                         />
                       </div>
-                      <span className={`text-lg font-black ${
-                        pred.confidence >= 0.70 ? 'text-green-400' : 
-                        pred.confidence >= 0.60 ? 'text-yellow-400' : 
-                        'text-orange-400'
-                      }`}>
-                        {(pred.confidence * 100).toFixed(1)}%
+                      <span className={`text-lg font-black ${getConfidenceColor(pred.confidence)}`}>
+                        {pred.confidence.toFixed(1)}%
                       </span>
                     </div>
                   </div>
                 </div>
-
-                {/* Key Factors */}
-                {pred.top_feature_1 && (
-                  <div className="border-t border-slate-700/50 pt-6">
-                    <div className="flex items-start gap-3">
-                      <TrendingUp className="w-6 h-6 text-blue-400 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm text-slate-300 mb-3 uppercase tracking-wider font-bold">Key Factors:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {[pred.top_feature_1, pred.top_feature_2, pred.top_feature_3]
-                            .filter(Boolean)
-                            .map((feature, idx) => (
-                              <span
-                                key={idx}
-                                className="text-sm bg-slate-900 px-4 py-2 rounded-lg text-white border border-slate-700 font-semibold"
-                              >
-                                {feature?.replace(/_/g, ' ')}
-                              </span>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -374,8 +371,8 @@ export default function PredictionsPage() {
         {!loading && !error && predictions.length === 0 && (
           <div className="text-center py-12">
             <AlertCircle className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400 text-lg">No predictions available for this date</p>
-            <p className="text-sm text-gray-500 mt-2">Try selecting a different date or generate new predictions</p>
+            <p className="text-gray-400 text-lg">No predictions available</p>
+            <p className="text-sm text-gray-500 mt-2">Check that the API server is running and try refreshing</p>
           </div>
         )}
       </div>
