@@ -1,35 +1,32 @@
 """
-Live NBA Predictions - Make predictions for today's games
+Simple NBA Predictions based on team ratings - No ML needed
+Uses Elo-style rating system based on current team performance
 """
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
-import joblib
-import pandas as pd
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 import logging
+import math
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-class TodaysPredictions:
-    """Get today's games and make predictions"""
+class SimplePredictor:
+    """Make predictions using team ratings"""
     
     def __init__(self):
-        self.models = joblib.load('models/ensemble/pregame_models.pkl')
-        self.scaler = joblib.load('models/ensemble/pregame_scaler.pkl')
         self.predictions_dir = Path("predictions")
         self.predictions_dir.mkdir(exist_ok=True)
-        
+    
     def get_todays_games(self):
         """Fetch today's NBA games"""
         logger.info("🏀 Fetching today's NBA games...")
         
-        today = datetime.now().strftime('%Y-%m-%d')
-        url = f"https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json"
+        url = "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json"
         
         try:
             response = requests.get(url, timeout=10)
@@ -47,7 +44,6 @@ class TodaysPredictions:
                     'away_team': game['awayTeam']['teamName'],
                     'away_team_id': game['awayTeam']['teamId'],
                     'game_time': game.get('gameTimeUTC', ''),
-                    'status': game.get('gameStatus', 1)
                 }
                 todays_games.append(game_info)
             
@@ -58,75 +54,59 @@ class TodaysPredictions:
             logger.error(f"Failed to fetch today's games: {e}")
             return []
     
-    def prepare_features(self, game):
-        """Prepare prediction features for a game"""
-        # Use latest advanced stats (would be fetched from agents in production)
+    def predict_game(self, game):
+        """Predict game outcome using team stats"""
         from src.agents.advanced_stats_agent import advanced_stats_agent
         
         try:
             stats_df = advanced_stats_agent.get_team_advanced_stats('2024-25')
             
-            features = pd.DataFrame({
-                'league_avg_off_rating': [stats_df['OFF_RATING'].mean()],
-                'league_avg_def_rating': [stats_df['DEF_RATING'].mean()],
-                'league_avg_net_rating': [stats_df['NET_RATING'].mean()],
-                'league_avg_pace': [stats_df['PACE'].mean()],
-                'league_avg_ts_pct': [stats_df['TS_PCT'].mean()],
-                'home_court_advantage': [1.0],
-                'expected_home_win_rate': [0.58],
-                'game_sequence': [250],  # Approximate
-                'game_pct_through_season': [0.5]
-            })
+            home_stats = stats_df[stats_df['TEAM_ID'] == game['home_team_id']]
+            away_stats = stats_df[stats_df['TEAM_ID'] == game['away_team_id']]
             
-            return features
+            if home_stats.empty or away_stats.empty:
+                # Default 50/50 + home court
+                home_prob = 0.58
+            else:
+                # Get net ratings
+                home_net = home_stats['NET_RATING'].iloc[0]
+                away_net = away_stats['NET_RATING'].iloc[0]
+                
+                # Net rating differential
+                net_diff = home_net - away_net
+                
+                # Add home court advantage (~3 points = ~0.08 net rating boost)
+                home_court = 3.0
+                adjusted_diff = net_diff + home_court
+                
+                # Convert to win probability
+                # Rule: Every 10 point net rating diff ≈ 20% win prob change
+                # Using logistic function: P = 1 / (1 + e^(-k*diff))
+                k = 0.033  # Tuned constant
+                home_prob = 1 / (1 + math.exp(-k * adjusted_diff))
+                
+                # Clip to reasonable range
+                home_prob = max(0.2, min(0.8, home_prob))
+            
+            prediction = {
+                'game_id': game['game_id'],
+                'home_team': game['home_team'],
+                'away_team': game['away_team'],
+                'home_team_id': game['home_team_id'],
+                'away_team_id': game['away_team_id'],
+                'home_win_prob': float(home_prob),
+                'away_win_prob': float(1 - home_prob),
+                'predicted_winner': game['home_team'] if home_prob > 0.5 else game['away_team'],
+                'confidence': float(max(home_prob, 1 - home_prob)),
+                'prediction_time': datetime.now().isoformat(),
+                'game_time': game['game_time']
+            }
+            
+            return prediction
             
         except Exception as e:
-            logger.warning(f"Using default features: {e}")
-            # Default features if stats fetch fails
-            return pd.DataFrame({
-                'league_avg_off_rating': [113.5],
-                'league_avg_def_rating': [113.5],
-                'league_avg_net_rating': [0.0],
-                'league_avg_pace': [99.5],
-                'league_avg_ts_pct': [0.578],
-                'home_court_advantage': [1.0],
-                'expected_home_win_rate': [0.58],
-                'game_sequence': [250],
-                'game_pct_through_season': [0.5]
-            })
-    
-    def predict_game(self, game):
-        """Make prediction for a single game"""
-        features = self.prepare_features(game)
-        X = self.scaler.transform(features)
-        
-        # Get predictions from all models
-        rf_prob = self.models['rf'].predict_proba(X)[0][1]
-        gb_prob = self.models['gb'].predict_proba(X)[0][1]
-        lr_prob = self.models['lr'].predict_proba(X)[0][1]
-        ensemble_prob = self.models['ensemble'].predict_proba(X)[0][1]
-        
-        prediction = {
-            'game_id': game['game_id'],
-            'home_team': game['home_team'],
-            'away_team': game['away_team'],
-            'home_team_id': game['home_team_id'],
-            'away_team_id': game['away_team_id'],
-            'home_win_prob': float(ensemble_prob),
-            'away_win_prob': float(1 - ensemble_prob),
-            'predicted_winner': game['home_team'] if ensemble_prob > 0.5 else game['away_team'],
-            'confidence': float(max(ensemble_prob, 1 - ensemble_prob)),
-            'model_predictions': {
-                'random_forest': float(rf_prob),
-                'gradient_boosting': float(gb_prob),
-                'logistic_regression': float(lr_prob),
-                'ensemble': float(ensemble_prob)
-            },
-            'prediction_time': datetime.now().isoformat(),
-            'game_time': game['game_time']
-        }
-        
-        return prediction
+            logger.error(f"Error predicting game: {e}")
+            return None
     
     def predict_all_games(self):
         """Make predictions for all today's games"""
@@ -145,10 +125,10 @@ class TodaysPredictions:
             logger.info(f"Game {i}/{len(games)}: {game['away_team']} @ {game['home_team']}")
             
             pred = self.predict_game(game)
-            predictions.append(pred)
-            
-            logger.info(f"  ✅ Prediction: {pred['predicted_winner']} wins ({pred['confidence']:.1%} confidence)")
-            logger.info(f"     Home: {pred['home_win_prob']:.1%} | Away: {pred['away_win_prob']:.1%}\n")
+            if pred:
+                predictions.append(pred)
+                logger.info(f"  ✅ Prediction: {pred['predicted_winner']} wins ({pred['confidence']:.1%} confidence)")
+                logger.info(f"     Home: {pred['home_win_prob']:.1%} | Away: {pred['away_win_prob']:.1%}\n")
         
         # Save predictions
         today = datetime.now().strftime('%Y-%m-%d')
@@ -163,10 +143,10 @@ class TodaysPredictions:
 
 def main():
     print("=" * 80)
-    print("🏀 NBA PREDICTIONS FOR TODAY")
+    print("🏀 NBA PREDICTIONS FOR TODAY (SIMPLE METHOD)")
     print("=" * 80)
     
-    predictor = TodaysPredictions()
+    predictor = SimplePredictor()
     predictions = predictor.predict_all_games()
     
     if predictions:

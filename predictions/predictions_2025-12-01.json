@@ -1,21 +1,15 @@
 [
   {
-    "game_id": "0022500309",
-    "home_team": "Pistons",
-    "away_team": "Hawks",
-    "home_team_id": 1610612765,
-    "away_team_id": 1610612737,
-    "home_win_prob": 0.46546643018963074,
-    "away_win_prob": 0.5345335698103693,
-    "predicted_winner": "Hawks",
-    "confidence": 0.5345335698103693,
-    "model_predictions": {
-      "random_forest": 0.5358369188888262,
-      "gradient_boosting": 0.3591611780292022,
-      "logistic_regression": 0.5014011936508637,
-      "ensemble": 0.46546643018963074
-    },
-    "prediction_time": "2025-12-01T19:08:24.800888",
+    "game_id": "0022500311",
+    "home_team": "Wizards",
+    "away_team": "Bucks",
+    "home_team_id": 1610612764,
+    "away_team_id": 1610612749,
+    "home_win_prob": 0.40545174901250614,
+    "away_win_prob": 0.5945482509874939,
+    "predicted_winner": "Bucks",
+    "confidence": 0.5945482509874939,
+    "prediction_time": "2025-12-01T19:25:15.890214",
     "game_time": "2025-12-02T00:00:00Z"
   },
   {
@@ -24,36 +18,24 @@
     "away_team": "Cavaliers",
     "home_team_id": 1610612754,
     "away_team_id": 1610612739,
-    "home_win_prob": 0.46546643018963074,
-    "away_win_prob": 0.5345335698103693,
+    "home_win_prob": 0.466226506005884,
+    "away_win_prob": 0.533773493994116,
     "predicted_winner": "Cavaliers",
-    "confidence": 0.5345335698103693,
-    "model_predictions": {
-      "random_forest": 0.5358369188888262,
-      "gradient_boosting": 0.3591611780292022,
-      "logistic_regression": 0.5014011936508637,
-      "ensemble": 0.46546643018963074
-    },
-    "prediction_time": "2025-12-01T19:08:24.830720",
+    "confidence": 0.533773493994116,
+    "prediction_time": "2025-12-01T19:25:15.890498",
     "game_time": "2025-12-02T00:00:00Z"
   },
   {
-    "game_id": "0022500311",
-    "home_team": "Wizards",
-    "away_team": "Bucks",
-    "home_team_id": 1610612764,
-    "away_team_id": 1610612749,
-    "home_win_prob": 0.46546643018963074,
-    "away_win_prob": 0.5345335698103693,
-    "predicted_winner": "Bucks",
-    "confidence": 0.5345335698103693,
-    "model_predictions": {
-      "random_forest": 0.5358369188888262,
-      "gradient_boosting": 0.3591611780292022,
-      "logistic_regression": 0.5014011936508637,
-      "ensemble": 0.46546643018963074
-    },
-    "prediction_time": "2025-12-01T19:08:24.860216",
+    "game_id": "0022500309",
+    "home_team": "Pistons",
+    "away_team": "Hawks",
+    "home_team_id": 1610612765,
+    "away_team_id": 1610612737,
+    "home_win_prob": 0.5509723105969021,
+    "away_win_prob": 0.4490276894030979,
+    "predicted_winner": "Pistons",
+    "confidence": 0.5509723105969021,
+    "prediction_time": "2025-12-01T19:25:15.890881",
     "game_time": "2025-12-02T00:00:00Z"
   },
   {
@@ -62,17 +44,11 @@
     "away_team": "Hornets",
     "home_team_id": 1610612751,
     "away_team_id": 1610612766,
-    "home_win_prob": 0.46546643018963074,
-    "away_win_prob": 0.5345335698103693,
-    "predicted_winner": "Hornets",
-    "confidence": 0.5345335698103693,
-    "model_predictions": {
-      "random_forest": 0.5358369188888262,
-      "gradient_boosting": 0.3591611780292022,
-      "logistic_regression": 0.5014011936508637,
-      "ensemble": 0.46546643018963074
-    },
-    "prediction_time": "2025-12-01T19:08:24.887396",
+    "home_win_prob": 0.5395174083728296,
+    "away_win_prob": 0.4604825916271704,
+    "predicted_winner": "Nets",
+    "confidence": 0.5395174083728296,
+    "prediction_time": "2025-12-01T19:25:15.891129",
     "game_time": "2025-12-02T00:30:00Z"
   },
   {
@@ -81,17 +57,11 @@
     "away_team": "Clippers",
     "home_team_id": 1610612748,
     "away_team_id": 1610612746,
-    "home_win_prob": 0.46546643018963074,
-    "away_win_prob": 0.5345335698103693,
+    "home_win_prob": 0.4876275262013318,
+    "away_win_prob": 0.5123724737986681,
     "predicted_winner": "Clippers",
-    "confidence": 0.5345335698103693,
-    "model_predictions": {
-      "random_forest": 0.5358369188888262,
-      "gradient_boosting": 0.3591611780292022,
-      "logistic_regression": 0.5014011936508637,
-      "ensemble": 0.46546643018963074
-    },
-    "prediction_time": "2025-12-01T19:08:24.914404",
+    "confidence": 0.5123724737986681,
+    "prediction_time": "2025-12-01T19:25:15.891369",
     "game_time": "2025-12-02T00:30:00Z"
   },
   {
@@ -100,17 +70,11 @@
     "away_team": "Bulls",
     "home_team_id": 1610612753,
     "away_team_id": 1610612741,
-    "home_win_prob": 0.46546643018963074,
-    "away_win_prob": 0.5345335698103693,
-    "predicted_winner": "Bulls",
-    "confidence": 0.5345335698103693,
-    "model_predictions": {
-      "random_forest": 0.5358369188888262,
-      "gradient_boosting": 0.3591611780292022,
-      "logistic_regression": 0.5014011936508637,
-      "ensemble": 0.46546643018963074
-    },
-    "prediction_time": "2025-12-01T19:08:24.943068",
+    "home_win_prob": 0.536236357977364,
+    "away_win_prob": 0.463763642022636,
+    "predicted_winner": "Magic",
+    "confidence": 0.536236357977364,
+    "prediction_time": "2025-12-01T19:25:15.891608",
     "game_time": "2025-12-02T00:30:00Z"
   },
   {
@@ -119,17 +83,11 @@
     "away_team": "Mavericks",
     "home_team_id": 1610612743,
     "away_team_id": 1610612742,
-    "home_win_prob": 0.46546643018963074,
-    "away_win_prob": 0.5345335698103693,
-    "predicted_winner": "Mavericks",
-    "confidence": 0.5345335698103693,
-    "model_predictions": {
-      "random_forest": 0.5358369188888262,
-      "gradient_boosting": 0.3591611780292022,
-      "logistic_regression": 0.5014011936508637,
-      "ensemble": 0.46546643018963074
-    },
-    "prediction_time": "2025-12-01T19:08:24.970242",
+    "home_win_prob": 0.566429939207721,
+    "away_win_prob": 0.433570060792279,
+    "predicted_winner": "Nuggets",
+    "confidence": 0.566429939207721,
+    "prediction_time": "2025-12-01T19:25:15.891850",
     "game_time": "2025-12-02T02:00:00Z"
   },
   {
@@ -138,17 +96,11 @@
     "away_team": "Rockets",
     "home_team_id": 1610612762,
     "away_team_id": 1610612745,
-    "home_win_prob": 0.46546643018963074,
-    "away_win_prob": 0.5345335698103693,
+    "home_win_prob": 0.4118313029152475,
+    "away_win_prob": 0.5881686970847525,
     "predicted_winner": "Rockets",
-    "confidence": 0.5345335698103693,
-    "model_predictions": {
-      "random_forest": 0.5358369188888262,
-      "gradient_boosting": 0.3591611780292022,
-      "logistic_regression": 0.5014011936508637,
-      "ensemble": 0.46546643018963074
-    },
-    "prediction_time": "2025-12-01T19:08:24.999003",
+    "confidence": 0.5881686970847525,
+    "prediction_time": "2025-12-01T19:25:15.892126",
     "game_time": "2025-12-02T02:00:00Z"
   },
   {
@@ -157,17 +109,11 @@
     "away_team": "Suns",
     "home_team_id": 1610612747,
     "away_team_id": 1610612756,
-    "home_win_prob": 0.46546643018963074,
-    "away_win_prob": 0.5345335698103693,
-    "predicted_winner": "Suns",
-    "confidence": 0.5345335698103693,
-    "model_predictions": {
-      "random_forest": 0.5358369188888262,
-      "gradient_boosting": 0.3591611780292022,
-      "logistic_regression": 0.5014011936508637,
-      "ensemble": 0.46546643018963074
-    },
-    "prediction_time": "2025-12-01T19:08:25.027615",
+    "home_win_prob": 0.5591221225055751,
+    "away_win_prob": 0.44087787749442486,
+    "predicted_winner": "Lakers",
+    "confidence": 0.5591221225055751,
+    "prediction_time": "2025-12-01T19:25:15.892368",
     "game_time": "2025-12-02T03:00:00Z"
   }
 ]
