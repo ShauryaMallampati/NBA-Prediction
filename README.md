@@ -1,6 +1,34 @@
-# 🏀 NBA Game Prediction Platform# 🏀 NBA Intelligence Platform
+# 🏀 NBA Prediction System
 
+## 🤖 Automated Prediction System - NEW!
 
+> **✅ Made predictions for 9 games today (Dec 1, 2025)!**
+
+### Quick Commands
+
+```bash
+# Make predictions for today's games
+python scripts/predict_today.py
+
+# Validate yesterday's predictions (after 1 AM)
+python scripts/validate_predictions.py
+
+# Run 24/7 automated agent (recommended)
+python scripts/automated_agent.py
+```
+
+### Features
+- 🎯 **Daily Predictions**: Auto-predicts all games at 9 AM
+- 🔍 **Auto-Validation**: Checks accuracy at 1 AM next day
+- 📊 **Accuracy Tracking**: Shows prediction % for each day + overall
+- 🔄 **Continuous Learning**: Collects 500+ games weekly & retrains models
+- 🤖 **24/7 Operation**: Fully automated prediction & validation pipeline
+
+📚 **Full Documentation**: [AUTOMATED_SYSTEM.md](AUTOMATED_SYSTEM.md) | [SYSTEM_COMPLETE.md](SYSTEM_COMPLETE.md)
+
+---
+
+# 🏀 NBA Game Prediction Platform
 
 <div align="center">A production-quality, full-stack ML system for NBA game predictions, live win probability, player chemistry analysis, and social sentiment integration.
 
