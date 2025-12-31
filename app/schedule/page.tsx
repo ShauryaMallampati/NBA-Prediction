@@ -38,15 +38,20 @@ export default function SchedulePage() {
       const response = await fetch(`/api/schedule?month=${currentMonth}`)
       const data = await response.json()
       
-      if (data.error) {
-        console.error('Error fetching schedule:', data.error)
+      if (data.error || !data.success) {
+        console.error('Error fetching schedule:', data.error || data.message)
+        setGamesByDate({})
+        setDates([])
         return
       }
 
-      setGamesByDate(data.games_by_date || {})
+      // Handle both camelCase and snake_case formats
+      setGamesByDate(data.gamesByDate || data.games_by_date || {})
       setDates(data.dates || [])
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error fetching schedule:', error)
+      setGamesByDate({})
+      setDates([])
     } finally {
       setLoading(false)
     }

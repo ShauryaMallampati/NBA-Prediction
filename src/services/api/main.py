@@ -1,7 +1,7 @@
 """FastAPI main application."""
 
 import pickle
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -444,6 +444,105 @@ async def get_betting_odds():
     except Exception as e:
         logger.error(f"Failed to fetch odds: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/live_schedule")
+async def get_live_schedule(days: int = 14):
+    """Get live schedule for upcoming games (LOCAL DATA - NO API KEYS).
+    
+    Args:
+        days: Number of days ahead to fetch (default: 14)
+    
+    Returns:
+        List of upcoming games
+    """
+    try:
+        # Try to load from local schedule files first
+        schedule_file = Paths.DATA / "schedules" / "full_schedule_2024-25.csv"
+        today = datetime.now().date()
+        end_date = today + timedelta(days=days)
+        
+        games = []
+        
+        if schedule_file.exists():
+            try:
+                df = pd.read_csv(schedule_file)
+                if 'date' in df.columns or 'Date' in df.columns:
+                    date_col = 'date' if 'date' in df.columns else 'Date'
+                    df[date_col] = pd.to_datetime(df[date_col])
+                    
+                    # Filter for date range
+                    mask = (df[date_col].dt.date >= today) & (df[date_col].dt.date <= end_date)
+                    df_filtered = df[mask]
+                    
+                    for _, row in df_filtered.iterrows():
+                        games.append({
+                            'id': str(row.get('game_id', '')),
+                            'game_id': str(row.get('game_id', '')),
+                            'date': row[date_col].strftime('%Y-%m-%d'),
+                            'game_date': row[date_col].strftime('%Y-%m-%d'),
+                            'gameDate': row[date_col].strftime('%Y-%m-%d'),
+                            'home_team': str(row.get('home_team', row.get('Home', ''))),
+                            'homeTeam': str(row.get('home_team', row.get('Home', ''))),
+                            'home': str(row.get('home_team', row.get('Home', ''))),
+                            'away_team': str(row.get('away_team', row.get('Away', ''))),
+                            'awayTeam': str(row.get('away_team', row.get('Away', ''))),
+                            'away': str(row.get('away_team', row.get('Away', ''))),
+                            'time': str(row.get('game_time', row.get('Time', '7:00 pm ET'))),
+                            'game_time': str(row.get('game_time', row.get('Time', '7:00 pm ET'))),
+                            'gameTime': str(row.get('game_time', row.get('Time', '7:00 pm ET'))),
+                            'startTime': str(row.get('game_time', row.get('Time', '7:00 pm ET'))),
+                            'season': str(row.get('season', '2024-25'))
+                        })
+            except Exception as e:
+                logger.warning(f"Error reading schedule file: {e}")
+        
+        # If no games found, try fetching from game_fetcher as fallback
+        if not games:
+            try:
+                from src.data.ingest.game_fetcher import get_game_fetcher
+                fetcher = get_game_fetcher()
+                
+                current_date = today
+                while current_date <= end_date:
+                    date_str = current_date.strftime('%Y-%m-%d')
+                    try:
+                        date_games = fetcher.get_games_by_date(date_str)
+                        games.extend(date_games)
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch games for {date_str}: {e}")
+                    current_date += timedelta(days=1)
+            except Exception as e:
+                logger.warning(f"Game fetcher not available: {e}")
+        
+        # Normalize game format
+        normalized_games = []
+        for game in games:
+            if isinstance(game, dict):
+                normalized_games.append({
+                    'id': game.get('game_id', game.get('id', '')),
+                    'game_id': game.get('game_id', game.get('id', '')),
+                    'date': game.get('date', game.get('game_date', game.get('gameDate', ''))),
+                    'game_date': game.get('date', game.get('game_date', game.get('gameDate', ''))),
+                    'gameDate': game.get('date', game.get('game_date', game.get('gameDate', ''))),
+                    'home_team': game.get('home_team', game.get('homeTeam', game.get('home', ''))),
+                    'homeTeam': game.get('home_team', game.get('homeTeam', game.get('home', ''))),
+                    'home': game.get('home_team', game.get('homeTeam', game.get('home', ''))),
+                    'away_team': game.get('away_team', game.get('awayTeam', game.get('away', ''))),
+                    'awayTeam': game.get('away_team', game.get('awayTeam', game.get('away', ''))),
+                    'away': game.get('away_team', game.get('awayTeam', game.get('away', ''))),
+                    'time': game.get('time', game.get('game_time', game.get('gameTime', game.get('startTime', '')))),
+                    'game_time': game.get('time', game.get('game_time', game.get('gameTime', game.get('startTime', '')))),
+                    'gameTime': game.get('time', game.get('game_time', game.get('gameTime', game.get('startTime', '')))),
+                    'startTime': game.get('time', game.get('game_time', game.get('gameTime', game.get('startTime', '')))),
+                    'season': game.get('season', '2024-25')
+                })
+        
+        return normalized_games
+    except Exception as e:
+        logger.error(f"Failed to fetch live schedule: {e}")
+        # Return empty array instead of raising to prevent frontend errors
+        return []
 
 
 if __name__ == "__main__":

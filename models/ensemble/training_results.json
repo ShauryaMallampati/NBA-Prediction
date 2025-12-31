@@ -1,0 +1,47 @@
+{
+  "logistic_regression": {
+    "train_accuracy": 0.9999827166041584,
+    "test_accuracy": 0.999930867611476,
+    "roc_auc": 1.0
+  },
+  "random_forest": {
+    "train_accuracy": 0.9998790162291087,
+    "test_accuracy": 0.9994469408918079,
+    "roc_auc": 0.999999656344509
+  },
+  "gradient_boosting": {
+    "train_accuracy": 0.9999827166041584,
+    "test_accuracy": 0.9994469408918079,
+    "roc_auc": 0.999991125602322
+  },
+  "decision_tree": {
+    "train_accuracy": 0.9970618227069254,
+    "test_accuracy": 0.9961285862426547,
+    "roc_auc": 0.9998530165250179
+  },
+  "neural_network": {
+    "train_accuracy": 0.9995679151039596,
+    "test_accuracy": 0.9993086761147598,
+    "roc_auc": 0.9999990498936426
+  },
+  "xgboost": {
+    "train_accuracy": 1.0,
+    "test_accuracy": 0.9995852056688559,
+    "roc_auc": 0.9999997978497112
+  },
+  "catboost": {
+    "train_accuracy": 0.9999827166041584,
+    "test_accuracy": 0.999792602834428,
+    "roc_auc": 0.9999994946242781
+  },
+  "voting_ensemble": {
+    "train_accuracy": 0.9999827166041584,
+    "test_accuracy": 0.999861735222952,
+    "roc_auc": 0.9999998989248556
+  },
+  "stacking_ensemble": {
+    "train_accuracy": 1.0,
+    "test_accuracy": 0.999930867611476,
+    "roc_auc": 1.0
+  }
+}

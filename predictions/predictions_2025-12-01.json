@@ -9,7 +9,7 @@
     "away_win_prob": 0.5945482509874939,
     "predicted_winner": "Bucks",
     "confidence": 0.5945482509874939,
-    "prediction_time": "2025-12-01T19:25:15.890214",
+    "prediction_time": "2025-12-01T19:28:32.725284",
     "game_time": "2025-12-02T00:00:00Z"
   },
   {
@@ -22,7 +22,7 @@
     "away_win_prob": 0.533773493994116,
     "predicted_winner": "Cavaliers",
     "confidence": 0.533773493994116,
-    "prediction_time": "2025-12-01T19:25:15.890498",
+    "prediction_time": "2025-12-01T19:28:32.725615",
     "game_time": "2025-12-02T00:00:00Z"
   },
   {
@@ -35,7 +35,7 @@
     "away_win_prob": 0.4490276894030979,
     "predicted_winner": "Pistons",
     "confidence": 0.5509723105969021,
-    "prediction_time": "2025-12-01T19:25:15.890881",
+    "prediction_time": "2025-12-01T19:28:32.725878",
     "game_time": "2025-12-02T00:00:00Z"
   },
   {
@@ -48,7 +48,7 @@
     "away_win_prob": 0.4604825916271704,
     "predicted_winner": "Nets",
     "confidence": 0.5395174083728296,
-    "prediction_time": "2025-12-01T19:25:15.891129",
+    "prediction_time": "2025-12-01T19:28:32.726129",
     "game_time": "2025-12-02T00:30:00Z"
   },
   {
@@ -61,7 +61,7 @@
     "away_win_prob": 0.5123724737986681,
     "predicted_winner": "Clippers",
     "confidence": 0.5123724737986681,
-    "prediction_time": "2025-12-01T19:25:15.891369",
+    "prediction_time": "2025-12-01T19:28:32.726380",
     "game_time": "2025-12-02T00:30:00Z"
   },
   {
@@ -74,7 +74,7 @@
     "away_win_prob": 0.463763642022636,
     "predicted_winner": "Magic",
     "confidence": 0.536236357977364,
-    "prediction_time": "2025-12-01T19:25:15.891608",
+    "prediction_time": "2025-12-01T19:28:32.726631",
     "game_time": "2025-12-02T00:30:00Z"
   },
   {
@@ -87,7 +87,7 @@
     "away_win_prob": 0.433570060792279,
     "predicted_winner": "Nuggets",
     "confidence": 0.566429939207721,
-    "prediction_time": "2025-12-01T19:25:15.891850",
+    "prediction_time": "2025-12-01T19:28:32.726879",
     "game_time": "2025-12-02T02:00:00Z"
   },
   {
@@ -100,7 +100,7 @@
     "away_win_prob": 0.5881686970847525,
     "predicted_winner": "Rockets",
     "confidence": 0.5881686970847525,
-    "prediction_time": "2025-12-01T19:25:15.892126",
+    "prediction_time": "2025-12-01T19:28:32.727172",
     "game_time": "2025-12-02T02:00:00Z"
   },
   {
@@ -113,7 +113,7 @@
     "away_win_prob": 0.44087787749442486,
     "predicted_winner": "Lakers",
     "confidence": 0.5591221225055751,
-    "prediction_time": "2025-12-01T19:25:15.892368",
+    "prediction_time": "2025-12-01T19:28:32.727433",
     "game_time": "2025-12-02T03:00:00Z"
   }
 ]
