@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional
 
 from src.models.ensemble_model import NBAEnsembleModel
 from src.models.live.model import GRUWinProb
-from src.models.vision.model import get_vision_model
+# Lazy import vision model to avoid importing heavy packages at module import time
 from src.common.hardware import pick_device
 
 logger = logging.getLogger(__name__)
@@ -28,8 +28,8 @@ class NBAWorldModel:
         self.live_rnn = GRUWinProb().to(self.device)
         self.live_rnn_loaded = False
         
-        # 3. Vision CNN (The "Eyes")
-        self.vision_cnn = get_vision_model().to(self.device)
+        # 3. Vision CNN (The "Eyes") - lazy loaded to avoid heavy imports on startup
+        self.vision_cnn = None
         self.vision_cnn_loaded = False
         
         self.load_models()
@@ -59,15 +59,31 @@ class NBAWorldModel:
             
         # Load Vision CNN
         cnn_path = self.models_dir / "vision_mnv3.pt"
-        if cnn_path.exists():
-            try:
-                self.vision_cnn = torch.jit.load(str(cnn_path), map_location=self.device)
-                self.vision_cnn_loaded = True
-                logger.info("✅ Vision CNN loaded")
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to load Vision CNN: {e}")
-        else:
-            logger.warning("⚠️ Vision CNN model file not found")
+        # Try to import vision model factory if available (deferred import)
+        try:
+            from src.models.vision.model import get_vision_model
+
+            # If a saved TorchScript exists, prefer loading it
+            if cnn_path.exists():
+                try:
+                    self.vision_cnn = torch.jit.load(str(cnn_path), map_location=self.device)
+                    self.vision_cnn_loaded = True
+                    logger.info("✅ Vision CNN loaded from TorchScript")
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to load Vision CNN TorchScript: {e}")
+                    try:
+                        self.vision_cnn = get_vision_model().to(self.device)
+                        logger.info("✅ Vision CNN instantiated (untrained)")
+                    except Exception as e2:
+                        logger.warning(f"⚠️ Failed to instantiate Vision CNN: {e2}")
+            else:
+                try:
+                    self.vision_cnn = get_vision_model().to(self.device)
+                    logger.info("⚠️ Vision CNN model file not found — instantiated default model")
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to instantiate Vision CNN: {e}")
+        except Exception as e:
+            logger.warning(f"⚠️ Vision dependencies not available: {e}")
             
     def predict_pregame(self, features: pd.DataFrame) -> pd.DataFrame:
         """Get pregame predictions from the ensemble"""

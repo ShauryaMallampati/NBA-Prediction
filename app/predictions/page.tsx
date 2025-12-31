@@ -43,13 +43,73 @@ export default function PredictionsPage() {
     setError(null)
 
     try {
-      const response = await fetch('http://localhost:8000/predictions')
+      // Try FastAPI backend first
+      let response = await fetch('http://localhost:8000/predictions')
+      let result = null
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      if (response.ok) {
+        result = await response.json()
+        
+        // Handle both formats: {predictions: []} or direct list
+        if (Array.isArray(result)) {
+          result = {
+            timestamp: new Date().toISOString(),
+            total_games: result.length,
+            predictions: result.map((p: any) => ({
+              game_id: p.game_id || `${p.home_team}@${p.away_team}`,
+              home_team: p.home_team || '',
+              away_team: p.away_team || '',
+              commence_time: p.date || p.commence_time || new Date().toISOString(),
+              prediction: p.predicted_winner || (p.home_win_prob > 0.5 ? p.home_team : p.away_team),
+              home_win_probability: p.home_win_prob || p.home_win_probability || 0.5,
+              away_win_probability: p.away_win_prob || p.away_win_probability || 0.5,
+              confidence: p.confidence || Math.abs((p.home_win_prob || 0.5) - 0.5) * 2 * 100,
+              models_agree: 'ensemble',
+              consensus_percentage: p.confidence || Math.abs((p.home_win_prob || 0.5) - 0.5) * 2 * 100,
+              individual_votes: {},
+              home_odds: p.home_odds || 0,
+              away_odds: p.away_odds || 0,
+              home_spread: p.home_spread || 0,
+              away_spread: p.away_spread || 0,
+            }))
+          }
+        }
+      } else {
+        // Fallback to Next.js API route
+        const dateQuery = dateParam || new Date().toISOString().split('T')[0]
+        response = await fetch(`/api/predictions?date=${dateQuery}`)
+        
+        if (response.ok) {
+          const apiResult = await response.json()
+          if (apiResult.success && apiResult.predictions) {
+            result = {
+              timestamp: new Date().toISOString(),
+              total_games: apiResult.count || apiResult.predictions.length,
+              predictions: apiResult.predictions.map((p: any) => ({
+                game_id: p.game_id || `${p.home_team}@${p.away_team}`,
+                home_team: p.home_team || '',
+                away_team: p.away_team || '',
+                commence_time: p.date || p.commence_time || new Date().toISOString(),
+                prediction: p.predicted_winner || (parseFloat(p.home_win_prob) > 0.5 ? p.home_team : p.away_team),
+                home_win_probability: parseFloat(p.home_win_prob) || 0.5,
+                away_win_probability: parseFloat(p.away_win_prob) || 0.5,
+                confidence: parseFloat(p.confidence) || Math.abs(parseFloat(p.home_win_prob || '0.5') - 0.5) * 2 * 100,
+                models_agree: 'ensemble',
+                consensus_percentage: parseFloat(p.confidence) || Math.abs(parseFloat(p.home_win_prob || '0.5') - 0.5) * 2 * 100,
+                individual_votes: {},
+                home_odds: 0,
+                away_odds: 0,
+                home_spread: 0,
+                away_spread: 0,
+              }))
+            }
+          }
+        }
       }
       
-      const result = await response.json()
+      if (!result || !result.predictions || result.predictions.length === 0) {
+        throw new Error(result?.message || 'No predictions available')
+      }
       
       // If a specific date is selected, filter predictions for that date
       if (dateParam) {
@@ -66,8 +126,9 @@ export default function PredictionsPage() {
       }
       setError(null)
     } catch (err) {
-      setError("Failed to fetch predictions. Is the API server running at localhost:8000?")
-      console.error(err)
+      const errorMsg = err instanceof Error ? err.message : "Failed to fetch predictions"
+      setError(errorMsg)
+      console.error('Prediction fetch error:', err)
     } finally {
       setLoading(false)
     }
