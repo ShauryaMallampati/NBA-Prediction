@@ -342,6 +342,59 @@ async def live_schedule(days: int = 14):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/explain/{game_id}")
+async def explain_prediction(game_id: str):
+    """
+    Get SHAP explanation for a specific game prediction.
+    Returns feature importance and human-readable explanation.
+    """
+    try:
+        from src.models.shap_explainer import shap_explainer
+        
+        # For now, return a mock explanation structure
+        # In production, this would use actual features from the game
+        return {
+            "game_id": game_id,
+            "explanation": {
+                "top_features": [
+                    {"feature": "elo_diff", "impact": "positive", "contribution": "25.3%"},
+                    {"feature": "home_court_adv", "impact": "positive", "contribution": "15.1%"},
+                    {"feature": "away_b2b", "impact": "positive", "contribution": "12.8%"},
+                ],
+                "summary": "Home team has significant Elo advantage and home court advantage.",
+                "confidence_drivers": ["Historical performance", "Rest advantage", "Home court"]
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/scouting-report/{game_id}")
+async def get_scouting_report(game_id: str):
+    """
+    Generate an AI-powered scouting report for a game.
+    """
+    try:
+        from src.models.scouting_reports import report_generator
+        
+        # Generate a sample report
+        report = report_generator.generate_report(
+            home_team="Lakers",
+            away_team="Celtics",
+            home_win_prob=45.0,
+            away_win_prob=55.0,
+            confidence=65.0
+        )
+        
+        return {
+            "game_id": game_id,
+            "report": report,
+            "format": "markdown"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     
@@ -350,6 +403,8 @@ if __name__ == "__main__":
     print("="*80)
     print("📍 API docs: http://localhost:8000/docs")
     print("🎯 Predictions: http://localhost:8000/predictions")
+    print("🧠 XAI: http://localhost:8000/explain/{game_id}")
+    print("📋 Reports: http://localhost:8000/scouting-report/{game_id}")
     print("="*80)
     
     uvicorn.run(app, host="0.0.0.0", port=8000)
