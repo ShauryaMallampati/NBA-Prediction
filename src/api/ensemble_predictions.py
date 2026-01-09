@@ -408,6 +408,55 @@ async def get_scouting_report(game_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# === CHEMISTRY ENDPOINTS ===
+
+@app.get("/chemistry/league")
+async def get_league_chemistry():
+    """Get league-wide chemistry data from real player pair analysis."""
+    try:
+        from src.models.chemistry_gnn import get_chemistry_model
+        
+        model = get_chemistry_model()
+        if not model or not model.loaded:
+            raise HTTPException(status_code=503, detail="Chemistry model not available")
+        
+        top_duos = model.get_league_top_duos(20)
+        
+        # Rank teams by chemistry
+        team_rankings = [
+            {"team": team, "chemistry_score": score}
+            for team, score in sorted(
+                model.team_chemistry.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )
+        ]
+        
+        return {
+            "total_teams": len(model.team_chemistry),
+            "total_pairs": len(model.player_pairs),
+            "top_duos": top_duos,
+            "team_rankings": team_rankings
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/chemistry/matchup/{home_team}/{away_team}")
+async def get_matchup_chemistry(home_team: str, away_team: str):
+    """Get chemistry analysis for a specific matchup."""
+    try:
+        from src.models.chemistry_gnn import get_chemistry_model
+        
+        model = get_chemistry_model()
+        if not model or not model.loaded:
+            raise HTTPException(status_code=503, detail="Chemistry model not available")
+        
+        return model.predict_chemistry_impact(home_team.upper(), away_team.upper())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     
@@ -418,6 +467,7 @@ if __name__ == "__main__":
     print("🎯 Predictions: http://localhost:8000/predictions")
     print("🧠 XAI: http://localhost:8000/explain/{game_id}")
     print("📋 Reports: http://localhost:8000/scouting-report/{game_id}")
+    print("🧪 Chemistry: http://localhost:8000/chemistry/league")
     print("="*80)
     
     uvicorn.run(app, host="0.0.0.0", port=8000)
