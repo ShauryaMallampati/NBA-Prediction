@@ -92,7 +92,7 @@ export default function HomePage() {
           </Link>
           <nav className="hidden md:flex items-center gap-8">
             <Link
-              href="/predictions"
+              href="/ensemble-predictions"
               className="text-sm font-semibold hover:text-primary transition-colors relative group"
             >
               Predictions
@@ -119,8 +119,11 @@ export default function HomePage() {
               Schedule
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
             </Link>
-            <Link href="/live" className="text-sm font-semibold hover:text-primary transition-colors relative group">
-              Live
+            <Link
+              href="/postgame"
+              className="text-sm font-semibold hover:text-primary transition-colors relative group"
+            >
+              Postgame
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
             </Link>
             <Link
@@ -179,11 +182,11 @@ export default function HomePage() {
               Schedule
             </Link>
             <Link
-              href="/live"
+              href="/postgame"
               className="inline-flex items-center gap-3 px-10 py-5 rounded-2xl glass-strong font-bold text-lg hover:bg-accent hover:scale-105 transition-all duration-300 border-2"
             >
-              <Activity className="w-5 h-5" />
-              Live Games
+              <BarChart3 className="w-5 h-5" />
+              Postgame
             </Link>
           </div>
         </div>
@@ -218,10 +221,10 @@ export default function HomePage() {
                       {formatTime(pred.commence_time)}
                     </div>
                     <div className={`px-3 py-1 rounded-lg text-xs font-bold ${pred.confidence >= 70
-                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                        : pred.confidence >= 50
-                          ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                          : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      : pred.confidence >= 50
+                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                        : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
                       }`}>
                       {pred.confidence.toFixed(0)}% Confident
                     </div>
@@ -229,8 +232,8 @@ export default function HomePage() {
 
                   <div className="space-y-3 mb-4">
                     <div className={`p-3 rounded-lg border-2 ${pred.prediction === 'HOME_WIN'
-                        ? 'bg-green-500/10 border-green-500/30'
-                        : 'bg-slate-800/30 border-slate-700/30'
+                      ? 'bg-green-500/10 border-green-500/30'
+                      : 'bg-slate-800/30 border-slate-700/30'
                       }`}>
                       <div className="flex items-center justify-between">
                         <div>
@@ -257,8 +260,8 @@ export default function HomePage() {
                     </div>
 
                     <div className={`p-3 rounded-lg border-2 ${pred.prediction === 'AWAY_WIN'
-                        ? 'bg-green-500/10 border-green-500/30'
-                        : 'bg-slate-800/30 border-slate-700/30'
+                      ? 'bg-green-500/10 border-green-500/30'
+                      : 'bg-slate-800/30 border-slate-700/30'
                       }`}>
                       <div className="flex items-center justify-between">
                         <div>
@@ -320,28 +323,28 @@ export default function HomePage() {
               <div className="flex-1">
                 <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-purple-500/20 border border-purple-400/50 mb-6">
                   <Brain className="w-5 h-5 text-purple-400" />
-                  <span className="text-sm font-bold text-purple-300">6 AI Models Voting</span>
+                  <span className="text-sm font-bold text-purple-300">Ensemble Models + XAI</span>
                 </div>
                 <h3 className="text-6xl font-black mb-6 text-balance bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent" style={{ fontFamily: "var(--font-display)" }}>
-                  Ensemble Predictions
+                  Advanced Predictions
                 </h3>
                 <p className="text-xl text-gray-300 leading-relaxed mb-8 max-w-3xl">
-                  <span className="text-green-400 font-bold">XGBoost + Random Forest + Decision Tree + Logistic Regression + Gradient Boosting + Neural Network</span> all voting together.
-                  Get win probabilities, confidence scores, and see how each model voted.
+                  <span className="text-green-400 font-bold">XGBoost + LightGBM + CatBoost</span> ensemble.
+                  Now with **Explainable AI (SHAP)** and **AI-Generated Scouting Reports** for every single game.
                 </p>
                 <div className="flex flex-wrap gap-4 mb-8">
                   <div className="px-4 py-2 rounded-lg bg-green-500/20 border border-green-400/30">
-                    <span className="text-green-400 font-bold text-sm">100% Test Accuracy</span>
+                    <span className="text-green-400 font-bold text-sm">67.7% Accuracy</span>
                   </div>
                   <div className="px-4 py-2 rounded-lg bg-blue-500/20 border border-blue-400/30">
-                    <span className="text-blue-400 font-bold text-sm">6 Models Voting</span>
+                    <span className="text-blue-400 font-bold text-sm">XAI Interpretability</span>
                   </div>
                   <div className="px-4 py-2 rounded-lg bg-yellow-500/20 border border-yellow-400/30">
-                    <span className="text-yellow-400 font-bold text-sm">Real-time Updates</span>
+                    <span className="text-yellow-400 font-bold text-sm">Daily Automation</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-purple-400 font-bold text-lg">
-                  View Detailed Predictions
+                  Explore Modern Interface
                   <ArrowRight className="w-6 h-6 group-hover:translate-x-3 transition-transform" />
                 </div>
               </div>
@@ -350,35 +353,35 @@ export default function HomePage() {
           </Link>
 
           <Link
-            href="/schedule"
+            href="/ensemble-predictions"
             className="group md:col-span-4 p-12 rounded-3xl glass-strong hover:bg-accent/50 transition-all duration-500 hover:scale-[1.02] border-2 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20"
           >
             <Calendar className="w-16 h-16 text-primary mb-8 group-hover:scale-110 transition-transform glow" />
             <h3 className="text-5xl font-black mb-6 text-balance" style={{ fontFamily: "var(--font-display)" }}>
-              Game Schedule & Analysis
+              Daily Runner
             </h3>
             <p className="text-xl text-muted-foreground leading-relaxed mb-8 max-w-2xl">
-              Complete season schedule with pregame analytics, Elo ratings, and comprehensive feature engineering
+              Automated script that fetches results every morning and tracks model performance against real outcomes.
             </p>
             <div className="flex items-center gap-3 text-primary font-bold text-lg">
-              Explore Schedule
+              Check Track Record
               <ArrowRight className="w-6 h-6 group-hover:translate-x-3 transition-transform" />
             </div>
           </Link>
 
           <Link
-            href="/live"
+            href="/postgame"
             className="group md:col-span-2 p-12 rounded-3xl glass-strong hover:bg-accent/50 transition-all duration-500 hover:scale-[1.02] border-2 hover:border-secondary/50 hover:shadow-2xl hover:shadow-secondary/20"
           >
             <TrendingUp className="w-16 h-16 text-secondary mb-8 group-hover:scale-110 transition-transform glow" />
             <h3 className="text-4xl font-black mb-6 text-balance" style={{ fontFamily: "var(--font-display)" }}>
-              Live Game Center
+              Accuracy Dashboard
             </h3>
             <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-              Real-time win probability tracking with possession-by-possession updates
+              Track our model's performance with real accuracy metrics and calibration analysis
             </p>
             <div className="flex items-center gap-3 text-secondary font-bold">
-              Watch Live
+              View Stats
               <ArrowRight className="w-5 h-5 group-hover:translate-x-3 transition-transform" />
             </div>
           </Link>
