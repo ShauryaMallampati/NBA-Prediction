@@ -1,18 +1,18 @@
 "use client"
 
 import {
-    Activity,
-    ArrowRight,
-    BarChart3,
-    Brain,
-    Calendar,
-    CheckCircle,
-    MessageSquare,
-    RefreshCw,
-    Target,
-    TrendingUp,
-    Users,
-    Zap,
+  Activity,
+  ArrowRight,
+  BarChart3,
+  Brain,
+  Calendar,
+  CheckCircle,
+  MessageSquare,
+  RefreshCw,
+  Target,
+  TrendingUp,
+  Users,
+  Zap,
 } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -217,32 +217,29 @@ export default function HomePage() {
                     <div className="text-xs text-muted-foreground font-medium">
                       {formatTime(pred.commence_time)}
                     </div>
-                    <div className={`px-3 py-1 rounded-lg text-xs font-bold ${
-                      pred.confidence >= 70 
+                    <div className={`px-3 py-1 rounded-lg text-xs font-bold ${pred.confidence >= 70
                         ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                         : pred.confidence >= 50
-                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                        : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                    }`}>
+                          ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                          : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                      }`}>
                       {pred.confidence.toFixed(0)}% Confident
                     </div>
                   </div>
 
                   <div className="space-y-3 mb-4">
-                    <div className={`p-3 rounded-lg border-2 ${
-                      pred.prediction === 'HOME_WIN'
+                    <div className={`p-3 rounded-lg border-2 ${pred.prediction === 'HOME_WIN'
                         ? 'bg-green-500/10 border-green-500/30'
                         : 'bg-slate-800/30 border-slate-700/30'
-                    }`}>
+                      }`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-xs text-muted-foreground mb-1">HOME</div>
                           <div className="font-bold">{pred.home_team}</div>
                         </div>
                         <div className="text-right">
-                          <div className={`text-2xl font-black ${
-                            pred.prediction === 'HOME_WIN' ? 'text-green-400' : 'text-gray-500'
-                          }`}>
+                          <div className={`text-2xl font-black ${pred.prediction === 'HOME_WIN' ? 'text-green-400' : 'text-gray-500'
+                            }`}>
                             {pred.home_win_probability.toFixed(0)}%
                           </div>
                         </div>
@@ -259,20 +256,18 @@ export default function HomePage() {
                       <div className="text-xs text-muted-foreground font-bold">VS</div>
                     </div>
 
-                    <div className={`p-3 rounded-lg border-2 ${
-                      pred.prediction === 'AWAY_WIN'
+                    <div className={`p-3 rounded-lg border-2 ${pred.prediction === 'AWAY_WIN'
                         ? 'bg-green-500/10 border-green-500/30'
                         : 'bg-slate-800/30 border-slate-700/30'
-                    }`}>
+                      }`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-xs text-muted-foreground mb-1">AWAY</div>
                           <div className="font-bold">{pred.away_team}</div>
                         </div>
                         <div className="text-right">
-                          <div className={`text-2xl font-black ${
-                            pred.prediction === 'AWAY_WIN' ? 'text-green-400' : 'text-gray-500'
-                          }`}>
+                          <div className={`text-2xl font-black ${pred.prediction === 'AWAY_WIN' ? 'text-green-400' : 'text-gray-500'
+                            }`}>
                             {pred.away_win_probability.toFixed(0)}%
                           </div>
                         </div>
@@ -331,7 +326,7 @@ export default function HomePage() {
                   Ensemble Predictions
                 </h3>
                 <p className="text-xl text-gray-300 leading-relaxed mb-8 max-w-3xl">
-                  <span className="text-green-400 font-bold">XGBoost + Random Forest + Decision Tree + Logistic Regression + Gradient Boosting + Neural Network</span> all voting together. 
+                  <span className="text-green-400 font-bold">XGBoost + Random Forest + Decision Tree + Logistic Regression + Gradient Boosting + Neural Network</span> all voting together.
                   Get win probabilities, confidence scores, and see how each model voted.
                 </p>
                 <div className="flex flex-wrap gap-4 mb-8">

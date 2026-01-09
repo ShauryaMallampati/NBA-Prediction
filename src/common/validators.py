@@ -77,3 +77,9 @@ def validate_data_exists(data_path: Path, min_rows: int = 100) -> None:
                 f"Data file has insufficient rows: {data_path} ({len(df)} < {min_rows})"
             )
         logger.info(f"✓ Data validated: {data_path.name} ({len(df)} rows)")
+
+
+def guard_mock_allowed() -> None:
+    """Ensure mock data is allowed by configuration."""
+    if settings.require_real_data:
+        raise ValidationError("Mock data requested but REQUIRE_REAL_DATA=true")

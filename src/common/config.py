@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     api_port: int = Field(default=8000)
     cors_origins: str = Field(default="http://localhost:3000")
 
+    # Betting Strategy (Kelly Criterion)
+    bankroll: float = Field(default=1000.0, alias="BANKROLL")
+    kelly_fraction: float = Field(default=0.25, alias="KELLY_FRACTION")
+    min_edge: float = Field(default=0.05, alias="MIN_EDGE")
+    max_bet_pct: float = Field(default=0.05, alias="MAX_BET_PCT")
+
     class Config:
         env_file = ".env"
         case_sensitive = False
