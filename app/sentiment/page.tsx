@@ -33,6 +33,10 @@ export default function SentimentPage() {
           <p className="text-muted-foreground text-lg">
             Real-time sentiment tracking from Twitter, Reddit, and YouTube using transformer models
           </p>
+          <div className="mt-4 p-3 rounded-lg bg-yellow-500/20 border border-yellow-500/50 inline-flex items-center gap-2">
+            <span className="text-yellow-400 font-bold text-sm">⚠️ DEMO DATA</span>
+            <span className="text-yellow-300 text-sm">This page shows sample data. API integration coming soon.</span>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
@@ -109,9 +113,8 @@ export default function SentimentPage() {
                       <span className="text-xl font-bold text-muted-foreground">#{index + 1}</span>
                       <span className="text-lg font-semibold">{team.team}</span>
                       <span
-                        className={`text-sm font-medium ${
-                          team.change.startsWith("+") ? "text-primary" : "text-destructive"
-                        }`}
+                        className={`text-sm font-medium ${team.change.startsWith("+") ? "text-primary" : "text-destructive"
+                          }`}
                       >
                         {team.change}
                       </span>

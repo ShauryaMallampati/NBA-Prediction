@@ -22,6 +22,10 @@ export default function ChemistryPage() {
           <p className="text-muted-foreground text-lg">
             Graph Neural Network analysis of player synergies and on-court chemistry
           </p>
+          <div className="mt-4 p-3 rounded-lg bg-yellow-500/20 border border-yellow-500/50 inline-flex items-center gap-2">
+            <span className="text-yellow-400 font-bold text-sm">⚠️ DEMO DATA</span>
+            <span className="text-yellow-300 text-sm">This page shows sample data. GNN model coming soon.</span>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
