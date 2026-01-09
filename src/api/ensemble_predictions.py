@@ -171,6 +171,36 @@ async def get_predictions():
                 # Use 60% model + 40% implied odds
                 blended_probs = 0.6 * np.array(ensemble_probs) + 0.4 * np.array(implied_probs)
             
+            # === CHEMISTRY INJECTION ===
+            # Adjust win probability based on team chemistry differential
+            try:
+                from src.models.chemistry_gnn import get_chemistry_model
+                chem_model = get_chemistry_model()
+                
+                if chem_model and chem_model.loaded:
+                    chem_adjustments = []
+                    for _, row in df.iterrows():
+                        home = row['home_team']
+                        away = row['away_team']
+                        
+                        # Get differential (home - away)
+                        # Typical range: -0.4 to +0.4
+                        diff = chem_model.get_chemistry_differential(home, away)
+                        
+                        # Apply impact factor (0.1 means 10% max adjustment)
+                        # A massive chemistry gap (+0.4) results in +4% win prob
+                        adjustment = diff * 0.1
+                        chem_adjustments.append(adjustment)
+                    
+                    # Apply adjustment
+                    blended_probs = blended_probs + np.array(chem_adjustments)
+                    
+                    # Clamp probabilities to reasonable range
+                    blended_probs = np.clip(blended_probs, 0.05, 0.95)
+                    print(f"✅ Applied chemistry adjustments to {len(df)} games (Range: {min(chem_adjustments):.3f} to {max(chem_adjustments):.3f})")
+            except Exception as e:
+                print(f"⚠️ Failed to apply chemistry adjustment: {e}")
+            
             # Construct a predictions DataFrame similar to what the API expects
             predictions_df = pd.DataFrame({
                 'prediction': ['HOME_WIN' if p > 0.5 else 'AWAY_WIN' for p in blended_probs],
