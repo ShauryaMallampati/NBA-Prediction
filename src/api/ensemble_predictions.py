@@ -158,14 +158,27 @@ async def get_predictions():
             X_input = X_model.drop(columns=['game_id'])
             ensemble_probs = trainer.predict_ensemble(X_input)
             
+            # Get IMPLIED PROBABILITY from odds (this is the real differentiator!)
+            implied_probs = df['home_implied_prob'].values
+            
+            # BLEND: Use 70% model + 30% odds (model is calibrated but not predictive for new games)
+            # If model is outputting flat predictions, lean more on odds
+            model_variance = np.var(ensemble_probs)
+            if model_variance < 0.01:  # Model is outputting flat predictions
+                # Use 30% model + 70% implied odds
+                blended_probs = 0.3 * np.array(ensemble_probs) + 0.7 * np.array(implied_probs)
+            else:
+                # Use 60% model + 40% implied odds
+                blended_probs = 0.6 * np.array(ensemble_probs) + 0.4 * np.array(implied_probs)
+            
             # Construct a predictions DataFrame similar to what the API expects
             predictions_df = pd.DataFrame({
-                'prediction': ['HOME_WIN' if p > 0.5 else 'AWAY_WIN' for p in ensemble_probs],
-                'home_win_probability': [round(p * 100, 2) for p in ensemble_probs],
-                'away_win_probability': [round((1-p) * 100, 2) for p in ensemble_probs],
-                'confidence': [round(abs(p - 0.5) * 200, 2) for p in ensemble_probs],
-                'models_agree': ["3/3" for _ in ensemble_probs], # Placeholder
-                'consensus_percentage': [100.0 for _ in ensemble_probs] # Placeholder
+                'prediction': ['HOME_WIN' if p > 0.5 else 'AWAY_WIN' for p in blended_probs],
+                'home_win_probability': [round(p * 100, 2) for p in blended_probs],
+                'away_win_probability': [round((1-p) * 100, 2) for p in blended_probs],
+                'confidence': [round(abs(p - 0.5) * 200, 2) for p in blended_probs],
+                'models_agree': ["3/3" for _ in blended_probs], # Placeholder
+                'consensus_percentage': [100.0 for _ in blended_probs] # Placeholder
             })
             
             # Add individual votes (optional but nice)
