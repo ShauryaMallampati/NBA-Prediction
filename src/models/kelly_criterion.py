@@ -14,6 +14,7 @@ import logging
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple
+from src.common.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +24,10 @@ class KellyCriterion:
 
     def __init__(
         self,
-        bankroll: float = 1000.0,
-        kelly_fraction: float = 0.25,
-        min_edge: float = 0.05,
-        max_bet_pct: float = 0.05,
+        bankroll: float = settings.bankroll,
+        kelly_fraction: float = settings.kelly_fraction,
+        min_edge: float = settings.min_edge,
+        max_bet_pct: float = settings.max_bet_pct,
     ):
         """
         Initialize Kelly calculator.

@@ -85,10 +85,32 @@ class EnsembleTrainer:
         
         # Extract features and target
         # Exclude non-feature columns (identifiers, dates, and ACTUAL GAME OUTCOMES to prevent data leakage)
-        exclude_cols = ['game_id', 'date', 'home_team', 'away_team', 
+        exclude_cols = ['game_id', 'date', 'home_team', 'away_team', 'home', 'away',
                        'home_pts', 'away_pts', 'home_score', 'away_score',
                        'home_win', 'away_win', 'score_diff',
-                       'season', 'year', 'month', 'day_of_week']
+                       'season', 'year', 'month', 'day_of_week',
+                       # Exclude global leakage features
+                       'home_home_win_pct', 'away_away_win_pct',
+                       'home_home_win_pct_month', 'away_away_win_pct_month',
+                       'home_month_win_pct', 'away_month_win_pct',
+                       'home_day_win_pct', 'away_day_win_pct',
+                       'home_season_phase_win_pct', 'away_season_phase_win_pct',
+                       'home_b2b_win_pct', 'away_b2b_win_pct',
+                       'h2h_home_win_pct', 'h2h_avg_score_diff',
+                       'home_elo_tier', 'away_elo_tier', 'elo_tier_matchup',
+                       # Exclude more global/leaky features
+                       'home_team_off_rating', 'home_team_def_rating', 
+                       'away_team_off_rating', 'away_team_def_rating',
+                       'home_opp_adjusted_off_rating', 'away_opp_adjusted_off_rating', 
+                       'home_opp_adjusted_def_rating', 'away_opp_adjusted_def_rating',
+                       'h2h_home_wins', 'h2h_away_wins',
+                       'home_recent_weighted_form', 'away_recent_weighted_form',
+                       'home_momentum_3', 'home_momentum_5', 'home_momentum_10',
+                       'away_momentum_3', 'away_momentum_5', 'away_momentum_10',
+                       # Exclude recent form (suspected leak)
+                       'home_recent_form', 'away_recent_form',
+                       'home_recent_form_3', 'away_recent_form_3',
+                       'home_recent_form_5', 'away_recent_form_5']
         
         feature_cols = [col for col in df.columns if col not in exclude_cols]
         self.feature_names = feature_cols

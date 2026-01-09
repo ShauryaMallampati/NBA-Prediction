@@ -1,7 +1,0 @@
-model: mobilenet_v3_small
-frames: 12
-fps: 6
-img_size: 224
-epochs: 3
-batch_size: 64
-lr: 0.0008

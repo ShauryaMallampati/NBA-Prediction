@@ -46,10 +46,10 @@ export default function PredictionsPage() {
       // Try FastAPI backend first
       let response = await fetch('http://localhost:8000/predictions')
       let result = null
-      
+
       if (response.ok) {
         result = await response.json()
-        
+
         // Handle both formats: {predictions: []} or direct list
         if (Array.isArray(result)) {
           result = {
@@ -78,7 +78,7 @@ export default function PredictionsPage() {
         // Fallback to Next.js API route
         const dateQuery = dateParam || new Date().toISOString().split('T')[0]
         response = await fetch(`/api/predictions?date=${dateQuery}`)
-        
+
         if (response.ok) {
           const apiResult = await response.json()
           if (apiResult.success && apiResult.predictions) {
@@ -106,11 +106,11 @@ export default function PredictionsPage() {
           }
         }
       }
-      
+
       if (!result || !result.predictions || result.predictions.length === 0) {
         throw new Error(result?.message || 'No predictions available')
       }
-      
+
       // If a specific date is selected, filter predictions for that date
       if (dateParam) {
         const filteredPredictions = result.predictions.filter(
@@ -138,13 +138,13 @@ export default function PredictionsPage() {
     // Check if date is in URL params
     const params = new URLSearchParams(window.location.search)
     const dateParam = params.get('date')
-    
+
     if (dateParam) {
       fetchPredictions(dateParam)
     } else {
       fetchPredictions()
     }
-    
+
     // Refresh every 5 minutes
     const interval = setInterval(() => {
       if (dateParam) {
@@ -185,7 +185,7 @@ export default function PredictionsPage() {
                 <p className="text-xs text-slate-400">ML-Powered Analytics</p>
               </div>
             </Link>
-            
+
             <div className="flex items-center gap-6">
               <Link href="/" className="flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors">
                 <ArrowLeft className="w-4 h-4" />
@@ -213,7 +213,7 @@ export default function PredictionsPage() {
           <p className="text-slate-300 text-xl mb-8">
             AI-powered predictions using 6-model ensemble voting
           </p>
-          
+
           <div className="flex flex-wrap justify-center gap-3 mb-6">
             <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-purple-600/30 border border-purple-400/50">
               <Users className="w-5 h-5 text-purple-300" />
@@ -228,7 +228,7 @@ export default function PredictionsPage() {
               <span className="text-sm text-white font-semibold">Real-time Updates</span>
             </div>
           </div>
-            
+
           <button
             onClick={() => fetchPredictions(selectedDate || undefined)}
             disabled={loading}
@@ -348,11 +348,11 @@ export default function PredictionsPage() {
                     <div className="text-4xl font-black text-white mb-2">{pred.away_team}</div>
                     <div className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Away</div>
                   </div>
-                  
+
                   <div className="px-6">
                     <div className="text-3xl font-black text-slate-600">@</div>
                   </div>
-                  
+
                   <div className="text-center flex-1">
                     <div className="text-4xl font-black text-white mb-2">{pred.home_team}</div>
                     <div className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Home</div>
@@ -377,7 +377,7 @@ export default function PredictionsPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="text-center p-6 rounded-xl bg-slate-900/80 border border-slate-700/50">
                     <div className={`text-5xl font-black mb-3 ${pred.prediction === pred.home_team ? 'text-blue-400' : 'text-slate-600'}`}>
                       {(pred.home_win_probability).toFixed(1)}%
@@ -408,12 +408,11 @@ export default function PredictionsPage() {
                     <span className="text-sm text-slate-400 font-semibold">Ensemble Confidence:</span>
                     <div className="flex items-center gap-3">
                       <div className="w-40 h-4 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
-                        <div 
-                          className={`h-full ${
-                            pred.confidence >= 70 ? 'bg-green-500' : 
-                            pred.confidence >= 60 ? 'bg-yellow-500' : 
-                            'bg-orange-500'
-                          }`}
+                        <div
+                          className={`h-full ${pred.confidence >= 70 ? 'bg-green-500' :
+                              pred.confidence >= 60 ? 'bg-yellow-500' :
+                                'bg-orange-500'
+                            }`}
                           style={{ width: `${Math.min(pred.confidence, 100)}%` }}
                         />
                       </div>

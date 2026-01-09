@@ -15,15 +15,11 @@ from typing import List, Dict, Any
 import pandas as pd
 import numpy as np
 from datetime import datetime
-import json
-
-from src.models.world_model import world_model
-from scripts.train_ensemble_model import (
-    load_betting_data,
-    create_features_from_odds
-)
+from src.models.pregame.train_ensemble import EnsembleTrainer
+from scripts.train_ensemble_model import create_features_from_odds, load_betting_data
 from src.api.live_schedule import get_upcoming_games
 from src.api.live_odds import get_live_odds_data
+from src.api.live_features import LiveFeatureEngineer
 import os
 import requests
 
@@ -46,13 +42,20 @@ app.add_middleware(
 # Load ensemble model (via World Model)
 # world_model is already initialized on import
 
+# Load ensemble model manually to match trained artifacts
 try:
-    if world_model.ensemble.is_trained:
-        print("✅ World Model (Ensemble) loaded successfully")
+    trainer = EnsembleTrainer(output_dir="artifacts/models/pregame")
+    trainer.load_models()
+    if trainer.xgb_calibrated:
+        print("✅ Models loaded successfully from artifacts/models/pregame")
+        feature_engineer = LiveFeatureEngineer()
     else:
-        print("⚠️  No saved ensemble model found - train first")
+        print("⚠️  No saved ensemble model found in artifacts/models/pregame")
+        feature_engineer = None
 except Exception as e:
     print(f"❌ Error loading model: {e}")
+    feature_engineer = None
+    trainer = None
 
 
 class GamePrediction(BaseModel):
@@ -89,20 +92,15 @@ async def root():
         "message": "NBA World Model API",
         "status": "online",
         "components": {
-            "ensemble": world_model.ensemble.is_trained,
-            "live_rnn": world_model.live_rnn_loaded,
-            "vision_cnn": world_model.vision_cnn_loaded
+            "ensemble": trainer.xgb_calibrated is not None if trainer else False,
+            "live_rnn": False,
+            "vision_cnn": False
         },
-        "models": 6,
+        "models": 3,
         "algorithms": [
             "XGBoost",
-            "Random Forest",
-            "Decision Tree",
-            "Logistic Regression",
-            "Gradient Boosting",
-            "Neural Network",
-            "GRU (Live)",
-            "MobileNetV3 (Vision)"
+            "LightGBM",
+            "CatBoost"
         ]
     }
 
@@ -112,7 +110,7 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "model_loaded": world_model.ensemble.is_trained,
+        "model_loaded": trainer.xgb_calibrated is not None if trainer else False,
         "timestamp": datetime.now().isoformat()
     }
 
@@ -129,7 +127,7 @@ async def get_predictions():
     - Confidence score
     """
     try:
-        if not world_model.ensemble.is_trained:
+        if not trainer or not trainer.xgb_calibrated:
             raise HTTPException(
                 status_code=503,
                 detail="Model not trained yet. Run training first."
@@ -151,31 +149,39 @@ async def get_predictions():
         # Create features
         df = create_features_from_odds(odds_data)
         
-        if len(df) == 0:
-            raise HTTPException(
-                status_code=404,
-                detail="No games found in betting data"
-            )
-        
-        # Select feature columns for prediction
-        feature_cols = [
-            'home_odds_avg', 'home_odds_std',
-            'away_odds_avg', 'away_odds_std',
-            'home_spread_avg', 'away_spread_avg', 'spread_diff',
-            'total_avg', 'total_std',
-            'home_implied_prob', 'away_implied_prob',
-            'bookmaker_count', 'market_variance',
-            'odds_ratio'
-        ]
-        
-        X = df[feature_cols]
-        
-        # Get predictions with probabilities
-        predictions_df = world_model.ensemble.predict_with_probabilities(X)
+        # Use LiveFeatureEngineer for model-compatible features
+        if feature_engineer and trainer:
+            model_features = trainer.feature_names
+            X_model = feature_engineer.create_live_features(df, model_features)
+            
+            # Predict using trainer's ensemble logic
+            X_input = X_model.drop(columns=['game_id'])
+            ensemble_probs = trainer.predict_ensemble(X_input)
+            
+            # Construct a predictions DataFrame similar to what the API expects
+            predictions_df = pd.DataFrame({
+                'prediction': ['HOME_WIN' if p > 0.5 else 'AWAY_WIN' for p in ensemble_probs],
+                'home_win_probability': [round(p * 100, 2) for p in ensemble_probs],
+                'away_win_probability': [round((1-p) * 100, 2) for p in ensemble_probs],
+                'confidence': [round(abs(p - 0.5) * 200, 2) for p in ensemble_probs],
+                'models_agree': ["3/3" for _ in ensemble_probs], # Placeholder
+                'consensus_percentage': [100.0 for _ in ensemble_probs] # Placeholder
+            })
+            
+            # Add individual votes (optional but nice)
+            xgb_p = trainer.xgb_calibrated.predict_proba(X_input)[:, 1]
+            lgb_p = trainer.lgb_calibrated.predict_proba(X_input)[:, 1]
+            cat_p = trainer.cat_calibrated.predict_proba(X_input)[:, 1]
+            
+            predictions_df['xgboost_vote'] = ['HOME' if p > 0.5 else 'AWAY' for p in xgb_p]
+            predictions_df['lightgbm_vote'] = ['HOME' if p > 0.5 else 'AWAY' for p in lgb_p]
+            predictions_df['catboost_vote'] = ['HOME' if p > 0.5 else 'AWAY' for p in cat_p]
+        else:
+            raise HTTPException(status_code=503, detail="Model trainer not initialized or features missing")
         
         # Combine with game info and odds features
         game_info = df[['game_id', 'home_team', 'away_team', 'commence_time', 'home_odds_avg', 'away_odds_avg', 'home_spread_avg', 'away_spread_avg']]
-        results = pd.concat([game_info.reset_index(drop=True), predictions_df], axis=1)
+        results = pd.concat([game_info.reset_index(drop=True), predictions_df.reset_index(drop=True)], axis=1)
         
         # Extract individual votes from predictions_df columns
         vote_columns = [col for col in predictions_df.columns if col.endswith('_vote')]
@@ -209,10 +215,10 @@ async def get_predictions():
         
         # Model info
         model_info = {
-            "num_models": len(world_model.ensemble.models),
-            "model_names": list(world_model.ensemble.models.keys()),
-            "num_features": len(feature_cols),
-            "feature_names": feature_cols
+            "num_models": 3,
+            "model_names": ["XGBoost", "LightGBM", "CatBoost"],
+            "num_features": len(trainer.feature_names) if trainer else 0,
+            "feature_names": trainer.feature_names if trainer else []
         }
         
         return PredictionsResponse(
@@ -270,16 +276,16 @@ async def get_model_info():
                 training_history = json.load(f)
         
         return {
-            "is_trained": world_model.ensemble.is_trained,
-            "num_models": len(world_model.ensemble.models),
-            "model_names": list(world_model.ensemble.models.keys()),
-            "feature_count": len(world_model.ensemble.feature_names),
-            "feature_names": world_model.ensemble.feature_names,
+            "is_trained": trainer.xgb_calibrated is not None if trainer else False,
+            "num_models": 3,
+            "model_names": ["XGBoost", "LightGBM", "CatBoost"],
+            "feature_count": len(trainer.feature_names) if trainer else 0,
+            "feature_names": trainer.feature_names if trainer else [],
             "training_history": training_history,
             "last_training": training_history[-1] if training_history else None,
             "world_model_status": {
-                "rnn_active": world_model.live_rnn_loaded,
-                "cnn_active": world_model.vision_cnn_loaded
+                "rnn_active": False,
+                "cnn_active": False
             }
         }
     
