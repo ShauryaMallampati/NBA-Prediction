@@ -1,16 +1,16 @@
-import type React from "react"
 import type { Metadata } from "next"
-import { Inter, Space_Grotesk } from "next/font/google"
+import { Inter } from "next/font/google"
 import "./globals.css"
+import { ThemeProvider } from "@/components/theme-provider"
+import { QueryProvider } from "@/lib/providers"
+import { Sidebar } from "@/components/layout/sidebar"
+import { MobileNav } from "@/components/layout/mobile-nav"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" })
 
 export const metadata: Metadata = {
-  title: "NBA Intelligence Platform | ML-Powered Analytics",
-  description:
-    "Advanced NBA predictions with machine learning, live game tracking, player chemistry analysis, and social sentiment insights",
-    generator: 'v0.app'
+  title: "NBA Intel - ML-Powered Game Predictions",
+  description: "Advanced NBA analytics and predictions using ensemble machine learning models",
 }
 
 export default function RootLayout({
@@ -19,8 +19,30 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
-      <body className="font-sans">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <QueryProvider>
+            <div className="min-h-screen bg-background">
+              {/* Sidebar (desktop) */}
+              <Sidebar />
+
+              {/* Mobile navigation */}
+              <MobileNav />
+
+              {/* Main content area */}
+              <main className="lg:pl-64 pt-16 lg:pt-0">
+                {children}
+              </main>
+            </div>
+          </QueryProvider>
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

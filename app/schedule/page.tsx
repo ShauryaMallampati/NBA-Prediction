@@ -1,261 +1,159 @@
-"use client"
+'use client'
 
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Clock, MapPin, RefreshCw } from "lucide-react"
-import Link from "next/link"
-import { useEffect, useState } from "react"
-
-interface Game {
-  game_id: string
-  date: string
-  home_team: string
-  away_team: string
-  game_time: string
-  season: string
-}
-
-interface GamesByDate {
-  [date: string]: Game[]
-}
+import { useState } from 'react'
+import { Header } from '@/components/layout/header'
+import { useSchedule } from '@/lib/hooks'
+import { PageSkeleton } from '@/components/shared/loading-skeleton'
+import { ErrorState } from '@/components/shared/error-state'
+import { EmptyState } from '@/components/shared/empty-state'
+import { formatShortDate, formatTime } from '@/lib/utils/format'
+import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 
 export default function SchedulePage() {
-  const [gamesByDate, setGamesByDate] = useState<GamesByDate>({})
-  const [dates, setDates] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [currentMonth, setCurrentMonth] = useState<string>(new Date().toISOString().slice(0, 7))
-  
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ]
+  const { data, isLoading, error, refetch } = useSchedule(30)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchSchedule()
-  }, [currentMonth])
+  const games = data?.games || []
 
-  const fetchSchedule = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/schedule?month=${currentMonth}`)
-      const data = await response.json()
-      
-      if (data.error || !data.success) {
-        console.error('Error fetching schedule:', data.error || data.message)
-        setGamesByDate({})
-        setDates([])
-        return
-      }
+  // Group games by date
+  const gamesByDate = games.reduce((acc, game) => {
+    const date = game.date.split('T')[0]
+    if (!acc[date]) acc[date] = []
+    acc[date].push(game)
+    return acc
+  }, {} as Record<string, typeof games>)
 
-      // Handle both camelCase and snake_case formats
-      setGamesByDate(data.gamesByDate || data.games_by_date || {})
-      setDates(data.dates || [])
-    } catch (error) {
-      console.error('Error fetching schedule:', error)
-      setGamesByDate({})
-      setDates([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const dates = Object.keys(gamesByDate).sort()
+  const today = new Date().toISOString().split('T')[0]
+  const displayDate = selectedDate || today
 
-  const changeMonth = (direction: 'prev' | 'next') => {
-    const [year, month] = currentMonth.split('-').map(Number)
-    let newYear = year
-    let newMonth = month
+  const displayGames = gamesByDate[displayDate] || []
 
-    if (direction === 'prev') {
-      newMonth -= 1
-      if (newMonth < 1) {
-        newMonth = 12
-        newYear -= 1
-      }
-    } else {
-      newMonth += 1
-      if (newMonth > 12) {
-        newMonth = 1
-        newYear += 1
-      }
-    }
-
-    setCurrentMonth(`${newYear}-${String(newMonth).padStart(2, '0')}`)
-  }
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00')
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short',
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    })
-  }
-
-  const isToday = (dateStr: string) => {
-    const today = new Date()
-    today.setHours(today.getHours() - 8)
-    const todayStr = today.toISOString().split('T')[0]
-    return dateStr === todayStr
-  }
-
-  const getCurrentMonthName = () => {
-    const [year, month] = currentMonth.split('-').map(Number)
-    return `${monthNames[month - 1]} ${year}`
-  }
+  const currentIndex = dates.indexOf(displayDate)
+  const canGoBack = currentIndex > 0
+  const canGoForward = currentIndex < dates.length - 1
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
-      <div className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link 
-                href="/"
-                className="text-slate-400 hover:text-white transition-colors flex items-center space-x-2"
+    <div className="min-h-screen">
+      <Header
+        title="Schedule"
+        description="Upcoming NBA games"
+      />
+
+      <div className="container mx-auto px-6 py-8">
+        {isLoading && <PageSkeleton />}
+
+        {error && (
+          <ErrorState
+            message={error.message}
+            retry={() => refetch()}
+          />
+        )}
+
+        {data && !isLoading && (
+          <>
+            {/* Date Navigation */}
+            <div className="flex items-center justify-between mb-8 p-4 rounded-xl border border-border bg-card">
+              <button
+                onClick={() => canGoBack && setSelectedDate(dates[currentIndex - 1])}
+                disabled={!canGoBack}
+                className="p-2 rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <ArrowLeft className="w-5 h-5" />
-                <span className="text-sm font-medium">Back</span>
-              </Link>
-              <div className="h-6 w-px bg-slate-700"></div>
-              <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-                <Calendar className="w-6 h-6 text-blue-400" />
-                <span>NBA Schedule</span>
-              </h1>
-            </div>
-          </div>
-        </div>
-      </div>
+                <ChevronLeft className="h-5 w-5" />
+              </button>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-slate-700/50">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => changeMonth('prev')}
-              className="flex items-center space-x-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              <span>Previous</span>
-            </button>
-            
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-white mb-1">
-                {getCurrentMonthName()}
-              </h2>
-              <p className="text-slate-400 text-sm">
-                {dates.length} game days • {Object.values(gamesByDate).flat().length} games
-              </p>
-            </div>
-
-            <button
-              onClick={() => changeMonth('next')}
-              className="flex items-center space-x-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-colors"
-            >
-              <span>Next</span>
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-
-          <button
-            onClick={fetchSchedule}
-            className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Refresh</span>
-          </button>
-        </div>
-
-        {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <p className="text-slate-400 mt-4">Loading schedule...</p>
-          </div>
-        )}
-
-        {!loading && dates.length === 0 && (
-          <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-slate-700/50">
-            <Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No Games Scheduled</h3>
-            <p className="text-slate-400">There are no games scheduled for {getCurrentMonthName()}</p>
-          </div>
-        )}
-
-        {!loading && dates.map((date) => {
-          const games = gamesByDate[date] || []
-          const today = isToday(date)
-          
-          return (
-            <div key={date} className="mb-8">
-              <div className={`flex items-center space-x-3 mb-4 pb-2 border-b ${
-                today 
-                  ? 'border-blue-500/50' 
-                  : 'border-slate-700/50'
-              }`}>
-                <div className={`px-4 py-2 rounded-lg font-semibold ${
-                  today 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50' 
-                    : 'bg-slate-700/50 text-slate-200'
-                }`}>
-                  {today ? 'TODAY' : formatDate(date)}
-                </div>
-                <span className="text-slate-400 text-sm">
-                  {games.length} {games.length === 1 ? 'game' : 'games'}
+              <div className="flex items-center gap-3">
+                <Calendar className="h-5 w-5 text-primary" />
+                <span className="text-lg font-bold">
+                  {new Date(displayDate + 'T12:00:00').toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
                 </span>
+                {displayDate === today && (
+                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
+                    Today
+                  </span>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {games.map((game) => (
-                  <Link
+              <button
+                onClick={() => canGoForward && setSelectedDate(dates[currentIndex + 1])}
+                disabled={!canGoForward}
+                className="p-2 rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Quick Date Pills */}
+            <div className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide">
+              {dates.slice(0, 10).map((date) => (
+                <button
+                  key={date}
+                  onClick={() => setSelectedDate(date)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${date === displayDate
+                      ? 'bg-primary text-primary-foreground'
+                      : 'border border-border hover:bg-accent'
+                    }`}
+                >
+                  {formatShortDate(date + 'T12:00:00')}
+                  {date === today && ' (Today)'}
+                </button>
+              ))}
+            </div>
+
+            {/* Games Count */}
+            <div className="mb-6 text-sm text-muted-foreground">
+              {displayGames.length} game{displayGames.length !== 1 ? 's' : ''} scheduled
+            </div>
+
+            {/* Games Grid */}
+            {displayGames.length === 0 ? (
+              <EmptyState
+                title="No Games Scheduled"
+                description="There are no games scheduled for this date."
+                icon="calendar"
+              />
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {displayGames.map((game) => (
+                  <div
                     key={game.game_id}
-                    href={`/predictions?date=${date}`}
-                    className="block"
+                    className="rounded-xl border border-border bg-card p-5 hover:border-primary/50 transition-all"
                   >
-                    <div className="bg-slate-800/80 hover:bg-slate-800 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-200 group">
-                      <div className="flex items-center space-x-2 mb-4">
-                        <Clock className="w-4 h-4 text-blue-400" />
-                        <span className="text-slate-400 text-sm">{game.game_time}</span>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        {game.game_time || formatTime(game.date)}
                       </div>
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                        Scheduled
+                      </span>
+                    </div>
 
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <MapPin className="w-4 h-4 text-slate-500" />
-                            <span className="text-white font-semibold text-lg">
-                              {game.away_team}
-                            </span>
-                          </div>
-                          <span className="text-slate-500 text-sm">Away</span>
-                        </div>
-
-                        <div className="flex items-center">
-                          <div className="flex-1 h-px bg-slate-700/50"></div>
-                          <span className="px-3 text-slate-500 text-xs font-semibold">VS</span>
-                          <div className="flex-1 h-px bg-slate-700/50"></div>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <MapPin className="w-4 h-4 text-blue-400" />
-                            <span className="text-white font-semibold text-lg">
-                              {game.home_team}
-                            </span>
-                          </div>
-                          <span className="text-blue-400 text-sm">Home</span>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                        <div>
+                          <div className="text-xs text-muted-foreground">HOME</div>
+                          <div className="font-bold">{game.home_team}</div>
                         </div>
                       </div>
-
-                      <div className="mt-4 pt-4 border-t border-slate-700/50">
-                        <span className="text-blue-400 text-sm group-hover:text-blue-300 transition-colors flex items-center justify-center">
-                          View Prediction
-                          <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </span>
+                      <div className="text-center text-muted-foreground text-sm">vs</div>
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                        <div>
+                          <div className="text-xs text-muted-foreground">AWAY</div>
+                          <div className="font-bold">{game.away_team}</div>
+                        </div>
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
-            </div>
-          )
-        })}
+            )}
+          </>
+        )}
       </div>
     </div>
   )

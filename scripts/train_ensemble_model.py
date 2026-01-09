@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 import json
 from typing import Dict
 
-from src.models.ensemble_model import NBAEnsembleModel
+
 
 # Setup logging
 logging.basicConfig(
@@ -191,76 +191,3 @@ def create_synthetic_labels(df: pd.DataFrame) -> pd.Series:
     return labels
 
 
-def train_model():
-    """Main training function"""
-    logger.info("="*80)
-    logger.info("🏀 NBA ENSEMBLE MODEL TRAINING")
-    logger.info("="*80)
-    
-    # Load data
-    odds_data = load_betting_data()
-    
-    if not odds_data:
-        logger.error("❌ No data available for training!")
-        return
-    
-    # Create features
-    df = create_features_from_odds(odds_data)
-    
-    if len(df) == 0:
-        logger.error("❌ No features created!")
-        return
-    
-    logger.info(f"\n📊 Dataset shape: {df.shape}")
-    
-    # Create labels (synthetic for now)
-    y = create_synthetic_labels(df)
-    
-    # Select feature columns
-    feature_cols = [
-        'home_odds_avg', 'home_odds_std',
-        'away_odds_avg', 'away_odds_std',
-        'home_spread_avg', 'away_spread_avg', 'spread_diff',
-        'total_avg', 'total_std',
-        'home_implied_prob', 'away_implied_prob',
-        'bookmaker_count', 'market_variance',
-        'odds_ratio'
-    ]
-    
-    X = df[feature_cols]
-    
-    # Initialize and train ensemble
-    logger.info("\n" + "="*80)
-    logger.info("🤖 INITIALIZING ENSEMBLE MODEL")
-    logger.info("="*80)
-    
-    ensemble = NBAEnsembleModel()
-    
-    # Train
-    results = ensemble.train(X, y, use_stacking=False)  # Skip stacking for small dataset
-    
-    # Test predictions
-    logger.info("\n" + "="*80)
-    logger.info("🎯 TESTING PREDICTIONS")
-    logger.info("="*80)
-    
-    predictions_df = ensemble.predict_with_probabilities(X.head(5))
-    
-    logger.info("\nSample predictions:")
-    for i, row in predictions_df.iterrows():
-        logger.info(f"\n   Game {i+1}:")
-        logger.info(f"      Prediction: {row['prediction']}")
-        logger.info(f"      Home Win: {row['home_win_probability']}%")
-        logger.info(f"      Away Win: {row['away_win_probability']}%")
-        logger.info(f"      Confidence: {row['confidence']}%")
-        logger.info(f"      Model Agreement: {row['models_agree']}")
-    
-    logger.info("\n" + "="*80)
-    logger.info("✅ TRAINING COMPLETE!")
-    logger.info("="*80)
-    logger.info(f"\n📁 Models saved to: models/ensemble/")
-    logger.info(f"🎯 Best model accuracy: {max(results.values()):.4f}")
-
-
-if __name__ == "__main__":
-    train_model()

@@ -115,169 +115,40 @@ async def health_check():
     }
 
 
+# Initialize prediction pipeline
+from src.services.prediction_pipeline import PredictionPipeline
+
+pipeline = PredictionPipeline()
+
 @app.get("/predictions", response_model=PredictionsResponse)
 async def get_predictions():
     """
     Get predictions for all upcoming games
-    
-    Returns predictions with:
-    - Win probability for each team
-    - Individual model votes
-    - Consensus strength
-    - Confidence score
     """
     try:
-        if not trainer or not trainer.xgb_calibrated:
-            raise HTTPException(
-                status_code=503,
-                detail="Model not trained yet. Run training first."
-            )
-        
-        # Load latest betting data (Try live first, fallback to static if needed but prefer live)
-        odds_data = get_live_odds_data()
-        
-        if not odds_data or not odds_data.get('endpoints', {}).get('nba_odds'):
-            print("⚠️ Live odds fetch failed or returned empty. Falling back to static data (if available).")
-            odds_data = load_betting_data()
-        
-        if not odds_data:
-            raise HTTPException(
-                status_code=404,
-                detail="No betting data available (Live or Static)"
-            )
-        
-        # Create features
-        df = create_features_from_odds(odds_data)
-        
-        # Use LiveFeatureEngineer for model-compatible features
-        if feature_engineer and trainer:
-            model_features = trainer.feature_names
-            X_model = feature_engineer.create_live_features(df, model_features)
-            
-            # Predict using trainer's ensemble logic
-            X_input = X_model.drop(columns=['game_id'])
-            ensemble_probs = trainer.predict_ensemble(X_input)
-            
-            # Get IMPLIED PROBABILITY from odds (this is the real differentiator!)
-            implied_probs = df['home_implied_prob'].values
-            
-            # BLEND: Use 70% model + 30% odds (model is calibrated but not predictive for new games)
-            # If model is outputting flat predictions, lean more on odds
-            model_variance = np.var(ensemble_probs)
-            if model_variance < 0.01:  # Model is outputting flat predictions
-                # Use 30% model + 70% implied odds
-                blended_probs = 0.3 * np.array(ensemble_probs) + 0.7 * np.array(implied_probs)
-            else:
-                # Use 60% model + 40% implied odds
-                blended_probs = 0.6 * np.array(ensemble_probs) + 0.4 * np.array(implied_probs)
-            
-            # === CHEMISTRY INJECTION ===
-            # Adjust win probability based on team chemistry differential
-            try:
-                from src.models.chemistry_gnn import get_chemistry_model
-                chem_model = get_chemistry_model()
-                
-                if chem_model and chem_model.loaded:
-                    chem_adjustments = []
-                    for _, row in df.iterrows():
-                        home = row['home_team']
-                        away = row['away_team']
-                        
-                        # Get differential (home - away)
-                        # Typical range: -0.4 to +0.4
-                        diff = chem_model.get_chemistry_differential(home, away)
-                        
-                        # Apply impact factor (0.1 means 10% max adjustment)
-                        # A massive chemistry gap (+0.4) results in +4% win prob
-                        adjustment = diff * 0.1
-                        chem_adjustments.append(adjustment)
-                    
-                    # Apply adjustment
-                    blended_probs = blended_probs + np.array(chem_adjustments)
-                    
-                    # Clamp probabilities to reasonable range
-                    blended_probs = np.clip(blended_probs, 0.05, 0.95)
-                    print(f"✅ Applied chemistry adjustments to {len(df)} games (Range: {min(chem_adjustments):.3f} to {max(chem_adjustments):.3f})")
-            except Exception as e:
-                print(f"⚠️ Failed to apply chemistry adjustment: {e}")
-            
-            # Construct a predictions DataFrame similar to what the API expects
-            predictions_df = pd.DataFrame({
-                'prediction': ['HOME_WIN' if p > 0.5 else 'AWAY_WIN' for p in blended_probs],
-                'home_win_probability': [round(p * 100, 2) for p in blended_probs],
-                'away_win_probability': [round((1-p) * 100, 2) for p in blended_probs],
-                'confidence': [round(abs(p - 0.5) * 200, 2) for p in blended_probs],
-                'models_agree': ["3/3" for _ in blended_probs], # Placeholder
-                'consensus_percentage': [100.0 for _ in blended_probs] # Placeholder
-            })
-            
-            # Add individual votes (optional but nice)
-            xgb_p = trainer.xgb_calibrated.predict_proba(X_input)[:, 1]
-            lgb_p = trainer.lgb_calibrated.predict_proba(X_input)[:, 1]
-            cat_p = trainer.cat_calibrated.predict_proba(X_input)[:, 1]
-            
-            predictions_df['xgboost_vote'] = ['HOME' if p > 0.5 else 'AWAY' for p in xgb_p]
-            predictions_df['lightgbm_vote'] = ['HOME' if p > 0.5 else 'AWAY' for p in lgb_p]
-            predictions_df['catboost_vote'] = ['HOME' if p > 0.5 else 'AWAY' for p in cat_p]
-        else:
-            raise HTTPException(status_code=503, detail="Model trainer not initialized or features missing")
-        
-        # Combine with game info and odds features
-        game_info = df[['game_id', 'home_team', 'away_team', 'commence_time', 'home_odds_avg', 'away_odds_avg', 'home_spread_avg', 'away_spread_avg']]
-        results = pd.concat([game_info.reset_index(drop=True), predictions_df.reset_index(drop=True)], axis=1)
-        
-        # Extract individual votes from predictions_df columns
-        vote_columns = [col for col in predictions_df.columns if col.endswith('_vote')]
-        
-        # Convert to response format
-        predictions = []
-        for _, row in results.iterrows():
-            # Get individual votes
-            individual_votes = {
-                col.replace('_vote', '').replace('_', ' ').title(): row[col]
-                for col in vote_columns
-            }
-            
-            predictions.append(GamePrediction(
-                game_id=row['game_id'],
-                home_team=row['home_team'],
-                away_team=row['away_team'],
-                commence_time=row['commence_time'],
-                prediction=row['prediction'],
-                home_win_probability=round(row['home_win_probability'], 2),
-                away_win_probability=round(row['away_win_probability'], 2),
-                confidence=round(row['confidence'], 2),
-                models_agree=row['models_agree'],
-                consensus_percentage=round(row['consensus_percentage'], 2),
-                individual_votes=individual_votes,
-                home_odds=round(row['home_odds_avg'], 2),
-                away_odds=round(row['away_odds_avg'], 2),
-                home_spread=round(row['home_spread_avg'], 1),
-                away_spread=round(row['away_spread_avg'], 1)
-            ))
+        results = pipeline.get_predictions(use_live_odds=True)
         
         # Model info
         model_info = {
             "num_models": 3,
             "model_names": ["XGBoost", "LightGBM", "CatBoost"],
-            "num_features": len(trainer.feature_names) if trainer else 0,
-            "feature_names": trainer.feature_names if trainer else []
+            "num_features": len(pipeline.trainer.feature_names) if pipeline.trainer else 0,
+            "feature_names": pipeline.trainer.feature_names if pipeline.trainer else []
         }
         
         return PredictionsResponse(
             timestamp=datetime.now().isoformat(),
-            total_games=len(predictions),
-            predictions=predictions,
+            total_games=len(results),
+            predictions=results,
             model_info=model_info
         )
     
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Error generating predictions: {str(e)}"
         )
+
 
 
 @app.get("/predictions/{game_id}")
