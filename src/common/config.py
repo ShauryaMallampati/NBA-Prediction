@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
-import yaml
+
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -49,15 +49,6 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = False
 
-
-def load_config(config_name: str = "config") -> Dict[str, Any]:
-    """Load YAML configuration file."""
-    config_path = Path(f"configs/{config_name}.yaml")
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
-
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
 
 
 # Global settings instance
