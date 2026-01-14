@@ -560,8 +560,43 @@ class EnsembleTrainer:
         
         logger.info(f"✅ Models saved to {self.output_dir}")
     
+    async def load_models_async(self):
+        """Async version of model loading."""
+        import asyncio
+        logger.info("📂 Loading models async...")
+        
+        xgb_path = self.output_dir / "xgb_model.pkl"
+        lgb_path = self.output_dir / "lgb_model.pkl"
+        cat_path = self.output_dir / "cat_model.pkl"
+        metadata_path = self.output_dir / "ensemble_metadata.json"
+        
+        async def read_pickle(path):
+            with open(path, 'rb') as f:
+                return pickle.load(f)
+        
+        async def read_json(path):
+            with open(path, 'r') as f:
+                return json.load(f)
+
+        if xgb_path.exists():
+            self.xgb_calibrated = await asyncio.to_thread(read_pickle, xgb_path)
+        
+        if lgb_path.exists():
+            self.lgb_calibrated = await asyncio.to_thread(read_pickle, lgb_path)
+        
+        if cat_path.exists():
+            self.cat_calibrated = await asyncio.to_thread(read_pickle, cat_path)
+        
+        if metadata_path.exists():
+            metadata = await asyncio.to_thread(read_json, metadata_path)
+            self.weights = metadata.get('weights', self.weights)
+            self.metrics = metadata.get('metrics', {})
+            self.feature_names = metadata.get('feature_names', [])
+        
+        logger.info("✅ Models loaded async")
+
     def load_models(self):
-        """Load models from disk."""
+        """Load models from disk (sync)."""
         logger.info("📂 Loading models...")
         
         # Load individual models

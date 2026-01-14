@@ -551,6 +551,54 @@ class RapidAPIClient:
     
     # ==================== Bulk Data Collection ====================
     
+    async def collect_all_data_async(self, date: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Async version: Collect data from all available endpoints
+        """
+        import asyncio
+        if not date:
+            date = datetime.now().strftime("%Y-%m-%d")
+        
+        logger.info(f"Starting async data collection for {date}")
+        
+        data = {
+            "collection_date": date,
+            "timestamp": datetime.now().isoformat(),
+            "data": {}
+        }
+        
+        endpoints = [
+            ("league_info", lambda: self.get_nba_league_info()),
+            ("teams", lambda: self.get_nba_teams()),
+            ("scoreboard", lambda: self.get_nba_scoreboard(date)),
+            ("schedule", lambda: self.get_nba_schedule()),
+            ("standings", lambda: self.get_nba_standings()),
+            ("players", lambda: self.get_nba_players()),
+            ("statistics", lambda: self.get_nba_statistics()),
+            ("injury_reports", lambda: self.get_injury_reports(date)),
+            ("live_odds", lambda: self.get_nba_odds()),
+            ("scores", lambda: self.get_nba_scores()),
+            ("daily_leaders", lambda: self.get_daily_leaders(date)),
+            ("latest_news", lambda: self.get_latest_news()),
+            ("events_today", lambda: self.get_events_for_today()),
+            ("all_markets", lambda: self.get_all_markets()),
+            ("all_bookies", lambda: self.get_all_bookies()),
+            ("nba_futures", lambda: self.get_nba_futures()),
+        ]
+        
+        for name, func in endpoints:
+            try:
+                # API calls are still sync here using requests, but sleep is async
+                result = await asyncio.to_thread(func)
+                if result:
+                    data["data"][name] = result
+                await asyncio.sleep(0.5)  # Async rate limiting
+            except Exception as e:
+                logger.error(f"✗ Error fetching {name}: {e}")
+                data["data"][name] = {"error": str(e)}
+        
+        return data
+
     def collect_all_data(self, date: Optional[str] = None) -> Dict[str, Any]:
         """
         Collect data from all available endpoints

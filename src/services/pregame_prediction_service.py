@@ -27,8 +27,37 @@ class PregamePredictionService:
         self.metadata = None
         self._load_model()
     
+    async def load_model_async(self):
+        """Async version of model loading"""
+        import asyncio
+        try:
+            model_file = self.model_path / "pregame_model.pkl"
+            calibrated_file = self.model_path / "calibrated_model.pkl"
+            metadata_file = self.model_path / "pregame_model_metadata.json"
+            
+            async def read_pickle(path):
+                with open(path, 'rb') as f:
+                    return pickle.load(f)
+            
+            async def read_json(path):
+                with open(path, 'r') as f:
+                    return json.load(f)
+
+            if model_file.exists():
+                self.model = await asyncio.to_thread(read_pickle, model_file)
+            
+            if calibrated_file.exists():
+                self.calibrated_model = await asyncio.to_thread(read_pickle, calibrated_file)
+            
+            if metadata_file.exists():
+                self.metadata = await asyncio.to_thread(read_json, metadata_file)
+                self.feature_names = self.metadata.get('feature_names', [])
+                
+        except Exception as e:
+            logger.error(f"Error loading model async: {e}")
+
     def _load_model(self):
-        """Load trained XGBoost model and metadata."""
+        """Load trained XGBoost model and metadata (sync)."""
         try:
             model_file = self.model_path / "pregame_model.pkl"
             calibrated_file = self.model_path / "calibrated_model.pkl"
@@ -190,6 +219,37 @@ class PregamePredictionService:
         
         return {k: float(v) for k, v in top_features.items()}
     
+    async def predict_games_for_date_async(self, date_str: Optional[str] = None) -> List[Dict]:
+        """Async version of predict_games_for_date"""
+        import asyncio
+        if date_str is None:
+            date_str = datetime.now().strftime('%Y-%m-%d')
+        
+        try:
+            # ScoreBoard is blocking, run in thread
+            nba_response = await asyncio.to_thread(scoreboard.ScoreBoard)
+            games = await asyncio.to_thread(nba_response.get_data_frames)
+            games = games[0] if games else pd.DataFrame()
+            
+            predictions = []
+            # Use to_dict('records') instead of iterrows()
+            game_records = games.to_dict('records')
+            
+            for game in game_records:
+                home_team = game.get('HOME_TEAM_ABBREVIATION')
+                away_team = game.get('AWAY_TEAM_ABBREVIATION')
+                game_date = game.get('GAME_DATE_EST', date_str)
+                
+                if home_team and away_team:
+                    # predict_game involves pd.read_csv, keep it in thread
+                    pred = await asyncio.to_thread(self.predict_game, home_team, away_team, game_date)
+                    predictions.append(pred)
+            
+            return predictions
+        except Exception as e:
+            logger.error(f"Error async predicting games for {date_str}: {e}")
+            return []
+
     def predict_games_for_date(self, date_str: Optional[str] = None) -> List[Dict]:
         """
         Get predictions for all games on a given date.
@@ -209,7 +269,10 @@ class PregamePredictionService:
             games = nba_response.get_data_frames()[0]
             
             predictions = []
-            for _, game in games.iterrows():
+            # Use to_dict('records') instead of iterrows()
+            game_records = games.to_dict('records')
+            
+            for game in game_records:
                 home_team = game.get('HOME_TEAM_ABBREVIATION')
                 away_team = game.get('AWAY_TEAM_ABBREVIATION')
                 game_date = game.get('GAME_DATE_EST', date_str)

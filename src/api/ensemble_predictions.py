@@ -17,11 +17,13 @@ import numpy as np
 from datetime import datetime
 from src.models.pregame.train_ensemble import EnsembleTrainer
 from scripts.train_ensemble_model import create_features_from_odds, load_betting_data
-from src.api.live_schedule import get_upcoming_games
-from src.api.live_odds import get_live_odds_data
+from src.api.live_schedule import get_upcoming_games_async
+from src.api.live_odds import get_live_odds_data_async
 from src.api.live_features import LiveFeatureEngineer
 import os
 import requests
+import asyncio
+import json
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -126,7 +128,8 @@ async def get_predictions():
     Get predictions for all upcoming games
     """
     try:
-        results = pipeline.get_predictions(use_live_odds=True)
+        # Use optimized async version
+        results = await pipeline.get_predictions_async(use_live_odds=True)
         
         # Model info
         model_info = {
@@ -186,8 +189,10 @@ async def get_model_info():
         training_history = []
         
         if history_file.exists():
-            with open(history_file, 'r') as f:
-                training_history = json.load(f)
+            def load_json():
+                with open(history_file, 'r') as f:
+                    return json.load(f)
+            training_history = await asyncio.to_thread(load_json)
         
         return {
             "is_trained": trainer.xgb_calibrated is not None if trainer else False,
@@ -214,7 +219,8 @@ async def get_model_info():
 async def live_schedule(days: int = 14):
     """Return upcoming games using local python libraries (nba_api / pyespn) when available."""
     try:
-        games = get_upcoming_games(days_ahead=days)
+        # Use optimized async version
+        games = await get_upcoming_games_async(days_ahead=days)
 
         # If no games found from local libraries, fall back to RapidAPI (if key provided)
         if not games:
@@ -222,13 +228,16 @@ async def live_schedule(days: int = 14):
             rapid_host = 'nba-schedule.p.rapidapi.com'
             if rapid_key:
                 try:
+                    import httpx
                     url = f"https://{rapid_host}/schedule"
                     headers = {
                         'x-rapidapi-key': rapid_key,
                         'x-rapidapi-host': rapid_host
                     }
-                    r = requests.get(url, headers=headers, timeout=10)
-                    if r.ok:
+                    async with httpx.AsyncClient() as client:
+                        r = await client.get(url, headers=headers, timeout=10.0)
+                    
+                    if r.status_code == 200:
                         payload = r.json()
                         games = payload.get('games') or payload.get('schedule') or []
                         # Normalize minimal fields

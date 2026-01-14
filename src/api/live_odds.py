@@ -24,19 +24,25 @@ logger = logging.getLogger(__name__)
 DEFAULT_RAPID_KEY = "ecfaccc609msh0c3aa0fa4b8e802p12f41fjsn38bee5c39743"
 
 
-async def get_live_odds_data_async(date_str: Optional[str] = None) -> Dict[str, Any]:
+async def get_live_odds_data_async(
+    date_str: Optional[str] = None, 
+    start_date: Optional[str] = None, 
+    end_date: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Async version: Fetch live NBA odds from RapidAPI.
     
     Args:
-        date_str: Optional YYYY-MM-DD string to filter games by date.
+        date_str: Optional YYYY-MM-DD string to filter games by date (1-day range).
+        start_date: Optional YYYY-MM-DD start date for range.
+        end_date: Optional YYYY-MM-DD end date for range.
     
     Returns:
         Dict with structure: {'endpoints': {'nba_odds': [...]}}
     """
     if not HTTPX_AVAILABLE:
         # Fall back to sync version in thread pool
-        return await asyncio.to_thread(get_live_odds_data, date_str)
+        return await asyncio.to_thread(get_live_odds_data, date_str, start_date, end_date)
     
     api_key = os.environ.get('RAPIDAPI_KEY') or os.environ.get('NBA_STATS_API_KEY') or DEFAULT_RAPID_KEY
     host = "odds.p.rapidapi.com"
@@ -60,12 +66,19 @@ async def get_live_odds_data_async(date_str: Optional[str] = None) -> Dict[str, 
             dt = datetime.strptime(date_str, "%Y-%m-%d")
             start_time = dt.strftime("%Y-%m-%dT00:00:00Z")
             end_time = (dt + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
-            
             params["commenceTimeFrom"] = start_time
             params["commenceTimeTo"] = end_time
-            logger.info(f"Fetching odds for date: {date_str} ({start_time} to {end_time})")
         except ValueError:
             logger.warning(f"Invalid date format: {date_str}. Ignoring date filter.")
+    elif start_date:
+        try:
+            params["commenceTimeFrom"] = datetime.strptime(start_date, "%Y-%m-%d").strftime("%Y-%m-%dT00:00:00Z")
+            if end_date:
+                params["commenceTimeTo"] = datetime.strptime(end_date, "%Y-%m-%d").strftime("%Y-%m-%dT23:59:59Z")
+            else:
+                params["commenceTimeTo"] = (datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=7)).strftime("%Y-%m-%dT23:59:59Z")
+        except ValueError as e:
+            logger.warning(f"Invalid range date format: {e}. Ignoring filter.")
     
     try:
         logger.info(f"Fetching live odds from {url}...")
@@ -89,7 +102,11 @@ async def get_live_odds_data_async(date_str: Optional[str] = None) -> Dict[str, 
         return {}
 
 
-def get_live_odds_data(date_str: Optional[str] = None) -> Dict[str, Any]:
+def get_live_odds_data(
+    date_str: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Sync version: Fetch live NBA odds from RapidAPI.
     
@@ -97,7 +114,9 @@ def get_live_odds_data(date_str: Optional[str] = None) -> Dict[str, Any]:
     Use get_live_odds_data_async for async contexts.
     
     Args:
-        date_str: Optional YYYY-MM-DD string to filter games by date.
+        date_str: Optional YYYY-MM-DD string to filter games by date (1-day range).
+        start_date: Optional YYYY-MM-DD start date for range.
+        end_date: Optional YYYY-MM-DD end date for range.
     
     Returns:
         Dict with structure: {'endpoints': {'nba_odds': [...]}}
@@ -140,12 +159,19 @@ def get_live_odds_data(date_str: Optional[str] = None) -> Dict[str, Any]:
             dt = datetime.strptime(date_str, "%Y-%m-%d")
             start_time = dt.strftime("%Y-%m-%dT00:00:00Z")
             end_time = (dt + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
-            
             params["commenceTimeFrom"] = start_time
             params["commenceTimeTo"] = end_time
-            logger.info(f"Fetching odds for date: {date_str} ({start_time} to {end_time})")
         except ValueError:
             logger.warning(f"Invalid date format: {date_str}. Ignoring date filter.")
+    elif start_date:
+        try:
+            params["commenceTimeFrom"] = datetime.strptime(start_date, "%Y-%m-%d").strftime("%Y-%m-%dT00:00:00Z")
+            if end_date:
+                params["commenceTimeTo"] = datetime.strptime(end_date, "%Y-%m-%d").strftime("%Y-%m-%dT23:59:59Z")
+            else:
+                params["commenceTimeTo"] = (datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=7)).strftime("%Y-%m-%dT23:59:59Z")
+        except ValueError as e:
+            logger.warning(f"Invalid range date format: {e}. Ignoring filter.")
     
     try:
         logger.info(f"Fetching live odds from {url}...")

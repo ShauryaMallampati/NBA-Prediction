@@ -30,12 +30,33 @@ class EnsemblePredictor:
         
         self._load_models()
     
+    async def load_async(self):
+        """Async version of model loading"""
+        import asyncio
+        metadata_path = self.model_dir / "ensemble_metadata.json"
+        
+        async def read_json():
+            with open(metadata_path, 'r') as f:
+                return json.load(f)
+        
+        self.metadata = await asyncio.to_thread(read_json)
+        self.weights = self.metadata['weights']
+        self.feature_names = self.metadata['feature_names']
+        
+        async def read_pickle(path):
+            with open(path, 'rb') as f:
+                return pickle.load(f)
+        
+        self.xgb_model = await asyncio.to_thread(read_pickle, self.model_dir / "xgb_model.pkl")
+        self.lgb_model = await asyncio.to_thread(read_pickle, self.model_dir / "lgb_model.pkl")
+        self.cat_model = await asyncio.to_thread(read_pickle, self.model_dir / "cat_model.pkl")
+
     def _load_models(self):
-        """Load all model files"""
+        """Load all model files (sync version)"""
         # Load metadata
         metadata_path = self.model_dir / "ensemble_metadata.json"
         if not metadata_path.exists():
-            raise FileNotFoundError(f"Metadata not found: {metadata_path}")
+            return # Silent fail for initialization, caller should check models
         
         with open(metadata_path, 'r') as f:
             self.metadata = json.load(f)
@@ -121,7 +142,11 @@ class EnsemblePredictor:
             
             # Calculate contribution (feature value * importance)
             contributions = []
-            for _, row in importance_df.head(top_n).iterrows():
+            
+            # Use to_dict('records') instead of iterrows() for performance
+            importance_records = importance_df.head(top_n).to_dict('records')
+            
+            for row in importance_records:
                 feat = row['feature']
                 importance = row['importance']
                 value = game_features[feat]

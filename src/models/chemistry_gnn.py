@@ -32,8 +32,31 @@ class PlayerChemistryModel:
         self.player_pairs: Dict[str, Dict] = {}
         self.loaded = False
     
+    async def load_async(self) -> bool:
+        """Async version of chemistry data loading."""
+        import asyncio
+        scores_file = DATA_DIR / "chemistry_scores.json"
+        pairs_file = DATA_DIR / "player_pairs.json"
+        
+        if not scores_file.exists() or not pairs_file.exists():
+            return False
+            
+        async def read_json(path):
+            with open(path, 'r') as f:
+                return json.load(f)
+                
+        scores_data = await asyncio.to_thread(read_json, scores_file)
+        pairs_data = await asyncio.to_thread(read_json, pairs_file)
+        
+        self.team_chemistry = scores_data.get('team_chemistry', {})
+        self.top_duos = scores_data.get('top_duos', [])
+        self.player_pairs = pairs_data.get('pairs', {})
+        
+        self.loaded = True
+        return True
+
     def load(self) -> bool:
-        """Load chemistry data from scraped files."""
+        """Load chemistry data from scraped files (sync version)."""
         scores_file = DATA_DIR / "chemistry_scores.json"
         pairs_file = DATA_DIR / "player_pairs.json"
         
@@ -145,6 +168,16 @@ def get_chemistry_model() -> PlayerChemistryModel:
     if _chemistry_model is None:
         _chemistry_model = PlayerChemistryModel()
         _chemistry_model.load()
+    return _chemistry_model
+
+async def get_chemistry_model_async() -> PlayerChemistryModel:
+    """Async version of chemistry model getter."""
+    global _chemistry_model
+    if _chemistry_model is None:
+        _chemistry_model = PlayerChemistryModel()
+        await _chemistry_model.load_async()
+    elif not _chemistry_model.loaded:
+        await _chemistry_model.load_async()
     return _chemistry_model
 
 

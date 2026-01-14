@@ -70,7 +70,9 @@ def fetch_actual_scores(date_str):
             logger.warning("No games found in ScoreboardV2")
             return []
 
-        for _, game in games.iterrows():
+        # Use to_dict('records') for performance
+        game_records = games.to_dict('records')
+        for game in game_records:
             game_id = game['GAME_ID']
             home_team_id = game['HOME_TEAM_ID']
             visitor_team_id = game['VISITOR_TEAM_ID']

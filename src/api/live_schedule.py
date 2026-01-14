@@ -8,6 +8,7 @@ the FastAPI route that consumes this will fall back to RapidAPI or the existing 
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -103,72 +104,117 @@ def _try_pyespn(days_ahead: int = 14) -> List[Dict[str, Any]]:
         return []
 
 
-def get_upcoming_games(days_ahead: int = 14) -> List[Dict[str, Any]]:
-    """Return upcoming NBA games for the next `days_ahead` days.
-
-    Strategy:
-    1. Try `nba_api` for live/today data (fast, free).
-    2. Try `RapidAPI` (get_live_odds_data) for future dates loop.
+async def get_upcoming_games_async(days_ahead: int = 14) -> List[Dict[str, Any]]:
+    """Async: Return upcoming NBA games for the next `days_ahead` days.
+    
+    Optimized to use a single range API call.
     """
     all_games = []
     
     # 1. Try nba_api (mostly for today)
-    todays_games = _try_nba_api(days_ahead)
+    # Since nba_api is sync, run in thread
+    todays_games = await asyncio.to_thread(_try_nba_api, days_ahead)
     if todays_games:
         all_games.extend(todays_games)
         
-    # Track which dates we have to avoid duplicates (though minimal risk if we target specific future dates)
-    existing_dates = set(g['date'] for g in all_games)
+    existing_game_ids = set(g['game_id'] for g in all_games)
     
-    # 2. Loop for future dates using RapidAPI
-    # Only if we used the user's key? Yes, get_live_odds_data handles fallback.
+    # 2. Single call for future dates using RapidAPI range fetch
     try:
-        from src.api.live_odds import get_live_odds_data
+        from src.api.live_odds import get_live_odds_data_async
         
         start_date = datetime.utcnow().date()
+        end_date = start_date + timedelta(days=min(days_ahead, 14))
         
-        # Limit to next 5 days for speed/rate-limits?
-        # User asked for "future games". 14 days is 14 calls. RapidAPI might limit us.
-        # Let's limit to 7 days for now to be safe, or just `days_ahead` if small.
-        # But `days_ahead` default is 14. 
-        # Let's do min(days_ahead, 7) to be kind to the key quota.
-        # The user's key `ecfaccc...` is likely a free tier.
-        scan_days = min(days_ahead, 7)
+        # Optimized: Fetch ALL days at once
+        odds_data = await get_live_odds_data_async(
+            start_date=start_date.isoformat(),
+            end_date=end_date.isoformat()
+        )
         
-        for i in range(0, scan_days + 1): # Start from 0 to capture today if nba_api failed!
-            target_date = start_date + timedelta(days=i)
-            date_str = target_date.isoformat()
-            
-            if date_str in existing_dates:
+        nba_odds = odds_data.get('endpoints', {}).get('nba_odds', [])
+        
+        for g in nba_odds:
+            game_id = g.get('id', '')
+            if game_id and game_id in existing_game_ids:
                 continue
                 
-            # Fetch from RapidAPI
-            odds_data = get_live_odds_data(date_str=date_str)
-            nba_odds = odds_data.get('endpoints', {}).get('nba_odds', [])
+            start = g.get('commence_time', '')
+            date_str = start.split('T')[0] if 'T' in start else ''
             
-            if nba_odds:
-                for g in nba_odds:
-                    start = g.get('commence_time', '')
-                    # Normalize game dict
-                    all_games.append({
-                        'game_id': g.get('id', ''),
-                        'date': date_str, # Use our target date to ensure consistency
-                        'home_team': g.get('home_team', ''),
-                        'away_team': g.get('away_team', ''),
-                        'game_time': start
-                    })
-                existing_dates.add(date_str)
+            all_games.append({
+                'game_id': game_id,
+                'date': date_str,
+                'home_team': g.get('home_team', ''),
+                'away_team': g.get('away_team', ''),
+                'game_time': start
+            })
+            if game_id:
+                existing_game_ids.add(game_id)
                 
     except Exception as e:
         logger.error(f"Error fetching future games via RapidAPI: {e}")
 
-    # Fallback to pyespn only if we have absolute zero games?
+    # Fallback to pyespn
     if not all_games:
-        py_games = _try_pyespn(days_ahead)
+        py_games = await asyncio.to_thread(_try_pyespn, days_ahead)
         if py_games:
             all_games.extend(py_games)
 
+    return all_games
+
+
+def get_upcoming_games(days_ahead: int = 14) -> List[Dict[str, Any]]:
+    """Sync version of get_upcoming_games.
+    
+    Warning: This still uses the old N+1 loop for compatibility 
+    if not called from an async context, but it's better to use the async version.
+    """
+    # Try to run async version if possible
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # In an event loop, we can't use asyncio.run
+            # Use the old logic as fallback or ideally callers should use the async version
+            pass
+        else:
+            return asyncio.run(get_upcoming_games_async(days_ahead))
+    except Exception:
+        pass
+
+    # Original logic (N+1 fallback)
+    all_games = []
+    todays_games = _try_nba_api(days_ahead)
+    if todays_games:
+        all_games.extend(todays_games)
+        
+    existing_dates = set(g['date'] for g in all_games)
+    
+    try:
+        from src.api.live_odds import get_live_odds_data
+        start_date = datetime.utcnow().date()
+        scan_days = min(days_ahead, 7)
+        
+        for i in range(0, scan_days + 1):
+            target_date = start_date + timedelta(days=i)
+            date_str = target_date.isoformat()
+            if date_str in existing_dates: continue
+            
+            odds_data = get_live_odds_data(date_str=date_str)
+            nba_odds = odds_data.get('endpoints', {}).get('nba_odds', [])
+            for g in nba_odds:
+                all_games.append({
+                    'game_id': g.get('id', ''),
+                    'date': date_str,
+                    'home_team': g.get('home_team', ''),
+                    'away_team': g.get('away_team', ''),
+                    'game_time': g.get('commence_time', '')
+                })
+            existing_dates.add(date_str)
+    except Exception:
+        pass
+        
     if not all_games:
-        logger.warning("No schedule source available. Returning empty list.")
+        all_games.extend(_try_pyespn(days_ahead))
         
     return all_games

@@ -25,8 +25,35 @@ class SHAPExplainer:
         self.feature_names = []
         self._load_model()
     
+    async def load_async(self):
+        """Async version of model loading for SHAP."""
+        import asyncio
+        try:
+            xgb_path = self.model_dir / "xgb_model.pkl"
+            metadata_path = self.model_dir / "ensemble_metadata.json"
+            
+            async def read_pickle(path):
+                with open(path, 'rb') as f:
+                    return pickle.load(f)
+            
+            async def read_json(path):
+                with open(path, 'r') as f:
+                    return json.load(f)
+
+            if xgb_path.exists():
+                model = await asyncio.to_thread(read_pickle, xgb_path)
+                base_model = model.estimators_[0].estimator if hasattr(model, 'estimators_') else model
+                self.explainer = await asyncio.to_thread(shap.TreeExplainer, base_model)
+                logger.info("✅ SHAP explainer initialized async")
+            
+            if metadata_path.exists():
+                metadata = await asyncio.to_thread(read_json, metadata_path)
+                self.feature_names = metadata.get('feature_names', [])
+        except Exception as e:
+            logger.error(f"Failed to initialize SHAP explainer async: {e}")
+
     def _load_model(self):
-        """Load the XGBoost model for SHAP analysis."""
+        """Load the XGBoost model for SHAP analysis (sync)."""
         try:
             xgb_path = self.model_dir / "xgb_model.pkl"
             metadata_path = self.model_dir / "ensemble_metadata.json"

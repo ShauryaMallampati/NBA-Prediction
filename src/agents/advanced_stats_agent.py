@@ -25,6 +25,45 @@ class AdvancedStatsAgent:
         self.stats_cache = {}  # In-memory cache
         self.last_api_call = 0
         
+    async def get_team_advanced_stats_async(self, season='2024-25') -> pd.DataFrame:
+        """Async version: Get advanced team stats"""
+        import asyncio
+        cache_key = f"team_advanced_{season}"
+        if cache_key in self.stats_cache:
+            return self.stats_cache[cache_key]
+        
+        cache_file = self.cache_dir / f"{cache_key}.parquet"
+        if cache_file.exists():
+            df = await asyncio.to_thread(pd.read_parquet, cache_file)
+            self.stats_cache[cache_key] = df
+            return df
+        
+        try:
+            time_since_last = time.time() - self.last_api_call
+            if time_since_last < 1.0:
+                await asyncio.sleep(1.0 - time_since_last)
+            
+            logger.info("Fetching advanced team stats (async)...")
+            # nba_api is sync, run in thread
+            def fetch():
+                stats = leaguedashteamstats.LeagueDashTeamStats(
+                    season=season,
+                    measure_type_detailed_defense='Advanced',
+                    per_mode_detailed='PerGame',
+                    timeout=60
+                )
+                return stats.get_data_frames()[0]
+            
+            df = await asyncio.to_thread(fetch)
+            self.last_api_call = time.time()
+            
+            self.stats_cache[cache_key] = df
+            await asyncio.to_thread(df.to_parquet, cache_file)
+            return df
+        except Exception as e:
+            logger.error(f"Failed to fetch team advanced stats async: {e}")
+            return pd.DataFrame(columns=['TEAM_ID', 'OFF_RATING', 'DEF_RATING', 'NET_RATING', 'PACE', 'TS_PCT'])
+
     def get_team_advanced_stats(self, season='2024-25') -> pd.DataFrame:
         """Get advanced team stats (Offensive/Defensive Rating, Pace, etc.)"""
         # Check cache first
@@ -66,6 +105,44 @@ class AdvancedStatsAgent:
             # Return empty DataFrame with expected columns
             return pd.DataFrame(columns=['TEAM_ID', 'OFF_RATING', 'DEF_RATING', 'NET_RATING', 'PACE', 'TS_PCT'])
     
+    async def get_team_home_away_splits_async(self, team_id: int, season='2024-25') -> Dict:
+        """Async version: Get home/away performance splits"""
+        import asyncio
+        cache_key = f"splits_{team_id}_{season}"
+        if cache_key in self.stats_cache:
+            return self.stats_cache[cache_key]
+        
+        try:
+            time_since_last = time.time() - self.last_api_call
+            if time_since_last < 1.0:
+                await asyncio.sleep(1.0 - time_since_last)
+            
+            def fetch():
+                dashboard = teamdashboardbygeneralsplits.TeamDashboardByGeneralSplits(
+                    team_id=team_id,
+                    season=season,
+                    timeout=60
+                )
+                return dashboard.get_data_frames()[0]
+                
+            splits = await asyncio.to_thread(fetch)
+            self.last_api_call = time.time()
+            
+            home = splits[splits['GROUP_VALUE'] == 'Home']
+            away = splits[splits['GROUP_VALUE'] == 'Road']
+            
+            result = {
+                'home_win_pct': home['W_PCT'].values[0] if len(home) > 0 else 0.5,
+                'away_win_pct': away['W_PCT'].values[0] if len(away) > 0 else 0.5,
+                'home_ppg': home['PTS'].values[0] if len(home) > 0 else 0,
+                'away_ppg': away['PTS'].values[0] if len(away) > 0 else 0
+            }
+            self.stats_cache[cache_key] = result
+            return result
+        except Exception as e:
+            logger.warning(f"Failed to fetch splits for team {team_id} async: {e}")
+            return {}
+
     def get_team_home_away_splits(self, team_id: int, season='2024-25') -> Dict:
         """Get home/away performance splits"""
         cache_key = f"splits_{team_id}_{season}"

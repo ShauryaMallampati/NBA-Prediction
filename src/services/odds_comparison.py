@@ -92,6 +92,61 @@ class OddsComparisonEngine:
             "LOW": 0.03,     # 3-5% edge
         }
         
+    async def fetch_player_props_async(
+        self,
+        sport: str = "basketball_nba",
+        markets: str = "player_points,player_assists,player_rebounds",
+        regions: str = "us",
+        bookmakers: str = "fanduel,draftkings",
+    ) -> List[MarketLine]:
+        """Async version: Fetch live player props from sportsbooks."""
+        import httpx
+        import asyncio
+        logger.info(f"Fetching player props async from {bookmakers}...")
+        
+        events_url = f"{self.base_url}/sports/{sport}/events"
+        params = {
+            "apiKey": self.odds_api_key,
+            "regions": regions,
+        }
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(events_url, params=params, timeout=10.0)
+                response.raise_for_status()
+                events = response.json()
+                
+                if not events:
+                    return []
+                
+                all_lines = []
+                # Fetch odds for each event (parallelized)
+                async def fetch_event_odds(event):
+                    event_id = event.get("id")
+                    odds_url = f"{self.base_url}/sports/{sport}/events/{event_id}/odds"
+                    odds_params = {
+                        "apiKey": self.odds_api_key,
+                        "regions": regions,
+                        "markets": markets,
+                        "bookmakers": bookmakers,
+                    }
+                    try:
+                        r = await client.get(odds_url, params=odds_params, timeout=10.0)
+                        if r.status_code == 200:
+                            return self._parse_odds_response(r.json())
+                    except Exception:
+                        pass
+                    return []
+
+                results = await asyncio.gather(*[fetch_event_odds(e) for e in events[:5]])
+                for r in results:
+                    all_lines.extend(r)
+                
+                return all_lines
+        except Exception as e:
+            logger.error(f"❌ Async odds fetch failed: {e}")
+            return []
+
     def fetch_player_props(
         self,
         sport: str = "basketball_nba",
@@ -100,62 +155,8 @@ class OddsComparisonEngine:
         bookmakers: str = "fanduel,draftkings",
     ) -> List[MarketLine]:
         """
-        Fetch live player props from sportsbooks.
-        
-        Args:
-            sport: Sport key (default: basketball_nba)
-            markets: Comma-separated markets (player_points, player_assists, etc.)
-            regions: Regions to fetch odds from
-            bookmakers: Comma-separated bookmaker keys
-        
-        Returns:
-            List of MarketLine objects
+        Fetch live player props from sportsbooks (sync).
         """
-        logger.info(f"Fetching player props from {bookmakers}...")
-        
-        # First, get available events (games)
-        events_url = f"{self.base_url}/sports/{sport}/events"
-        params = {
-            "apiKey": self.odds_api_key,
-            "regions": regions,
-        }
-        
-        try:
-            response = requests.get(events_url, params=params, timeout=10)
-            response.raise_for_status()
-            events = response.json()
-            
-            if not events:
-                logger.warning("No upcoming games found")
-                return []
-            
-            logger.info(f"Found {len(events)} upcoming games")
-            
-            # Fetch odds for each event
-            all_lines = []
-            for event in events[:5]:  # Limit to first 5 games for now
-                event_id = event.get("id")
-                
-                odds_url = f"{self.base_url}/sports/{sport}/events/{event_id}/odds"
-                odds_params = {
-                    "apiKey": self.odds_api_key,
-                    "regions": regions,
-                    "markets": markets,
-                    "bookmakers": bookmakers,
-                }
-                
-                odds_response = requests.get(odds_url, params=odds_params, timeout=10)
-                if odds_response.status_code == 200:
-                    odds_data = odds_response.json()
-                    lines = self._parse_odds_response(odds_data)
-                    all_lines.extend(lines)
-            
-            logger.info(f"✅ Fetched {len(all_lines)} market lines")
-            return all_lines
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"❌ Error fetching odds: {e}")
-            return []
     
     def _parse_odds_response(self, odds_data: Dict) -> List[MarketLine]:
         """Parse API response into MarketLine objects."""

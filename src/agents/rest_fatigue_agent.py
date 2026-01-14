@@ -21,6 +21,34 @@ class RestFatigueAgent:
         self.gamelog_cache = {}  # Cache gamelogs per team
         self.last_api_call = 0
         
+    async def calculate_rest_days_async(self, team_id: int, target_date: str, season='2024-25') -> Dict:
+        """Async version: Calculate days of rest before a game"""
+        import asyncio
+        cache_key = f"{team_id}_{season}"
+        
+        if cache_key not in self.gamelog_cache:
+            try:
+                time_since_last = time.time() - self.last_api_call
+                if time_since_last < 1.0:
+                    await asyncio.sleep(1.0 - time_since_last)
+                
+                # Sync call in thread
+                def fetch():
+                    gamelog = teamgamelog.TeamGameLog(team_id=team_id, season=season, timeout=60)
+                    return gamelog.get_data_frames()[0]
+                    
+                df = await asyncio.to_thread(fetch)
+                self.last_api_call = time.time()
+                
+                df['GAME_DATE'] = pd.to_datetime(df['GAME_DATE'], format='%b %d, %Y')
+                df = df.sort_values('GAME_DATE', ascending=False)
+                self.gamelog_cache[cache_key] = df
+            except Exception as e:
+                logger.warning(f"Failed to fetch gamelog async for team {team_id}: {e}")
+                return {'rest_days': 1, 'is_back_to_back': False, 'games_in_last_7_days': 0}
+        
+        return self.calculate_rest_days(team_id, target_date, season)
+
     def calculate_rest_days(self, team_id: int, target_date: str, season='2024-25') -> Dict:
         """Calculate days of rest before a game"""
         cache_key = f"{team_id}_{season}"
@@ -70,13 +98,22 @@ class RestFatigueAgent:
             logger.warning(f"Failed to calculate rest for team {team_id}: {e}")
             return {}
     
+    async def calculate_travel_fatigue_async(self, team_id: int, target_date: str, season: str = '2024-25') -> Dict:
+        """Async version: Calculate travel fatigue"""
+        # Ensure we have rest info first (async)
+        rest_info = await self.calculate_rest_days_async(team_id, target_date, season)
+        # The rest of the logic is CPU bound/maths, so reuse sync version but inject the async rest_info
+        return self._calculate_travel_fatigue_internal(team_id, target_date, rest_info, season)
+
     def calculate_travel_fatigue(self, team_id: int, target_date: str, season: str = '2024-25') -> Dict:
         """
         Calculate travel fatigue based on distance between games and timezone changes.
-        
-        Returns:
-            Dict with travel_distance_miles, timezone_change, travel_fatigue_score (0-100)
         """
+        rest_info = self.calculate_rest_days(team_id, target_date, season)
+        return self._calculate_travel_fatigue_internal(team_id, target_date, rest_info, season)
+
+    def _calculate_travel_fatigue_internal(self, team_id: int, target_date: str, rest_info: Dict, season: str = '2024-25') -> Dict:
+        """Internal logic for travel fatigue calculation"""
         # NBA Arena locations (lat, lon, timezone offset from ET)
         ARENA_LOCATIONS = {
             1610612737: (33.7573, -84.3963, 0),    # ATL Hawks
@@ -113,21 +150,15 @@ class RestFatigueAgent:
         
         try:
             cache_key = f"{team_id}_{season}"
-            
             if cache_key not in self.gamelog_cache:
                 return {'travel_distance_miles': 0, 'timezone_change': 0, 'travel_fatigue_score': 0}
             
             df = self.gamelog_cache[cache_key]
             target = pd.to_datetime(target_date)
-            
-            # Get last two games
             past_games = df[df['GAME_DATE'] < target].head(2)
             
             if len(past_games) < 1:
                 return {'travel_distance_miles': 0, 'timezone_change': 0, 'travel_fatigue_score': 0}
-            
-            # Get home location
-            team_loc = ARENA_LOCATIONS.get(team_id, (39.0, -98.0, -1))  # Default to center of US
             
             # Determine if last game was away (check MATCHUP column for '@')
             last_game = past_games.iloc[0]
@@ -137,35 +168,20 @@ class RestFatigueAgent:
             tz_change = 0
             
             if '@' in matchup:
-                # Extract opponent team abbr and find their location
-                # MATCHUP format: "LAL @ BOS" or "LAL vs. BOS"
-                parts = matchup.split('@')
-                if len(parts) == 2:
-                    # Approximate distance calculation using lat/lon
-                    # This is simplified - real implementation would use team abbreviation lookup
-                    # For now, estimate based on whether it was an away game
-                    distance = 1500  # Average NBA travel distance
-                    tz_change = 1  # Assume 1 timezone on average
+                distance = 1500  # Average NBA travel distance
+                tz_change = 1  # Assume 1 timezone on average
             
-            # Calculate fatigue score (0-100)
-            # Factors: distance, timezone changes, back-to-back status
             fatigue_score = 0
+            # Distance factor
+            if distance > 2000: fatigue_score += 40
+            elif distance > 1500: fatigue_score += 30
+            elif distance > 1000: fatigue_score += 20
+            elif distance > 500: fatigue_score += 10
             
-            # Distance factor (0-40 points)
-            if distance > 2000:
-                fatigue_score += 40
-            elif distance > 1500:
-                fatigue_score += 30
-            elif distance > 1000:
-                fatigue_score += 20
-            elif distance > 500:
-                fatigue_score += 10
-            
-            # Timezone factor (0-30 points)
+            # Timezone factor
             fatigue_score += min(abs(tz_change) * 10, 30)
             
-            # Back-to-back factor (0-30 points)
-            rest_info = self.calculate_rest_days(team_id, target_date, season)
+            # Back-to-back factor
             if rest_info.get('is_back_to_back', False):
                 fatigue_score += 30
             elif rest_info.get('rest_days', 3) <= 2:
@@ -176,10 +192,14 @@ class RestFatigueAgent:
                 'timezone_change': tz_change,
                 'travel_fatigue_score': min(fatigue_score, 100)
             }
-            
         except Exception as e:
-            logger.warning(f"Failed to calculate travel fatigue for team {team_id}: {e}")
+            logger.warning(f"Failed to calculate travel fatigue internal for team {team_id}: {e}")
             return {'travel_distance_miles': 0, 'timezone_change': 0, 'travel_fatigue_score': 0}
+
+    def calculate_travel_fatigue_original(self, team_id: int, target_date: str, season: str = '2024-25') -> Dict:
+        """Original calculation logic (for reference)"""
+        # Handled by _calculate_travel_fatigue_internal
+        pass
 
 
 rest_fatigue_agent = RestFatigueAgent()

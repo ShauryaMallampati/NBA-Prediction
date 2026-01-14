@@ -1,7 +1,9 @@
 import argparse
 import json
 import logging
+import logging
 import sys
+import asyncio
 from pathlib import Path
 from datetime import datetime
 import os
@@ -49,20 +51,19 @@ def main():
     target_date = args.date or datetime.now().strftime("%Y-%m-%d")
     logger.info(f"🚀 Starting prediction job for {target_date}")
     
-    try:
+    async def run_job():
         pipeline = PredictionPipeline()
-        predictions = pipeline.get_predictions(date=target_date, use_live_odds=True)
+        # Use new async method
+        return await pipeline.get_predictions_async(date=target_date, use_live_odds=True)
+
+    try:
+        predictions = asyncio.run(run_job())
         
         if not predictions:
             logger.warning(f"⚠️ No predictions generated for {target_date}")
-            # We still might want to save an empty file or log this event, 
-            # but for now we just exit safely.
             return
             
         save_predictions(predictions, target_date)
-        
-        # Also update a 'latest.json' for easy frontend access if needed
-        # (Though frontend currently uses API, this is good for static site generators)
         
     except Exception as e:
         logger.error(f"❌ Critical error in prediction job: {e}", exc_info=True)
