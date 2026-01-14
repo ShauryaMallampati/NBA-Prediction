@@ -24,7 +24,7 @@ import logging
 # Import nba_api
 try:
     from nba_api.stats.endpoints import (
-        scoreboard,
+        scoreboardv2 as scoreboard,
         leaguegamefinder,
         playergamelogs,
         commonplayerinfo,

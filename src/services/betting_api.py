@@ -26,6 +26,7 @@ from src.models.pregame.train_props_model import PlayerPropsLightGBMTrainer
 from src.services.odds_comparison import OddsComparisonEngine, BettingRecommendation
 from src.models.pregame.blowout_rest_predictor import BlowoutRestPredictor, GameContext
 from src.services.betting_tracker import BettingTracker, BetRecord
+from src.services.player_minutes import fetch_minutes_yesterday
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -287,13 +288,16 @@ async def get_player_props(
                 try:
                     # Create default game context (pre-game assumptions)
                     # In production, would fetch actual game state from live data
+                    minutes_yesterday = await fetch_minutes_yesterday(line.player_name, game_date)
+                    is_back_to_back = minutes_yesterday > 0
+
                     game_context = GameContext(
                         score_diff=0.0,  # Pre-game: no score diff
                         quarter=1,  # Pre-game: Q1
                         time_remaining_sec=12 * 60,  # Pre-game: full quarter
                         player_minutes_today=0.0,  # Pre-game: no minutes yet
-                        player_minutes_yesterday=0.0,  # TODO: Fetch from player data
-                        is_back_to_back=False,  # TODO: Check schedule
+                        player_minutes_yesterday=minutes_yesterday,
+                        is_back_to_back=is_back_to_back,
                         travel_fatigue_score=0.0,  # TODO: Calculate from travel data
                         team_leading=False,  # Pre-game: no leader
                     )
@@ -402,13 +406,18 @@ async def get_bet_opportunities(
                 try:
                     # Create default game context (pre-game assumptions)
                     # In production, would fetch actual game state from live data
+                    # Note: We can't access game_date here easily as it's not passed, defaulting to today
+                    today = datetime.now().date()
+                    minutes_yesterday = await fetch_minutes_yesterday(line.player_name, today)
+                    is_back_to_back = minutes_yesterday > 0
+
                     game_context = GameContext(
                         score_diff=0.0,  # Pre-game: no score diff
                         quarter=1,  # Pre-game: Q1
                         time_remaining_sec=12 * 60,  # Pre-game: full quarter
                         player_minutes_today=0.0,  # Pre-game: no minutes yet
-                        player_minutes_yesterday=0.0,  # TODO: Fetch from player data
-                        is_back_to_back=False,  # TODO: Check schedule
+                        player_minutes_yesterday=minutes_yesterday,
+                        is_back_to_back=is_back_to_back,
                         travel_fatigue_score=0.0,  # TODO: Calculate from travel data
                         team_leading=False,  # Pre-game: no leader
                     )
