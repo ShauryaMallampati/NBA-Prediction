@@ -16,6 +16,7 @@ Integrates:
 
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import date, datetime
@@ -26,6 +27,8 @@ from src.models.pregame.train_props_model import PlayerPropsLightGBMTrainer
 from src.services.odds_comparison import OddsComparisonEngine, BettingRecommendation
 from src.models.pregame.blowout_rest_predictor import BlowoutRestPredictor, GameContext
 from src.services.betting_tracker import BettingTracker, BetRecord
+from src.utils.schedule_utils import is_team_back_to_back
+from src.utils.player_utils import get_player_team_id
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -285,6 +288,13 @@ async def get_player_props(
                 adjusted_prob = predicted_prob
                 
                 try:
+                    # Determine if back to back (run in threadpool to avoid blocking)
+                    is_b2b = False
+                    if line.home_team and line.away_team:
+                        team_id = await run_in_threadpool(get_player_team_id, line.player_name, line.home_team, line.away_team)
+                        if team_id:
+                            is_b2b = await run_in_threadpool(is_team_back_to_back, team_id, game_date)
+
                     # Create default game context (pre-game assumptions)
                     # In production, would fetch actual game state from live data
                     game_context = GameContext(
@@ -293,7 +303,7 @@ async def get_player_props(
                         time_remaining_sec=12 * 60,  # Pre-game: full quarter
                         player_minutes_today=0.0,  # Pre-game: no minutes yet
                         player_minutes_yesterday=0.0,  # TODO: Fetch from player data
-                        is_back_to_back=False,  # TODO: Check schedule
+                        is_back_to_back=is_b2b,
                         travel_fatigue_score=0.0,  # TODO: Calculate from travel data
                         team_leading=False,  # Pre-game: no leader
                     )
@@ -374,6 +384,9 @@ async def get_bet_opportunities(
     try:
         logger.info(f"Finding bet opportunities with min_edge={min_edge}")
         
+        # Default date to today for opportunities if not specified
+        game_date = datetime.now().date()
+
         odds_engine = get_odds_engine()
         market_lines = odds_engine.fetch_player_props()
         
@@ -400,6 +413,13 @@ async def get_bet_opportunities(
                 adjusted_prob = model_prob
                 
                 try:
+                    # Determine if back to back (run in threadpool to avoid blocking)
+                    is_b2b = False
+                    if line.home_team and line.away_team:
+                        team_id = await run_in_threadpool(get_player_team_id, line.player_name, line.home_team, line.away_team)
+                        if team_id:
+                            is_b2b = await run_in_threadpool(is_team_back_to_back, team_id, game_date)
+
                     # Create default game context (pre-game assumptions)
                     # In production, would fetch actual game state from live data
                     game_context = GameContext(
@@ -408,7 +428,7 @@ async def get_bet_opportunities(
                         time_remaining_sec=12 * 60,  # Pre-game: full quarter
                         player_minutes_today=0.0,  # Pre-game: no minutes yet
                         player_minutes_yesterday=0.0,  # TODO: Fetch from player data
-                        is_back_to_back=False,  # TODO: Check schedule
+                        is_back_to_back=is_b2b,
                         travel_fatigue_score=0.0,  # TODO: Calculate from travel data
                         team_leading=False,  # Pre-game: no leader
                     )

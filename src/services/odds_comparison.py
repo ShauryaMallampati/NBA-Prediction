@@ -48,6 +48,8 @@ class MarketLine:
     under_odds: int  # American odds e.g., -110
     sportsbook: str  # e.g., "fanduel", "draftkings"
     timestamp: datetime
+    home_team: Optional[str] = None
+    away_team: Optional[str] = None
 
 
 @dataclass
@@ -147,6 +149,9 @@ class OddsComparisonEngine:
                 odds_response = requests.get(odds_url, params=odds_params, timeout=10)
                 if odds_response.status_code == 200:
                     odds_data = odds_response.json()
+                    # Add team info to odds data from event info
+                    odds_data["home_team"] = event.get("home_team")
+                    odds_data["away_team"] = event.get("away_team")
                     lines = self._parse_odds_response(odds_data)
                     all_lines.extend(lines)
             
@@ -162,6 +167,8 @@ class OddsComparisonEngine:
         lines = []
         
         bookmakers = odds_data.get("bookmakers", [])
+        home_team = odds_data.get("home_team")
+        away_team = odds_data.get("away_team")
         
         for bookmaker in bookmakers:
             sportsbook = bookmaker.get("key", "unknown")
@@ -206,6 +213,8 @@ class OddsComparisonEngine:
                             under_odds=under.get("price", 0),
                             sportsbook=sportsbook,
                             timestamp=datetime.now(),
+                            home_team=home_team,
+                            away_team=away_team,
                         ))
         
         return lines
