@@ -3,7 +3,7 @@ Live odds fetcher using RapidAPI (The Odds API).
 Fetches real-time betting odds to replace static JSON files.
 """
 import os
-import requests
+import httpx
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
@@ -13,13 +13,14 @@ logger = logging.getLogger(__name__)
 # Fallback key from project context if env var is missing
 DEFAULT_RAPID_KEY = "ecfaccc609msh0c3aa0fa4b8e802p12f41fjsn38bee5c39743"
 
-def get_live_odds_data(date_str: Optional[str] = None) -> Dict[str, Any]:
+async def get_live_odds_data(date_str: Optional[str] = None, client: Optional[httpx.AsyncClient] = None) -> Dict[str, Any]:
     """
     Fetch live NBA odds from RapidAPI and return in the structure 
     expected by create_features_from_odds.
     
     Args:
         date_str: Optional YYYY-MM-DD string to filter games by date.
+        client: Optional httpx.AsyncClient to reuse connection.
     """
     api_key = os.environ.get('RAPIDAPI_KEY') or os.environ.get('NBA_STATS_API_KEY') or DEFAULT_RAPID_KEY
     host = "odds.p.rapidapi.com"
@@ -57,7 +58,11 @@ def get_live_odds_data(date_str: Optional[str] = None) -> Dict[str, Any]:
     
     try:
         logger.info(f"Fetching live odds from {url}...")
-        response = requests.get(url, headers=headers, params=params, timeout=10)
+        if client:
+            response = await client.get(url, headers=headers, params=params, timeout=10)
+        else:
+            async with httpx.AsyncClient() as new_client:
+                response = await new_client.get(url, headers=headers, params=params, timeout=10)
         
         if response.status_code != 200:
             logger.error(f"Failed to fetch odds: {response.status_code} {response.text}")

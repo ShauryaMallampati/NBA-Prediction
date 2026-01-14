@@ -8,6 +8,8 @@ the FastAPI route that consumes this will fall back to RapidAPI or the existing 
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 import logging
+import asyncio
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +105,7 @@ def _try_pyespn(days_ahead: int = 14) -> List[Dict[str, Any]]:
         return []
 
 
-def get_upcoming_games(days_ahead: int = 14) -> List[Dict[str, Any]]:
+async def get_upcoming_games(days_ahead: int = 14) -> List[Dict[str, Any]]:
     """Return upcoming NBA games for the next `days_ahead` days.
 
     Strategy:
@@ -135,29 +137,45 @@ def get_upcoming_games(days_ahead: int = 14) -> List[Dict[str, Any]]:
         # The user's key `ecfaccc...` is likely a free tier.
         scan_days = min(days_ahead, 7)
         
-        for i in range(0, scan_days + 1): # Start from 0 to capture today if nba_api failed!
-            target_date = start_date + timedelta(days=i)
-            date_str = target_date.isoformat()
-            
-            if date_str in existing_dates:
-                continue
+        # Use asyncio.gather to fetch concurrent days if possible?
+        # But for now, we loop and await. To improve perf, we could gather.
+
+        tasks = []
+        date_strs = []
+
+        # Reuse client for concurrent requests
+        async with httpx.AsyncClient() as client:
+            for i in range(0, scan_days + 1): # Start from 0 to capture today if nba_api failed!
+                target_date = start_date + timedelta(days=i)
+                date_str = target_date.isoformat()
                 
-            # Fetch from RapidAPI
-            odds_data = get_live_odds_data(date_str=date_str)
-            nba_odds = odds_data.get('endpoints', {}).get('nba_odds', [])
+                if date_str in existing_dates:
+                    continue
+
+                tasks.append(get_live_odds_data(date_str=date_str, client=client))
+                date_strs.append(date_str)
             
-            if nba_odds:
-                for g in nba_odds:
-                    start = g.get('commence_time', '')
-                    # Normalize game dict
-                    all_games.append({
-                        'game_id': g.get('id', ''),
-                        'date': date_str, # Use our target date to ensure consistency
-                        'home_team': g.get('home_team', ''),
-                        'away_team': g.get('away_team', ''),
-                        'game_time': start
-                    })
-                existing_dates.add(date_str)
+            if tasks:
+                odds_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                for date_str, odds_data in zip(date_strs, odds_results):
+                    if isinstance(odds_data, Exception):
+                        logger.error(f"Error fetching odds for {date_str}: {odds_data}")
+                        continue
+
+                    nba_odds = odds_data.get('endpoints', {}).get('nba_odds', [])
+                    if nba_odds:
+                        for g in nba_odds:
+                            start = g.get('commence_time', '')
+                            # Normalize game dict
+                            all_games.append({
+                                'game_id': g.get('id', ''),
+                                'date': date_str, # Use our target date to ensure consistency
+                                'home_team': g.get('home_team', ''),
+                                'away_team': g.get('away_team', ''),
+                                'game_time': start
+                            })
+                        existing_dates.add(date_str)
                 
     except Exception as e:
         logger.error(f"Error fetching future games via RapidAPI: {e}")

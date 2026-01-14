@@ -38,7 +38,7 @@ class PredictionPipeline:
         except Exception as e:
             logger.error(f"❌ Error loading model: {e}")
             
-    def get_predictions(self, date: Optional[str] = None, use_live_odds: bool = True) -> List[Dict[str, Any]]:
+    async def get_predictions(self, date: Optional[str] = None, use_live_odds: bool = True) -> List[Dict[str, Any]]:
         """
         Generate predictions for a given date (default: today).
         
@@ -57,7 +57,7 @@ class PredictionPipeline:
         odds_data = None
         if use_live_odds:
             logger.info("Fetching live odds...")
-            odds_data = get_live_odds_data()
+            odds_data = await get_live_odds_data()
             
         # Fallback if live fetch failed or empty
         if not odds_data or not odds_data.get('endpoints', {}).get('nba_odds'):

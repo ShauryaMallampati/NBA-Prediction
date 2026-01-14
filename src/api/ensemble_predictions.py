@@ -22,6 +22,7 @@ from src.api.live_odds import get_live_odds_data
 from src.api.live_features import LiveFeatureEngineer
 import os
 import requests
+import httpx # Use httpx for async requests
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -126,7 +127,7 @@ async def get_predictions():
     Get predictions for all upcoming games
     """
     try:
-        results = pipeline.get_predictions(use_live_odds=True)
+        results = await pipeline.get_predictions(use_live_odds=True)
         
         # Model info
         model_info = {
@@ -214,7 +215,7 @@ async def get_model_info():
 async def live_schedule(days: int = 14):
     """Return upcoming games using local python libraries (nba_api / pyespn) when available."""
     try:
-        games = get_upcoming_games(days_ahead=days)
+        games = await get_upcoming_games(days_ahead=days)
 
         # If no games found from local libraries, fall back to RapidAPI (if key provided)
         if not games:
@@ -227,22 +228,23 @@ async def live_schedule(days: int = 14):
                         'x-rapidapi-key': rapid_key,
                         'x-rapidapi-host': rapid_host
                     }
-                    r = requests.get(url, headers=headers, timeout=10)
-                    if r.ok:
-                        payload = r.json()
-                        games = payload.get('games') or payload.get('schedule') or []
-                        # Normalize minimal fields
-                        normalized = []
-                        for g in games:
-                            gd = g.get('date') or g.get('game_date') or g.get('start_date') or ''
-                            normalized.append({
-                                'game_id': g.get('id') or g.get('game_id') or g.get('GAME_ID') or '',
-                                'date': gd,
-                                'home_team': g.get('home_team') or g.get('home') or '',
-                                'away_team': g.get('away_team') or g.get('away') or '',
-                                'game_time': g.get('time') or g.get('startTime') or ''
-                            })
-                        games = normalized
+                    async with httpx.AsyncClient() as client:
+                        r = await client.get(url, headers=headers, timeout=10)
+                        if r.status_code == 200:
+                            payload = r.json()
+                            games = payload.get('games') or payload.get('schedule') or []
+                            # Normalize minimal fields
+                            normalized = []
+                            for g in games:
+                                gd = g.get('date') or g.get('game_date') or g.get('start_date') or ''
+                                normalized.append({
+                                    'game_id': g.get('id') or g.get('game_id') or g.get('GAME_ID') or '',
+                                    'date': gd,
+                                    'home_team': g.get('home_team') or g.get('home') or '',
+                                    'away_team': g.get('away_team') or g.get('away') or '',
+                                    'game_time': g.get('time') or g.get('startTime') or ''
+                                })
+                            games = normalized
                 except Exception:
                     pass
 

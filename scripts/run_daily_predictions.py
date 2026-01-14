@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 import os
+import asyncio
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -41,6 +42,10 @@ def save_predictions(predictions, date_str):
             
     logger.info("✅ Save complete")
 
+async def run_pipeline(target_date):
+    pipeline = PredictionPipeline()
+    return await pipeline.get_predictions(date=target_date, use_live_odds=True)
+
 def main():
     parser = argparse.ArgumentParser(description="Run daily NBA predictions")
     parser.add_argument("--date", type=str, help="Date to predict for (YYYY-MM-DD)", default=None)
@@ -50,8 +55,7 @@ def main():
     logger.info(f"🚀 Starting prediction job for {target_date}")
     
     try:
-        pipeline = PredictionPipeline()
-        predictions = pipeline.get_predictions(date=target_date, use_live_odds=True)
+        predictions = asyncio.run(run_pipeline(target_date))
         
         if not predictions:
             logger.warning(f"⚠️ No predictions generated for {target_date}")
