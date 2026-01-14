@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import List, Dict, Any
 import pandas as pd
@@ -126,7 +127,7 @@ async def get_predictions():
     Get predictions for all upcoming games
     """
     try:
-        results = pipeline.get_predictions(use_live_odds=True)
+        results = await run_in_threadpool(pipeline.get_predictions, use_live_odds=True)
         
         # Model info
         model_info = {
