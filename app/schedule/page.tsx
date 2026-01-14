@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Header } from '@/components/layout/header'
-import { useSchedule } from '@/lib/hooks'
+
+import { usePredictions } from '@/lib/hooks'
 import { PageSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -10,21 +11,30 @@ import { formatShortDate, formatTime } from '@/lib/utils/format'
 import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 
 export default function SchedulePage() {
-  const { data, isLoading, error, refetch } = useSchedule(30)
+  // Use predictions endpoint as source of truth for schedule
+  const { data, isLoading, error, refetch } = usePredictions()
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
-  const games = data?.games || []
+  const games = data?.predictions.map(p => ({
+    game_id: p.game_id,
+    date: p.commence_time,
+    home_team: p.home_team,
+    away_team: p.away_team,
+    game_time: formatTime(p.commence_time)
+  })) || []
 
-  // Group games by date
+  // Group games by date (using local date to match "today")
   const gamesByDate = games.reduce((acc, game) => {
-    const date = game.date.split('T')[0]
+    // Convert UTC game time to local YYYY-MM-DD
+    const date = new Date(game.date).toLocaleDateString('en-CA')
     if (!acc[date]) acc[date] = []
     acc[date].push(game)
     return acc
   }, {} as Record<string, typeof games>)
 
   const dates = Object.keys(gamesByDate).sort()
-  const today = new Date().toISOString().split('T')[0]
+  // Use local date for "today" to avoid UTC shifting
+  const today = new Date().toLocaleDateString('en-CA')
   const displayDate = selectedDate || today
 
   const displayGames = gamesByDate[displayDate] || []
@@ -94,8 +104,8 @@ export default function SchedulePage() {
                   key={date}
                   onClick={() => setSelectedDate(date)}
                   className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${date === displayDate
-                      ? 'bg-primary text-primary-foreground'
-                      : 'border border-border hover:bg-accent'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'border border-border hover:bg-accent'
                     }`}
                 >
                   {formatShortDate(date + 'T12:00:00')}

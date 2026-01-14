@@ -127,7 +127,7 @@ export default function HomePage() {
                     {formatGameTime(pred.commence_time)}
                   </span>
                   <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${getConfidenceBg(pred.confidence)} ${getConfidenceColor(pred.confidence)}`}>
-                    {pred.confidence.toFixed(0)}% conf
+                    {pred.confidence.toFixed(0)}% Probability
                   </span>
                 </div>
 
