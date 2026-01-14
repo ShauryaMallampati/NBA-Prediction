@@ -49,11 +49,6 @@ export default function ChemistryPage() {
                 icon={TrendingUp}
                 valueClassName="text-purple-400"
               />
-              <KPICard
-                title="Data Source"
-                value="NBA API"
-                icon={Medal}
-              />
             </div>
 
             <div className="grid lg:grid-cols-2 gap-8">
