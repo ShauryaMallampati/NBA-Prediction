@@ -1,5 +1,6 @@
 """FastAPI main application."""
 
+import asyncio
 import pickle
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -123,14 +124,18 @@ def get_prediction_service():
 _model_cache = {}
 
 
-def load_model(model_name: str):
+async def load_model(model_name: str):
     """Load model from disk (cached)."""
     if model_name not in _model_cache:
         model_path = Paths.MODELS / f"{model_name}.pkl"
         if not model_path.exists():
             raise FileNotFoundError(f"Model not found: {model_path}")
-        with open(model_path, "rb") as f:
-            _model_cache[model_name] = pickle.load(f)
+
+        def _load():
+            with open(model_path, "rb") as f:
+                return pickle.load(f)
+
+        _model_cache[model_name] = await asyncio.to_thread(_load)
         logger.info(f"Loaded model: {model_name}")
     return _model_cache[model_name]
 
