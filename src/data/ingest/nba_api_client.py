@@ -18,7 +18,7 @@ import time
 import requests
 from typing import Dict, List, Optional, Any, Literal
 from datetime import datetime, date, timedelta
-from functools import wraps
+from functools import wraps, lru_cache
 import logging
 
 # Import nba_api
@@ -30,7 +30,8 @@ try:
         commonplayerinfo,
         playercareerstats,
         teamgamelog,
-        commonteamroster
+        commonteamroster,
+        leaguedashplayerstats
     )
     from nba_api.stats.static import players as static_players
     from nba_api.stats.static import teams as static_teams
@@ -343,6 +344,53 @@ class NBAAPIClient:
         except Exception as e:
             logger.error(f"Failed to fetch season averages: {e}")
             return []
+
+    @lru_cache(maxsize=4)
+    def get_all_player_teams(self, season: Optional[str] = None) -> Dict[str, int]:
+        """
+        Get mapping of player names to team IDs for the current season.
+        Cached to improve performance.
+
+        Args:
+            season: Season string (e.g., '2024-25'). Defaults to current season.
+
+        Returns:
+            Dictionary mapping lowercase player name to team ID.
+        """
+        if not self.nba_api_available:
+            return {}
+
+        if not season:
+            # Default to current season
+            current_year = datetime.now().year
+            current_month = datetime.now().month
+            if current_month >= 10:  # NBA season starts in October
+                season = f"{current_year}-{str(current_year + 1)[-2:]}"
+            else:
+                season = f"{current_year - 1}-{str(current_year)[-2:]}"
+
+        logger.info(f"🏀 Fetching player-team mapping for {season}")
+
+        try:
+            stats = leaguedashplayerstats.LeagueDashPlayerStats(season=season)
+            data = stats.get_dict()
+
+            player_team_map = {}
+            if 'resultSets' in data:
+                headers = data['resultSets'][0]['headers']
+                for row in data['resultSets'][0]['rowSet']:
+                    row_dict = dict(zip(headers, row))
+                    player_name = row_dict.get('PLAYER_NAME', '').lower()
+                    team_id = row_dict.get('TEAM_ID')
+                    if player_name and team_id:
+                        player_team_map[player_name] = team_id
+
+            logger.info(f"✅ Mapped {len(player_team_map)} players to teams")
+            return player_team_map
+
+        except Exception as e:
+            logger.error(f"Failed to fetch player-team mapping: {e}")
+            return {}
     
     # ============================================================================
     # FALLBACK METHODS

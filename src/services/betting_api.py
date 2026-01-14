@@ -18,7 +18,7 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import logging
 
 # Import our components
@@ -26,6 +26,7 @@ from src.models.pregame.train_props_model import PlayerPropsLightGBMTrainer
 from src.services.odds_comparison import OddsComparisonEngine, BettingRecommendation
 from src.models.pregame.blowout_rest_predictor import BlowoutRestPredictor, GameContext
 from src.services.betting_tracker import BettingTracker, BetRecord
+from src.data.ingest.nba_api_client import get_nba_client
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -261,6 +262,32 @@ async def get_player_props(
         # Load model (with intelligent fallback to baselines)
         model = get_model()
         
+        # Prepare for schedule checking
+        nba_client = get_nba_client()
+
+        # Fetch yesterday's games to identify back-to-backs
+        yesterday = game_date - timedelta(days=1)
+        yesterday_str = yesterday.strftime("%Y-%m-%d")
+        yesterday_games = nba_client.get_games_today(yesterday_str)
+
+        teams_played_yesterday = set()
+        for game in yesterday_games:
+            teams_played_yesterday.add(game['home_team']['id'])
+            teams_played_yesterday.add(game['visitor_team']['id'])
+
+        # Determine season for player-team mapping
+        season = None
+        if game_date:
+            year = game_date.year
+            month = game_date.month
+            if month >= 10:
+                season = f"{year}-{str(year + 1)[-2:]}"
+            else:
+                season = f"{year - 1}-{str(year)[-2:]}"
+
+        # Fetch player-team mapping for quick lookup
+        player_team_map = nba_client.get_all_player_teams(season=season)
+
         predictions = []
         
         for line in market_lines[:20]:  # Process first 20 lines
@@ -287,13 +314,19 @@ async def get_player_props(
                 try:
                     # Create default game context (pre-game assumptions)
                     # In production, would fetch actual game state from live data
+                    # Determine is_back_to_back
+                    team_id = player_team_map.get(line.player_name.lower())
+                    is_back_to_back = False
+                    if team_id and team_id in teams_played_yesterday:
+                        is_back_to_back = True
+
                     game_context = GameContext(
                         score_diff=0.0,  # Pre-game: no score diff
                         quarter=1,  # Pre-game: Q1
                         time_remaining_sec=12 * 60,  # Pre-game: full quarter
                         player_minutes_today=0.0,  # Pre-game: no minutes yet
                         player_minutes_yesterday=0.0,  # TODO: Fetch from player data
-                        is_back_to_back=False,  # TODO: Check schedule
+                        is_back_to_back=is_back_to_back,
                         travel_fatigue_score=0.0,  # TODO: Calculate from travel data
                         team_leading=False,  # Pre-game: no leader
                     )
@@ -380,6 +413,20 @@ async def get_bet_opportunities(
         # Load model (with intelligent fallback to baselines)
         model = get_model()
         
+        # Prepare for schedule checking (assuming today)
+        nba_client = get_nba_client()
+        game_date = date.today()
+        yesterday = game_date - timedelta(days=1)
+        yesterday_str = yesterday.strftime("%Y-%m-%d")
+        yesterday_games = nba_client.get_games_today(yesterday_str)
+
+        teams_played_yesterday = set()
+        for game in yesterday_games:
+            teams_played_yesterday.add(game['home_team']['id'])
+            teams_played_yesterday.add(game['visitor_team']['id'])
+
+        player_team_map = nba_client.get_all_player_teams()
+
         opportunities = []
         
         for line in market_lines:
@@ -402,13 +449,19 @@ async def get_bet_opportunities(
                 try:
                     # Create default game context (pre-game assumptions)
                     # In production, would fetch actual game state from live data
+
+                    team_id = player_team_map.get(line.player_name.lower())
+                    is_back_to_back = False
+                    if team_id and team_id in teams_played_yesterday:
+                        is_back_to_back = True
+
                     game_context = GameContext(
                         score_diff=0.0,  # Pre-game: no score diff
                         quarter=1,  # Pre-game: Q1
                         time_remaining_sec=12 * 60,  # Pre-game: full quarter
                         player_minutes_today=0.0,  # Pre-game: no minutes yet
                         player_minutes_yesterday=0.0,  # TODO: Fetch from player data
-                        is_back_to_back=False,  # TODO: Check schedule
+                        is_back_to_back=is_back_to_back,
                         travel_fatigue_score=0.0,  # TODO: Calculate from travel data
                         team_leading=False,  # Pre-game: no leader
                     )
