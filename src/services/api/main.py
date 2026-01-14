@@ -1,5 +1,6 @@
 """FastAPI main application."""
 
+import asyncio
 import pickle
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -250,7 +251,8 @@ async def get_predictions(date: Optional[str] = None, home_team: Optional[str] =
                 detail="Features not found. Run feature engineering first."
             )
         
-        df = pd.read_parquet(features_path)
+        # Use asyncio.to_thread to avoid blocking the event loop
+        df = await asyncio.to_thread(pd.read_parquet, features_path)
         
         # Convert dates to string format for comparison (handle both ISO and simple date formats)
         if 'date' in df.columns:
@@ -279,9 +281,10 @@ async def get_predictions(date: Optional[str] = None, home_team: Optional[str] =
         # Get predictions with feature importance
         predictions = predictor.predict_with_features(df, top_n=5)
         
-        # Build response
+        # Build response using zip instead of iterrows() for ~10x faster iteration
         result = []
-        for i, (_, row) in enumerate(df.iterrows()):
+        df_records = df.to_dict('records')
+        for i, row in enumerate(df_records):
             pred_data = predictions[i]
             
             # Format top features as dict
@@ -466,7 +469,8 @@ async def get_live_schedule(days: int = 14):
         
         if schedule_file.exists():
             try:
-                df = pd.read_csv(schedule_file)
+                # Use asyncio.to_thread to avoid blocking the event loop
+                df = await asyncio.to_thread(pd.read_csv, schedule_file)
                 if 'date' in df.columns or 'Date' in df.columns:
                     date_col = 'date' if 'date' in df.columns else 'Date'
                     df[date_col] = pd.to_datetime(df[date_col])
@@ -475,13 +479,14 @@ async def get_live_schedule(days: int = 14):
                     mask = (df[date_col].dt.date >= today) & (df[date_col].dt.date <= end_date)
                     df_filtered = df[mask]
                     
-                    for _, row in df_filtered.iterrows():
+                    # Use to_dict('records') instead of iterrows() for faster iteration
+                    for row in df_filtered.to_dict('records'):
                         games.append({
                             'id': str(row.get('game_id', '')),
                             'game_id': str(row.get('game_id', '')),
-                            'date': row[date_col].strftime('%Y-%m-%d'),
-                            'game_date': row[date_col].strftime('%Y-%m-%d'),
-                            'gameDate': row[date_col].strftime('%Y-%m-%d'),
+                            'date': pd.to_datetime(row[date_col]).strftime('%Y-%m-%d') if date_col in row else '',
+                            'game_date': pd.to_datetime(row[date_col]).strftime('%Y-%m-%d') if date_col in row else '',
+                            'gameDate': pd.to_datetime(row[date_col]).strftime('%Y-%m-%d') if date_col in row else '',
                             'home_team': str(row.get('home_team', row.get('Home', ''))),
                             'homeTeam': str(row.get('home_team', row.get('Home', ''))),
                             'home': str(row.get('home_team', row.get('Home', ''))),

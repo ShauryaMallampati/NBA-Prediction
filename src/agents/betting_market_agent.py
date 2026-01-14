@@ -3,6 +3,7 @@ Betting Market Agent - Scrapes line movement and sharp money
 """
 import requests
 import pandas as pd
+import numpy as np
 import logging
 from pathlib import Path
 from typing import Dict, List
@@ -25,19 +26,26 @@ class BettingMarketAgent:
             if 'bookmakers' not in game_odds:
                 return {}
             
-            all_spreads = []
-            all_moneylines = []
+            home_team = game_odds.get('home_team', '')
             
-            for bookmaker in game_odds['bookmakers']:
-                for market in bookmaker.get('markets', []):
-                    if market['key'] == 'spreads':
-                        for outcome in market['outcomes']:
-                            if outcome['name'] == game_odds['home_team']:
-                                all_spreads.append(outcome['point'])
-                    elif market['key'] == 'h2h':
-                        for outcome in market['outcomes']:
-                            if outcome['name'] == game_odds['home_team']:
-                                all_moneylines.append(outcome['price'])
+            # Flattened list comprehensions instead of triple nested loops
+            all_spreads = [
+                outcome.get('point')
+                for bookmaker in game_odds.get('bookmakers', [])
+                for market in bookmaker.get('markets', [])
+                if market.get('key') == 'spreads'
+                for outcome in market.get('outcomes', [])
+                if outcome.get('name') == home_team and outcome.get('point') is not None
+            ]
+            
+            all_moneylines = [
+                outcome.get('price')
+                for bookmaker in game_odds.get('bookmakers', [])
+                for market in bookmaker.get('markets', [])
+                if market.get('key') == 'h2h'
+                for outcome in market.get('outcomes', [])
+                if outcome.get('name') == home_team and outcome.get('price') is not None
+            ]
             
             if all_spreads:
                 return {

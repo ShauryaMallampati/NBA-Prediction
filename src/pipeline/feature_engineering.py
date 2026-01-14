@@ -114,8 +114,11 @@ class FeatureEngineer:
         all_features = []
         processed_games = set()  # Avoid duplicates
         
-        for _, game in games.iterrows():
-            game_id = game['gameid']
+        # Use to_dict('records') instead of iterrows() for ~10x faster iteration
+        game_records = games.to_dict('records')
+        
+        for game in game_records:
+            game_id = game.get('gameid', '')
             
             # Skip if already processed
             if game_id in processed_games:
@@ -128,8 +131,8 @@ class FeatureEngineer:
                 home_team_id = int(game.get('home_team_id', 1610612737))
                 away_team_id = int(game.get('visitor_team_id', 1610612738))
                 game_date = game.get('date', '2024-12-01')
-            except:
-            game_date = '2024-12-01'   # Placeholder
+            except Exception:
+                game_date = '2024-12-01'   # Placeholder
             
             features = self.build_game_features(
                 game_id, home_team_id, away_team_id, game_date, season

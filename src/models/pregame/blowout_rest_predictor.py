@@ -267,16 +267,25 @@ class BlowoutRestPredictor:
         """
         results = []
         
-        for idx, pred_row in predictions_df.iterrows():
-            # Find matching context
-            context_row = contexts_df[
-                contexts_df["player_name"] == pred_row["player_name"]
-            ].iloc[0] if len(contexts_df) > 0 else None
+        # Use to_dict('records') instead of iterrows() for faster iteration
+        pred_records = predictions_df.to_dict('records')
+        
+        # Create a lookup dict for contexts by player_name for O(1) access
+        context_lookup = {}
+        if len(contexts_df) > 0:
+            for ctx_row in contexts_df.to_dict('records'):
+                ctx_player = ctx_row.get('player_name', '')
+                if ctx_player:
+                    context_lookup[ctx_player] = ctx_row
+        
+        for pred_row in pred_records:
+            player_name = pred_row.get('player_name', '')
+            context_row = context_lookup.get(player_name)
             
             if context_row is None:
                 # No context → no adjustment
                 results.append({
-                    **pred_row.to_dict(),
+                    **pred_row,
                     "adjusted_prob": pred_row["predicted_prob"],
                     "rest_risk": 0.0,
                     "explanation": "No context available",
@@ -301,7 +310,7 @@ class BlowoutRestPredictor:
             )
             
             results.append({
-                **pred_row.to_dict(),
+                **pred_row,
                 "adjusted_prob": adjusted_prob,
                 "rest_risk": assessment.combined_risk,
                 "blowout_risk": assessment.blowout_risk,

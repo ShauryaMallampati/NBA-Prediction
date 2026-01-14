@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import pathlib
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
@@ -25,7 +26,7 @@ def get_predictor():
     return predictor
 
 @router.get("/predictions")
-def get_predictions(date: str = Query(..., description="Date in YYYY-MM-DD format", pattern=r"\d{4}-\d{2}-\d{2}")):
+async def get_predictions(date: str = Query(..., description="Date in YYYY-MM-DD format", pattern=r"\d{4}-\d{2}-\d{2}")):
     """
     Get predictions for all games on a specific date
     
@@ -43,8 +44,8 @@ def get_predictions(date: str = Query(..., description="Date in YYYY-MM-DD forma
     # Load predictor
     pred = get_predictor()
     
-    # Load features for the date
-    df = pd.read_parquet(feats_path)
+    # Load features for the date - use asyncio.to_thread to avoid blocking
+    df = await asyncio.to_thread(pd.read_parquet, feats_path)
     
     # Filter by date if date column exists
     if "date" in df.columns:
@@ -61,9 +62,10 @@ def get_predictions(date: str = Query(..., description="Date in YYYY-MM-DD forma
     except Exception as e:
         raise HTTPException(500, f"Prediction failed: {str(e)}")
     
-    # Build response
+    # Build response using to_dict('records') instead of iterrows() for ~10x faster
     games = []
-    for i, (_, row) in enumerate(df_date.iterrows()):
+    df_records = df_date.to_dict('records')
+    for i, row in enumerate(df_records):
         pred_data = predictions[i]
         games.append({
             "game_id": row.get("game_id", f"game_{i}"),
@@ -94,4 +96,3 @@ def get_model_info():
     """Get information about the loaded model"""
     pred = get_predictor()
     return pred.get_model_info()
-

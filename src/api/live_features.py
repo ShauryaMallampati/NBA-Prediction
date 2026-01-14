@@ -62,7 +62,10 @@ class LiveFeatureEngineer:
         """
         live_games = []
         
-        for idx, row in upcoming_games.iterrows():
+        # Use to_dict('records') instead of iterrows() for ~10x faster iteration
+        upcoming_records = upcoming_games.to_dict('records')
+        
+        for row in upcoming_records:
             home = row.get('home_team', '')
             away = row.get('away_team', '')
             

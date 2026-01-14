@@ -38,14 +38,17 @@ class HistoricalMatchupAgent:
                     # This is simplified - would need opponent ID matching
                     h2h_games = df.head(5)  # Placeholder
                     
-                    for _, game in h2h_games.iterrows():
-                        total_games += 1
-                        if 'W' in game.get('WL', ''):
-                            team1_wins += 1
-                        else:
-                            team2_wins += 1
+                    # Use vectorized operations instead of iterrows()
+                    if len(h2h_games) > 0:
+                        total_games += len(h2h_games)
+                        # Count wins where 'W' is in the WL column
+                        wins = h2h_games['WL'].str.contains('W', na=False).sum()
+                        team1_wins += wins
+                        team2_wins += len(h2h_games) - wins
                         
-                        avg_point_diff.append(game.get('PLUS_MINUS', 0))
+                        # Get plus/minus values as a list
+                        pm_values = h2h_games['PLUS_MINUS'].dropna().tolist()
+                        avg_point_diff.extend(pm_values)
                         
                 except:
                     continue

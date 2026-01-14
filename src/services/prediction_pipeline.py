@@ -114,15 +114,15 @@ class PredictionPipeline:
                 chem_model = get_chemistry_model()
                 
                 if chem_model and chem_model.loaded:
-                    chem_adjustments = []
-                    for _, row in df.iterrows():
-                        home = row['home_team']
-                        away = row['away_team']
-                        diff = chem_model.get_chemistry_differential(home, away)
-                        # 10% impact factor
-                        chem_adjustments.append(diff * 0.1)
+                    # Vectorized chemistry adjustment using apply instead of iterrows()
+                    chem_adjustments = df.apply(
+                        lambda row: chem_model.get_chemistry_differential(
+                            row['home_team'], row['away_team']
+                        ) * 0.1,
+                        axis=1
+                    ).values
                     
-                    blended_probs = blended_probs + np.array(chem_adjustments)
+                    blended_probs = blended_probs + chem_adjustments
                     blended_probs = np.clip(blended_probs, 0.05, 0.95)
                     logger.info(f"Applied chemistry adjustments to {len(df)} games")
             except Exception as e:
@@ -136,7 +136,10 @@ class PredictionPipeline:
             lgb_p = self.trainer.lgb_calibrated.predict_proba(X_input)[:, 1]
             cat_p = self.trainer.cat_calibrated.predict_proba(X_input)[:, 1]
             
-            for idx, (index, row) in enumerate(df.iterrows()):
+            # Use to_dict('records') instead of iterrows() for ~10x faster iteration
+            df_records = df.to_dict('records')
+            
+            for idx, row in enumerate(df_records):
                 prob = blended_probs[idx]
                 prediction = "HOME_WIN" if prob > 0.5 else "AWAY_WIN"
                 # Change confidence to be the winner's probability (50-100 scale)

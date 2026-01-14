@@ -291,7 +291,10 @@ class OddsComparisonEngine:
         
         logger.info(f"Comparing {len(model_predictions)} predictions vs {len(market_lines)} lines...")
         
-        for _, pred_row in model_predictions.iterrows():
+        # Use to_dict('records') instead of iterrows() for ~10x faster iteration
+        predictions_list = model_predictions.to_dict('records')
+        
+        for pred_row in predictions_list:
             player = pred_row["player_name"]
             stat = pred_row["stat_type"]
             model_prob = pred_row["predicted_prob"]
