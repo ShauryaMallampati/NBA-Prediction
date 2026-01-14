@@ -6,16 +6,20 @@ import os
 import requests
 import logging
 from typing import Dict, Any, List, Optional
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
 # Fallback key from project context if env var is missing
-DEFAULT_RAPID_KEY = "1a7881ea8amsh9de79b369cd34f7p19587ajsn99e9a80c4881"
+DEFAULT_RAPID_KEY = "ecfaccc609msh0c3aa0fa4b8e802p12f41fjsn38bee5c39743"
 
-def get_live_odds_data() -> Dict[str, Any]:
+def get_live_odds_data(date_str: Optional[str] = None) -> Dict[str, Any]:
     """
     Fetch live NBA odds from RapidAPI and return in the structure 
     expected by create_features_from_odds.
+    
+    Args:
+        date_str: Optional YYYY-MM-DD string to filter games by date.
     """
     api_key = os.environ.get('RAPIDAPI_KEY') or os.environ.get('NBA_STATS_API_KEY') or DEFAULT_RAPID_KEY
     host = "odds.p.rapidapi.com"
@@ -32,13 +36,24 @@ def get_live_odds_data() -> Dict[str, Any]:
         "markets": "h2h,spreads,totals",
         "oddsFormat": "decimal", # create_features_from_odds expects decimal/american? 
                                  # It uses 1/odds for implied prob, so decimal is likely expected.
-                                 # Let's check create_features_from_odds logic.
-                                 # 'home_implied_prob': 1 / np.mean(home_odds)
-                                 # This implies Decimal odds (e.g. 1.90). 
-                                 # If American (-110), the formula would be different.
-                                 # So I'll request decimal.
         "dateFormat": "iso"
     }
+    
+    if date_str:
+        try:
+            # Create UTC range for the given date
+            # Assuming date_str is YYYY-MM-DD
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+            # Start of day UTC
+            start_time = dt.strftime("%Y-%m-%dT00:00:00Z")
+            # End of day UTC + buffer? RapidAPI commmenceTimeFrom is inclusive.
+            end_time = (dt + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
+            
+            params["commenceTimeFrom"] = start_time
+            params["commenceTimeTo"] = end_time
+            logger.info(f"Fetching odds for date: {date_str} ({start_time} to {end_time})")
+        except ValueError:
+            logger.warning(f"Invalid date format: {date_str}. Ignoring date filter.")
     
     try:
         logger.info(f"Fetching live odds from {url}...")
