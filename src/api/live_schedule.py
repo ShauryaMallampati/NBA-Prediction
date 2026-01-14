@@ -8,6 +8,7 @@ the FastAPI route that consumes this will fall back to RapidAPI or the existing 
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
 
@@ -135,29 +136,44 @@ def get_upcoming_games(days_ahead: int = 14) -> List[Dict[str, Any]]:
         # The user's key `ecfaccc...` is likely a free tier.
         scan_days = min(days_ahead, 7)
         
+        dates_to_fetch = []
         for i in range(0, scan_days + 1): # Start from 0 to capture today if nba_api failed!
             target_date = start_date + timedelta(days=i)
             date_str = target_date.isoformat()
             
-            if date_str in existing_dates:
-                continue
+            if date_str not in existing_dates:
+                dates_to_fetch.append(date_str)
+
+        if dates_to_fetch:
+            # Parallelize the fetching of odds for multiple dates
+            # We use a ThreadPoolExecutor since get_live_odds_data uses requests (I/O bound)
+            with ThreadPoolExecutor(max_workers=min(len(dates_to_fetch), 8)) as executor:
+                # Map date_str to future
+                future_to_date = {
+                    executor.submit(get_live_odds_data, date_str=d): d
+                    for d in dates_to_fetch
+                }
                 
-            # Fetch from RapidAPI
-            odds_data = get_live_odds_data(date_str=date_str)
-            nba_odds = odds_data.get('endpoints', {}).get('nba_odds', [])
-            
-            if nba_odds:
-                for g in nba_odds:
-                    start = g.get('commence_time', '')
-                    # Normalize game dict
-                    all_games.append({
-                        'game_id': g.get('id', ''),
-                        'date': date_str, # Use our target date to ensure consistency
-                        'home_team': g.get('home_team', ''),
-                        'away_team': g.get('away_team', ''),
-                        'game_time': start
-                    })
-                existing_dates.add(date_str)
+                for future in as_completed(future_to_date):
+                    date_str = future_to_date[future]
+                    try:
+                        odds_data = future.result()
+                        nba_odds = odds_data.get('endpoints', {}).get('nba_odds', [])
+
+                        if nba_odds:
+                            for g in nba_odds:
+                                start = g.get('commence_time', '')
+                                # Normalize game dict
+                                all_games.append({
+                                    'game_id': g.get('id', ''),
+                                    'date': date_str, # Use our target date to ensure consistency
+                                    'home_team': g.get('home_team', ''),
+                                    'away_team': g.get('away_team', ''),
+                                    'game_time': start
+                                })
+                            existing_dates.add(date_str)
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch odds for {date_str}: {e}")
                 
     except Exception as e:
         logger.error(f"Error fetching future games via RapidAPI: {e}")
