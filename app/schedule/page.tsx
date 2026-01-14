@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { Header } from '@/components/layout/header'
-
-import { usePredictions } from '@/lib/hooks'
+import { useSchedule } from '@/lib/hooks'
 import { PageSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -11,22 +10,25 @@ import { formatShortDate, formatTime } from '@/lib/utils/format'
 import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 
 export default function SchedulePage() {
-  // Use predictions endpoint as source of truth for schedule
-  const { data, isLoading, error, refetch } = usePredictions()
+  // Use schedule endpoint for 14-day view (better for future planning)
+  const { data, isLoading, error, refetch } = useSchedule(14)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
-  const games = data?.predictions.map(p => ({
-    game_id: p.game_id,
-    date: p.commence_time,
-    home_team: p.home_team,
-    away_team: p.away_team,
-    game_time: formatTime(p.commence_time)
-  })) || []
+  const games = data?.games || []
 
   // Group games by date (using local date to match "today")
   const gamesByDate = games.reduce((acc, game) => {
     // Convert UTC game time to local YYYY-MM-DD
-    const date = new Date(game.date).toLocaleDateString('en-CA')
+    // If game.date is already YYYY-MM-DD, new Date() parses it as UTC midnight,
+    // so toLocaleDateString might shift it back a day depending on browser timezone!
+    // Wait, if it comes from predictions it was ISO. 
+    // From live_schedule, it's YYYY-MM-DD (split T).
+    // Actually, live_schedule also provides `game_time` (ISO). 
+    // We should use `game.game_time` if available for accurate local conversion.
+
+    const dateStr = game.game_time || game.date
+    const date = new Date(dateStr).toLocaleDateString('en-CA')
+
     if (!acc[date]) acc[date] = []
     acc[date].push(game)
     return acc

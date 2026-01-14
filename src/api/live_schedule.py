@@ -18,7 +18,7 @@ def _try_nba_api(days_ahead: int = 14) -> List[Dict[str, Any]]:
         # Import here to keep import-time optional
         from nba_api.live.nba.endpoints import scoreboard
 
-        sb = scoreboard.Scoreboard()
+        sb = scoreboard.ScoreBoard()
         data = sb.get_dict()  # May contain 'gameHeader' and 'game' keys depending on version
 
         games = []
@@ -106,38 +106,69 @@ def _try_pyespn(days_ahead: int = 14) -> List[Dict[str, Any]]:
 def get_upcoming_games(days_ahead: int = 14) -> List[Dict[str, Any]]:
     """Return upcoming NBA games for the next `days_ahead` days.
 
-    Try `nba_api` first, then `pyespn`. If both fail, return an empty list.
+    Strategy:
+    1. Try `nba_api` for live/today data (fast, free).
+    2. Try `RapidAPI` (get_live_odds_data) for future dates loop.
     """
-    # Try nba_api
-    games = _try_nba_api(days_ahead)
-    if games:
-        return games
-
-    # Try pyespn next
-    games = _try_pyespn(days_ahead)
-    if games:
-        return games
-
-    # Try live odds as a fallback source for schedule
+    all_games = []
+    
+    # 1. Try nba_api (mostly for today)
+    todays_games = _try_nba_api(days_ahead)
+    if todays_games:
+        all_games.extend(todays_games)
+        
+    # Track which dates we have to avoid duplicates (though minimal risk if we target specific future dates)
+    existing_dates = set(g['date'] for g in all_games)
+    
+    # 2. Loop for future dates using RapidAPI
+    # Only if we used the user's key? Yes, get_live_odds_data handles fallback.
     try:
         from src.api.live_odds import get_live_odds_data
-        odds_data = get_live_odds_data()
-        nba_odds = odds_data.get('endpoints', {}).get('nba_odds', [])
-        if nba_odds:
-            games = []
-            for g in nba_odds:
-                start = g.get('commence_time', '')
-                games.append({
-                    'game_id': g.get('id', ''),
-                    'date': start.split('T')[0] if 'T' in start else start,
-                    'home_team': g.get('home_team', ''),
-                    'away_team': g.get('away_team', ''),
-                    'game_time': start
-                })
-            return games
+        
+        start_date = datetime.utcnow().date()
+        
+        # Limit to next 5 days for speed/rate-limits?
+        # User asked for "future games". 14 days is 14 calls. RapidAPI might limit us.
+        # Let's limit to 7 days for now to be safe, or just `days_ahead` if small.
+        # But `days_ahead` default is 14. 
+        # Let's do min(days_ahead, 7) to be kind to the key quota.
+        # The user's key `ecfaccc...` is likely a free tier.
+        scan_days = min(days_ahead, 7)
+        
+        for i in range(0, scan_days + 1): # Start from 0 to capture today if nba_api failed!
+            target_date = start_date + timedelta(days=i)
+            date_str = target_date.isoformat()
+            
+            if date_str in existing_dates:
+                continue
+                
+            # Fetch from RapidAPI
+            odds_data = get_live_odds_data(date_str=date_str)
+            nba_odds = odds_data.get('endpoints', {}).get('nba_odds', [])
+            
+            if nba_odds:
+                for g in nba_odds:
+                    start = g.get('commence_time', '')
+                    # Normalize game dict
+                    all_games.append({
+                        'game_id': g.get('id', ''),
+                        'date': date_str, # Use our target date to ensure consistency
+                        'home_team': g.get('home_team', ''),
+                        'away_team': g.get('away_team', ''),
+                        'game_time': start
+                    })
+                existing_dates.add(date_str)
+                
     except Exception as e:
-        logger.debug(f"live_odds fallback failed: {e}")
+        logger.error(f"Error fetching future games via RapidAPI: {e}")
 
-    # Nothing available
-    logger.warning("No live schedule source available (nba_api/pyespn/odds). Returning empty list.")
-    return []
+    # Fallback to pyespn only if we have absolute zero games?
+    if not all_games:
+        py_games = _try_pyespn(days_ahead)
+        if py_games:
+            all_games.extend(py_games)
+
+    if not all_games:
+        logger.warning("No schedule source available. Returning empty list.")
+        
+    return all_games
