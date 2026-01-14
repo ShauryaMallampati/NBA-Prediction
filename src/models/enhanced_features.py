@@ -33,32 +33,60 @@ def add_rolling_window_features(df: pd.DataFrame, windows: list = [5, 10, 20]) -
     # Stats to compute rolling averages for
     stats = ['pts', 'reb', 'ast', 'fg_pct', 'fg3_pct', 'ft_pct']
     
-    for window in windows:
-        for stat in stats:
-            # Home team rolling average
-            if f'home_{stat}' in df.columns:
-                df[f'home_{stat}_last{window}'] = (
-                    df.groupby('home')[f'home_{stat}']
-                    .transform(lambda x: x.shift(1).rolling(window, min_periods=1).mean())
-                )
+    # Identify columns to process
+    home_cols_map = {f'home_{stat}': f'home_{stat}' for stat in stats if f'home_{stat}' in df.columns}
+    away_cols_map = {f'away_{stat}': f'away_{stat}' for stat in stats if f'away_{stat}' in df.columns}
+
+    # Add win rate columns
+    home_cols_map['home_win'] = 'home_win_rate'
+
+    # For away win rate, we need to invert home_win
+    # We'll handle away_win_rate separately or create a temp column
+    # To keep it efficient, let's create a temporary column
+    df['temp_away_win'] = 1 - df['home_win']
+    away_cols_map['temp_away_win'] = 'away_win_rate'
+
+    # Group by home and shift relevant columns
+    home_cols = list(home_cols_map.keys())
+    if home_cols:
+        # Step 1: Shift within group
+        shifted_home = df.groupby('home')[home_cols].shift(1)
+
+        # Step 2: Re-group the shifted values by team
+        # We must use the original 'home' column for grouping to maintain alignment
+        grouped_shifted_home = shifted_home.groupby(df['home'])
+
+        for window in windows:
+            # Step 3: Compute rolling mean on shifted values
+            rolled_home = grouped_shifted_home.rolling(window, min_periods=1).mean()
             
-            # Away team rolling average
-            if f'away_{stat}' in df.columns:
-                df[f'away_{stat}_last{window}'] = (
-                    df.groupby('away')[f'away_{stat}']
-                    .transform(lambda x: x.shift(1).rolling(window, min_periods=1).mean())
-                )
+            # Step 4: Fix index (drop group level) and sort to match original df
+            rolled_home = rolled_home.reset_index(level=0, drop=True).sort_index()
+
+            # Step 5: Assign columns
+            for col in home_cols:
+                target_base = home_cols_map[col]
+                df[f'{target_base}_last{window}'] = rolled_home[col]
+
+    # Group by away and shift relevant columns
+    away_cols = list(away_cols_map.keys())
+    if away_cols:
+        shifted_away = df.groupby('away')[away_cols].shift(1)
+        grouped_shifted_away = shifted_away.groupby(df['away'])
         
-        # Rolling win rate
-        df[f'home_win_rate_last{window}'] = (
-            df.groupby('home')['home_win']
-            .transform(lambda x: x.shift(1).rolling(window, min_periods=1).mean())
-        )
-        df[f'away_win_rate_last{window}'] = (
-            df.groupby('away')['home_win']
-            .transform(lambda x: (1 - x).shift(1).rolling(window, min_periods=1).mean())
-        )
+        for window in windows:
+            rolled_away = grouped_shifted_away.rolling(window, min_periods=1).mean()
+            rolled_away = rolled_away.reset_index(level=0, drop=True).sort_index()
+
+            for col in away_cols:
+                target_base = away_cols_map[col]
+                df[f'{target_base}_last{window}'] = rolled_away[col]
+
+    # Clean up temp column
+    if 'temp_away_win' in df.columns:
+        df = df.drop(columns=['temp_away_win'])
         
+    for window in windows:
         logger.info(f"Added {window}-game rolling window features")
     
     return df
