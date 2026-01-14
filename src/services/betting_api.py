@@ -26,6 +26,7 @@ from src.models.pregame.train_props_model import PlayerPropsLightGBMTrainer
 from src.services.odds_comparison import OddsComparisonEngine, BettingRecommendation
 from src.models.pregame.blowout_rest_predictor import BlowoutRestPredictor, GameContext
 from src.services.betting_tracker import BettingTracker, BetRecord
+from src.services.utils.travel_fatigue_service import get_travel_service
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -201,6 +202,10 @@ def get_tracker():
     """Get betting tracker."""
     return BettingTracker(db_path="betting_performance.db")
 
+def get_fatigue_service():
+    """Get travel fatigue service."""
+    return get_travel_service()
+
 
 def get_baseline_prediction(stat_type: str) -> float:
     """
@@ -285,6 +290,10 @@ async def get_player_props(
                 adjusted_prob = predicted_prob
                 
                 try:
+                    # Calculate travel fatigue score
+                    fatigue_service = get_fatigue_service()
+                    fatigue_score = fatigue_service.get_travel_fatigue(line.player_name, str(game_date))
+
                     # Create default game context (pre-game assumptions)
                     # In production, would fetch actual game state from live data
                     game_context = GameContext(
@@ -294,7 +303,7 @@ async def get_player_props(
                         player_minutes_today=0.0,  # Pre-game: no minutes yet
                         player_minutes_yesterday=0.0,  # TODO: Fetch from player data
                         is_back_to_back=False,  # TODO: Check schedule
-                        travel_fatigue_score=0.0,  # TODO: Calculate from travel data
+                        travel_fatigue_score=fatigue_score,
                         team_leading=False,  # Pre-game: no leader
                     )
                     
@@ -400,6 +409,15 @@ async def get_bet_opportunities(
                 adjusted_prob = model_prob
                 
                 try:
+                    # Calculate travel fatigue score
+                    # For bet opportunities, we might not have the date in the request if it's not passed,
+                    # but typically opportunities are for today or upcoming.
+                    # Assuming today's date if not available, or we need to find the game date from line.
+                    # MarketLine timestamp is when it was fetched. Let's assume today.
+                    today_str = datetime.now().strftime("%Y-%m-%d")
+                    fatigue_service = get_fatigue_service()
+                    fatigue_score = fatigue_service.get_travel_fatigue(line.player_name, today_str)
+
                     # Create default game context (pre-game assumptions)
                     # In production, would fetch actual game state from live data
                     game_context = GameContext(
@@ -409,7 +427,7 @@ async def get_bet_opportunities(
                         player_minutes_today=0.0,  # Pre-game: no minutes yet
                         player_minutes_yesterday=0.0,  # TODO: Fetch from player data
                         is_back_to_back=False,  # TODO: Check schedule
-                        travel_fatigue_score=0.0,  # TODO: Calculate from travel data
+                        travel_fatigue_score=fatigue_score,
                         team_leading=False,  # Pre-game: no leader
                     )
                     

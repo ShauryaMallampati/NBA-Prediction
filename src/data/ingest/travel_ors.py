@@ -45,6 +45,7 @@ NBA_ARENAS = {
     "Utah Jazz": {"coords": (40.7683, -111.9011), "tz": "America/Denver"},
     "Golden State Warriors": {"coords": (37.7694, -122.3862), "tz": "America/Los_Angeles"},
     "LA Clippers": {"coords": (34.0430, -118.2673), "tz": "America/Los_Angeles"},
+    "Los Angeles Clippers": {"coords": (34.0430, -118.2673), "tz": "America/Los_Angeles"},
     "Los Angeles Lakers": {"coords": (34.0430, -118.2673), "tz": "America/Los_Angeles"},
     "Phoenix Suns": {"coords": (33.3760, -112.0618), "tz": "America/Phoenix"},
     "Sacramento Kings": {"coords": (38.5816, -121.4944), "tz": "America/Los_Angeles"},

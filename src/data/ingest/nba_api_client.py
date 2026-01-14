@@ -24,7 +24,7 @@ import logging
 # Import nba_api
 try:
     from nba_api.stats.endpoints import (
-        scoreboard,
+        scoreboardv2,
         leaguegamefinder,
         playergamelogs,
         commonplayerinfo,
@@ -126,7 +126,7 @@ class NBAAPIClient:
                 nba_date = date_obj.strftime("%m/%d/%Y")
                 
                 # Get scoreboard
-                board = scoreboard.Scoreboard(game_date=nba_date)
+                board = scoreboardv2.ScoreboardV2(game_date=nba_date)
                 games_data = board.get_dict()
                 
                 # Extract games from response
