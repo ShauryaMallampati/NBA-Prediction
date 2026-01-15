@@ -44,22 +44,36 @@ async def get_live_odds_data_async(
         # Fall back to sync version in thread pool
         return await asyncio.to_thread(get_live_odds_data, date_str, start_date, end_date)
     
-    api_key = os.environ.get('RAPIDAPI_KEY') or os.environ.get('NBA_STATS_API_KEY') or DEFAULT_RAPID_KEY
-    host = "odds.p.rapidapi.com"
+    # Key Priority: 1. ODDS_API_KEY (Direct), 2. RAPIDAPI_KEY, 3. Fallback Default
+    odds_key = os.environ.get('ODDS_API_KEY')
+    rapid_key = os.environ.get('RAPIDAPI_KEY') or os.environ.get('NBA_STATS_API_KEY')
     
-    url = f"https://{host}/v4/sports/basketball_nba/odds"
-    
-    headers = {
-        "X-RapidAPI-Key": api_key,
-        "X-RapidAPI-Host": host
-    }
-    
-    params = {
-        "regions": "us",
-        "markets": "h2h,spreads,totals",
-        "oddsFormat": "decimal",
-        "dateFormat": "iso"
-    }
+    if odds_key and len(odds_key) == 32: # Direct Odds API keys are 32 chars
+        api_key = odds_key
+        host = "api.the-odds-api.com"
+        url = f"https://{host}/v4/sports/basketball_nba/odds"
+        headers = {} # Direct API uses apiKey query param
+        params = {
+            "apiKey": api_key,
+            "regions": "us",
+            "markets": "h2h,spreads,totals",
+            "oddsFormat": "decimal",
+            "dateFormat": "iso"
+        }
+    else:
+        api_key = rapid_key or DEFAULT_RAPID_KEY
+        host = "odds.p.rapidapi.com"
+        url = f"https://{host}/v4/sports/basketball_nba/odds"
+        headers = {
+            "X-RapidAPI-Key": api_key,
+            "X-RapidAPI-Host": host
+        }
+        params = {
+            "regions": "us",
+            "markets": "h2h,spreads,totals",
+            "oddsFormat": "decimal",
+            "dateFormat": "iso"
+        }
     
     if date_str:
         try:
