@@ -71,23 +71,25 @@ jobs:
         git config --global user.name "NBA Intel Bot"
         git config --global user.email "bot@nbaintel.com"
         
-        # Add new data files if they exist
+        # Add new data files with force to bypass .gitignore if needed
         if [ -d "data/predictions" ]; then
-          git add data/predictions/
-        else
-          echo "No predictions directory found."
+          git add -f data/predictions/ 2>/dev/null || echo "No new predictions"
         fi
         
         if [ -d "data/schedules" ]; then
-          git add data/schedules/
+          git add -f data/schedules/ 2>/dev/null || echo "No new schedules"
         fi
         
         if [ -d "data/chemistry" ]; then
-          git add data/chemistry/
+          git add -f data/chemistry/ 2>/dev/null || echo "No new chemistry"
+        fi
+
+        if [ -d "data/analysis" ]; then
+          git add -f data/analysis/ 2>/dev/null || echo "No new analysis"
         fi
         
         if [ -f "data/metrics/daily_accuracy.csv" ]; then
-          git add data/metrics/daily_accuracy.csv
+          git add -f data/metrics/daily_accuracy.csv 2>/dev/null || echo "No new metrics"
         fi
         
         # Determine if there are changes

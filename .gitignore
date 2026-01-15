@@ -39,6 +39,9 @@ ENV/
 
 # Data
 data/
+!data/predictions/
+!data/schedules/
+!data/metrics/
 !data/.gitkeep
 artifacts/
 !artifacts/.gitkeep
