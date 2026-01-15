@@ -32,6 +32,27 @@ npm run dev
 
 Visit: http://localhost:3000
 
+## AI Agent Workflow
+
+### 1. Vision CNN Training
+Train the 3D CNN on your local dataset:
+```bash
+poetry run python scripts/train_vision_cnn.py
+```
+
+### 2. Daily Vision Agent
+Find yesterday's highlights and "watch" them for self-supervised learning:
+```bash
+poetry run python scripts/daily_vision_agent.py
+```
+
+### 3. Post-Game Analysis
+Generate AI reasoning for why predictions were wrong using Qwen2.5-3B + Web Scraping:
+```bash
+poetry run python scripts/analyze_wrong_predictions.py
+```
+*Note: These insights are automatically displayed on the `/analysis` page.*
+
 ## Architecture
 
 ```
