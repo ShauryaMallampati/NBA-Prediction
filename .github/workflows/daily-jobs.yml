@@ -32,9 +32,22 @@ jobs:
         pip install poetry
         poetry install
 
+    # === NEW: Fetch 14-Day Schedule ===
+    - name: Fetch Schedule (14 Days)
+      env:
+        ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      run: |
+        poetry run python scripts/fetch_schedule.py --days 14
+
+    # === NEW: Refresh Chemistry Data ===
+    - name: Refresh Chemistry Data
+      run: |
+        poetry run python scripts/fetch_lineup_data.py || echo "Chemistry fetch skipped (optional)"
+
     - name: Run Daily Predictions
       env:
         RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+        ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
       run: |
         # Generate predictions for today
         poetry run python scripts/run_daily_predictions.py
@@ -44,6 +57,14 @@ jobs:
         # Evaluate yesterday's predictions
         # (Script defaults to yesterday if no date provided)
         poetry run python scripts/run_daily_evaluation.py
+
+    # === NEW: Sync to Supabase ===
+    - name: Sync to Supabase
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      run: |
+        poetry run python scripts/sync_to_supabase.py
 
     - name: Commit and Push Data
       run: |
@@ -55,6 +76,14 @@ jobs:
           git add data/predictions/
         else
           echo "No predictions directory found."
+        fi
+        
+        if [ -d "data/schedules" ]; then
+          git add data/schedules/
+        fi
+        
+        if [ -d "data/chemistry" ]; then
+          git add data/chemistry/
         fi
         
         if [ -f "data/metrics/daily_accuracy.csv" ]; then

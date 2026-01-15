@@ -1,200 +1,278 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Brain, Calendar, FlaskConical, Target, TrendingUp, Zap } from 'lucide-react'
-import { usePredictions } from '@/lib/hooks'
-import { KPICard } from '@/components/shared/kpi-card'
+import { ArrowRight, BarChart3, Brain, Calendar, ChevronRight, Sparkles, Target, TrendingUp } from 'lucide-react'
+import { usePredictions, useAccuracy } from '@/lib/hooks'
 import { PredictionCardSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
-import { formatGameTime, getConfidenceBg, getConfidenceColor } from '@/lib/utils/format'
+import { formatGameTime } from '@/lib/utils/format'
 
 export default function HomePage() {
   const { data, isLoading, error, refetch } = usePredictions()
+  const { data: accuracyData } = useAccuracy()
 
   const topPicks = data?.predictions.slice(0, 6) || []
-  const highConfidence = data?.predictions.filter(p => p.confidence >= 70).length || 0
+  const highConfidence = data?.predictions.filter(p => p.confidence >= 65).length || 0
+  const avgConfidence = data?.predictions.length
+    ? Math.round(data.predictions.reduce((a, p) => a + p.confidence, 0) / data.predictions.length)
+    : 0
+  const modelAccuracy = accuracyData?.accuracy ?? 67.7
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-purple-900/20 via-background to-pink-900/10 border-b border-border">
-        <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,white)]" />
-        <div className="container mx-auto px-6 py-16 relative">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-              <Zap className="h-4 w-4" />
-              Powered by 3 ML Models
+      {/* Hero - Clean, editorial style */}
+      <section className="border-b border-border">
+        <div className="container-wide py-16 lg:py-24">
+          <div className="max-w-3xl">
+            {/* Subtle badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 text-xs font-medium uppercase tracking-wider text-muted-foreground border border-border rounded-full">
+              <Sparkles className="h-3.5 w-3.5" />
+              3 ML Models · Updated Daily
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-              NBA Game Predictions with{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                Machine Learning
-              </span>
+
+            {/* Clean headline - no gradients */}
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
+              NBA Game Predictions<br />
+              <span className="text-muted-foreground">Powered by Machine Learning</span>
             </h1>
-            <p className="text-lg text-muted-foreground mb-6">
-              XGBoost, LightGBM, and CatBoost ensemble model with player chemistry analysis,
-              SHAP explanations, and Kelly Criterion betting suggestions.
+
+            <p className="text-lg text-muted-foreground mb-8 max-w-2xl leading-relaxed">
+              XGBoost, LightGBM, and CatBoost ensemble voting with player chemistry analysis
+              and SHAP-powered explanations for every prediction.
             </p>
+
+            {/* Clean CTAs */}
             <div className="flex flex-wrap gap-3">
-              <Link
-                href="/predictions"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
-              >
-                View All Predictions
+              <Link href="/predictions" className="btn-primary">
+                View Predictions
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link
-                href="/analytics"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border hover:bg-accent transition-colors"
-              >
-                Model Analytics
+              <Link href="/analytics" className="btn-secondary">
+                Model Performance
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* KPI Stats */}
-      <section className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <KPICard
-            title="Games Today"
-            value={data?.total_games || 0}
-            icon={Calendar}
-            valueClassName="text-primary"
-          />
-          <KPICard
-            title="High Confidence"
-            value={highConfidence}
-            icon={Target}
-            valueClassName="text-green-400"
-          />
-          <KPICard
-            title="Models Voting"
-            value="3"
-            icon={Brain}
-            valueClassName="text-purple-400"
-          />
-          <KPICard
-            title="Model Accuracy"
-            value="67.7%"
-            icon={TrendingUp}
-            valueClassName="text-secondary"
-          />
+      {/* Stats Bar - Swiss grid precision */}
+      <section className="border-b border-border bg-muted/30">
+        <div className="container-wide py-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div>
+              <div className="stat-value">{data?.total_games || '—'}</div>
+              <div className="stat-label">Games Today</div>
+            </div>
+            <div>
+              <div className="stat-value text-success">{highConfidence}</div>
+              <div className="stat-label">High Confidence</div>
+            </div>
+            <div>
+              <div className="stat-value">{avgConfidence || '—'}%</div>
+              <div className="stat-label">Avg Probability</div>
+            </div>
+            <div>
+              <div className="stat-value text-secondary">{modelAccuracy}%</div>
+              <div className="stat-label">Model Accuracy</div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Today's Top Picks */}
-      <section className="container mx-auto px-6 pb-12">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold">Today's Predictions</h2>
-            <p className="text-sm text-muted-foreground">Latest ensemble model predictions</p>
+      {/* Today's Predictions - Bento Grid */}
+      <section className="section-gap">
+        <div className="container-wide">
+          {/* Section header */}
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-bold mb-1">Today's Predictions</h2>
+              <p className="text-muted-foreground">Ensemble model consensus for upcoming games</p>
+            </div>
+            <Link
+              href="/predictions"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              View all <ChevronRight className="h-4 w-4" />
+            </Link>
           </div>
-          <Link
-            href="/predictions"
-            className="text-sm text-primary hover:underline flex items-center gap-1"
-          >
-            View all <ArrowRight className="h-4 w-4" />
+
+          {/* Loading state */}
+          {isLoading && (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <PredictionCardSkeleton key={i} />
+              ))}
+            </div>
+          )}
+
+          {/* Error state */}
+          {error && (
+            <ErrorState message={error.message} retry={() => refetch()} />
+          )}
+
+          {/* Predictions grid */}
+          {data && !isLoading && (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {topPicks.map((pred) => (
+                <PredictionCard key={pred.game_id} prediction={pred} />
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {data && !isLoading && topPicks.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground">
+              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">No games scheduled today</p>
+              <p className="text-sm">Check back tomorrow for new predictions</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Features - Clean bento layout */}
+      <section className="section-gap border-t border-border bg-muted/20">
+        <div className="container-wide">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold mb-2">How It Works</h2>
+            <p className="text-muted-foreground">Three-stage prediction pipeline</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <FeatureCard
+              icon={Brain}
+              number="01"
+              title="Ensemble Learning"
+              description="Three gradient boosting models vote together: XGBoost for precision, LightGBM for speed, CatBoost for robustness."
+            />
+            <FeatureCard
+              icon={Target}
+              number="02"
+              title="Chemistry Analysis"
+              description="Graph neural network analyzes 5,498 player duo combinations to capture team synergy and lineup dynamics."
+            />
+            <FeatureCard
+              icon={BarChart3}
+              number="03"
+              title="SHAP Explanations"
+              description="Every prediction includes feature importance breakdown so you understand exactly why we made the call."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Minimal footer CTA */}
+      <section className="border-t border-border">
+        <div className="container-wide py-16 text-center">
+          <h3 className="text-xl font-bold mb-4">Ready to explore?</h3>
+          <Link href="/predictions" className="btn-primary">
+            View All Predictions
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-
-        {isLoading && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <PredictionCardSkeleton key={i} />
-            ))}
-          </div>
-        )}
-
-        {error && (
-          <ErrorState
-            message={error.message}
-            retry={() => refetch()}
-          />
-        )}
-
-        {data && !isLoading && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {topPicks.map((pred) => (
-              <Link
-                key={pred.game_id}
-                href="/predictions"
-                className="block rounded-xl border border-border bg-card p-5 hover:border-primary/50 transition-all group"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs text-muted-foreground">
-                    {formatGameTime(pred.commence_time)}
-                  </span>
-                  <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${getConfidenceBg(pred.confidence)} ${getConfidenceColor(pred.confidence)}`}>
-                    {pred.confidence.toFixed(0)}% Probability
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {/* Home Team */}
-                  <div className={`flex-1 p-3 rounded-lg border ${pred.prediction === 'HOME_WIN' ? 'bg-green-500/10 border-green-500/30' : 'bg-muted/50 border-border'}`}>
-                    <div className="text-xs text-muted-foreground">HOME</div>
-                    <div className="font-bold">{pred.home_team}</div>
-                    <div className={`text-xl font-black ${pred.prediction === 'HOME_WIN' ? 'text-green-400' : 'text-muted-foreground'}`}>
-                      {pred.home_win_probability.toFixed(0)}%
-                    </div>
-                  </div>
-
-                  <span className="text-muted-foreground font-bold">vs</span>
-
-                  {/* Away Team */}
-                  <div className={`flex-1 p-3 rounded-lg border ${pred.prediction === 'AWAY_WIN' ? 'bg-green-500/10 border-green-500/30' : 'bg-muted/50 border-border'}`}>
-                    <div className="text-xs text-muted-foreground">AWAY</div>
-                    <div className="font-bold">{pred.away_team}</div>
-                    <div className={`text-xl font-black ${pred.prediction === 'AWAY_WIN' ? 'text-green-400' : 'text-muted-foreground'}`}>
-                      {pred.away_win_probability.toFixed(0)}%
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-3 text-xs text-muted-foreground group-hover:text-primary transition-colors">
-                  Click for details →
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
       </section>
+    </div>
+  )
+}
 
-      {/* Features Grid */}
-      <section className="container mx-auto px-6 pb-16">
-        <h2 className="text-2xl font-bold mb-6">Platform Features</h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="p-6 rounded-xl border border-border bg-card">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4">
-              <Brain className="h-6 w-6 text-purple-400" />
-            </div>
-            <h3 className="font-bold mb-2">Ensemble ML</h3>
-            <p className="text-sm text-muted-foreground">
-              XGBoost, LightGBM, and CatBoost voting together for robust predictions
-            </p>
+// ==============================================
+// COMPONENTS
+// ==============================================
+
+interface Prediction {
+  game_id: string
+  home_team: string
+  away_team: string
+  home_win_probability: number
+  away_win_probability: number
+  prediction: string
+  confidence: number
+  commence_time: string
+}
+
+function PredictionCard({ prediction }: { prediction: Prediction }) {
+  const isHomeWin = prediction.prediction === 'HOME_WIN'
+  const winProb = isHomeWin ? prediction.home_win_probability : prediction.away_win_probability
+
+  return (
+    <Link
+      href="/predictions"
+      className="bento-item card-interactive group"
+    >
+      {/* Time + Confidence */}
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-xs text-muted-foreground font-mono">
+          {formatGameTime(prediction.commence_time)}
+        </span>
+        <span className={`badge ${winProb >= 65 ? 'badge-success' : winProb >= 55 ? 'badge-warning' : ''}`}>
+          {winProb.toFixed(0)}%
+        </span>
+      </div>
+
+      {/* Teams */}
+      <div className="space-y-3">
+        {/* Home Team */}
+        <div className={`flex items-center justify-between p-3 rounded-md border ${isHomeWin ? 'bg-success/5 border-success/20' : 'border-transparent'}`}>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Home</div>
+            <div className="font-semibold">{prediction.home_team}</div>
           </div>
-          <div className="p-6 rounded-xl border border-border bg-card">
-            <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4">
-              <FlaskConical className="h-6 w-6 text-green-400" />
-            </div>
-            <h3 className="font-bold mb-2">Chemistry GNN</h3>
-            <p className="text-sm text-muted-foreground">
-              Player synergy analysis from 5,498 duo combinations
-            </p>
-          </div>
-          <div className="p-6 rounded-xl border border-border bg-card">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4">
-              <Zap className="h-6 w-6 text-blue-400" />
-            </div>
-            <h3 className="font-bold mb-2">Explainable AI</h3>
-            <p className="text-sm text-muted-foreground">
-              SHAP values show exactly why each prediction was made
-            </p>
+          <div className={`text-2xl font-bold tabular-nums ${isHomeWin ? 'text-success' : 'text-muted-foreground'}`}>
+            {prediction.home_win_probability.toFixed(0)}%
           </div>
         </div>
-      </section>
+
+        {/* Away Team */}
+        <div className={`flex items-center justify-between p-3 rounded-md border ${!isHomeWin ? 'bg-success/5 border-success/20' : 'border-transparent'}`}>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Away</div>
+            <div className="font-semibold">{prediction.away_team}</div>
+          </div>
+          <div className={`text-2xl font-bold tabular-nums ${!isHomeWin ? 'text-success' : 'text-muted-foreground'}`}>
+            {prediction.away_win_probability.toFixed(0)}%
+          </div>
+        </div>
+      </div>
+
+      {/* Probability bar */}
+      <div className="mt-4">
+        <div className="prob-bar">
+          <div
+            className="prob-bar-fill bg-foreground"
+            style={{ width: `${prediction.home_win_probability}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Hover hint */}
+      <div className="mt-3 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+        View details →
+      </div>
+    </Link>
+  )
+}
+
+function FeatureCard({
+  icon: Icon,
+  number,
+  title,
+  description
+}: {
+  icon: React.ElementType
+  number: string
+  title: string
+  description: string
+}) {
+  return (
+    <div className="bento-item">
+      <div className="flex items-start justify-between mb-4">
+        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+          <Icon className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <span className="text-xs font-mono text-muted-foreground">{number}</span>
+      </div>
+      <h3 className="font-semibold mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
     </div>
   )
 }

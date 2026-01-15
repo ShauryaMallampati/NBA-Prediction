@@ -1,44 +1,41 @@
 'use client'
 
-import { Header } from '@/components/layout/header'
 import { useChemistry } from '@/lib/hooks'
 import { PageSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
-import { EmptyState } from '@/components/shared/empty-state'
-import { Users } from 'lucide-react'
 
-// NBA Team data with colors
+// NBA Team data - simplified colors for monochrome aesthetic
 const NBA_TEAMS = [
-    { abbr: 'ATL', name: 'Atlanta Hawks', color: 'bg-red-500' },
-    { abbr: 'BOS', name: 'Boston Celtics', color: 'bg-green-600' },
-    { abbr: 'BKN', name: 'Brooklyn Nets', color: 'bg-gray-800' },
-    { abbr: 'CHA', name: 'Charlotte Hornets', color: 'bg-teal-500' },
-    { abbr: 'CHI', name: 'Chicago Bulls', color: 'bg-red-600' },
-    { abbr: 'CLE', name: 'Cleveland Cavaliers', color: 'bg-red-800' },
-    { abbr: 'DAL', name: 'Dallas Mavericks', color: 'bg-blue-600' },
-    { abbr: 'DEN', name: 'Denver Nuggets', color: 'bg-yellow-500' },
-    { abbr: 'DET', name: 'Detroit Pistons', color: 'bg-red-500' },
-    { abbr: 'GSW', name: 'Golden State Warriors', color: 'bg-blue-500' },
-    { abbr: 'HOU', name: 'Houston Rockets', color: 'bg-red-600' },
-    { abbr: 'IND', name: 'Indiana Pacers', color: 'bg-yellow-400' },
-    { abbr: 'LAC', name: 'Los Angeles Clippers', color: 'bg-red-500' },
-    { abbr: 'LAL', name: 'Los Angeles Lakers', color: 'bg-purple-600' },
-    { abbr: 'MEM', name: 'Memphis Grizzlies', color: 'bg-blue-700' },
-    { abbr: 'MIA', name: 'Miami Heat', color: 'bg-red-600' },
-    { abbr: 'MIL', name: 'Milwaukee Bucks', color: 'bg-green-700' },
-    { abbr: 'MIN', name: 'Minnesota Timberwolves', color: 'bg-blue-800' },
-    { abbr: 'NOP', name: 'New Orleans Pelicans', color: 'bg-blue-600' },
-    { abbr: 'NYK', name: 'New York Knicks', color: 'bg-orange-500' },
-    { abbr: 'OKC', name: 'Oklahoma City Thunder', color: 'bg-blue-500' },
-    { abbr: 'ORL', name: 'Orlando Magic', color: 'bg-blue-600' },
-    { abbr: 'PHI', name: 'Philadelphia 76ers', color: 'bg-blue-700' },
-    { abbr: 'PHX', name: 'Phoenix Suns', color: 'bg-purple-500' },
-    { abbr: 'POR', name: 'Portland Trail Blazers', color: 'bg-red-600' },
-    { abbr: 'SAC', name: 'Sacramento Kings', color: 'bg-purple-700' },
-    { abbr: 'SAS', name: 'San Antonio Spurs', color: 'bg-gray-600' },
-    { abbr: 'TOR', name: 'Toronto Raptors', color: 'bg-red-600' },
-    { abbr: 'UTA', name: 'Utah Jazz', color: 'bg-yellow-500' },
-    { abbr: 'WAS', name: 'Washington Wizards', color: 'bg-blue-800' },
+    { abbr: 'ATL', name: 'Atlanta Hawks' },
+    { abbr: 'BOS', name: 'Boston Celtics' },
+    { abbr: 'BKN', name: 'Brooklyn Nets' },
+    { abbr: 'CHA', name: 'Charlotte Hornets' },
+    { abbr: 'CHI', name: 'Chicago Bulls' },
+    { abbr: 'CLE', name: 'Cleveland Cavaliers' },
+    { abbr: 'DAL', name: 'Dallas Mavericks' },
+    { abbr: 'DEN', name: 'Denver Nuggets' },
+    { abbr: 'DET', name: 'Detroit Pistons' },
+    { abbr: 'GSW', name: 'Golden State Warriors' },
+    { abbr: 'HOU', name: 'Houston Rockets' },
+    { abbr: 'IND', name: 'Indiana Pacers' },
+    { abbr: 'LAC', name: 'Los Angeles Clippers' },
+    { abbr: 'LAL', name: 'Los Angeles Lakers' },
+    { abbr: 'MEM', name: 'Memphis Grizzlies' },
+    { abbr: 'MIA', name: 'Miami Heat' },
+    { abbr: 'MIL', name: 'Milwaukee Bucks' },
+    { abbr: 'MIN', name: 'Minnesota Timberwolves' },
+    { abbr: 'NOP', name: 'New Orleans Pelicans' },
+    { abbr: 'NYK', name: 'New York Knicks' },
+    { abbr: 'OKC', name: 'Oklahoma City Thunder' },
+    { abbr: 'ORL', name: 'Orlando Magic' },
+    { abbr: 'PHI', name: 'Philadelphia 76ers' },
+    { abbr: 'PHX', name: 'Phoenix Suns' },
+    { abbr: 'POR', name: 'Portland Trail Blazers' },
+    { abbr: 'SAC', name: 'Sacramento Kings' },
+    { abbr: 'SAS', name: 'San Antonio Spurs' },
+    { abbr: 'TOR', name: 'Toronto Raptors' },
+    { abbr: 'UTA', name: 'Utah Jazz' },
+    { abbr: 'WAS', name: 'Washington Wizards' },
 ]
 
 export default function TeamsPage() {
@@ -55,51 +52,52 @@ export default function TeamsPage() {
 
     return (
         <div className="min-h-screen">
-            <Header
-                title="Teams"
-                description="All 30 NBA teams with chemistry analysis"
-            />
+            {/* Page Header */}
+            <header className="border-b border-border">
+                <div className="container-wide py-8">
+                    <h1 className="text-2xl font-bold tracking-tight">Teams</h1>
+                    <p className="text-muted-foreground">All 30 NBA teams ranked by chemistry score</p>
+                </div>
+            </header>
 
-            <div className="container mx-auto px-6 py-8">
+            <div className="container-wide py-8">
                 {isLoading && <PageSkeleton />}
 
                 {error && (
-                    <ErrorState
-                        message={error.message}
-                        retry={() => refetch()}
-                    />
+                    <ErrorState message={error.message} retry={() => refetch()} />
                 )}
 
                 {!isLoading && !error && (
                     <>
                         <div className="mb-6 text-sm text-muted-foreground">
-                            Showing all 30 NBA teams ranked by chemistry score
+                            Teams ranked by player synergy analysis from GNN model
                         </div>
 
+                        {/* Teams Grid */}
                         <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                             {teamsWithChemistry.map((team, i) => (
                                 <div
                                     key={team.abbr}
-                                    className="rounded-xl border border-border bg-card p-4 hover:border-primary/50 transition-all group"
+                                    className="bento-item card-interactive"
                                 >
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className={`w-10 h-10 rounded-lg ${team.color} flex items-center justify-center text-white font-bold text-xs`}>
+                                        <div className="w-10 h-10 rounded-md bg-foreground flex items-center justify-center text-background font-bold text-xs">
                                             {team.abbr}
                                         </div>
                                         <div className="min-w-0">
-                                            <div className="font-bold text-sm truncate">{team.name}</div>
-                                            <div className="text-xs text-muted-foreground">#{i + 1} Chemistry</div>
+                                            <div className="font-semibold text-sm truncate">{team.name}</div>
+                                            <div className="text-xs text-muted-foreground font-mono">#{String(i + 1).padStart(2, '0')}</div>
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-xs">
-                                            <span className="text-muted-foreground">Chemistry Score</span>
-                                            <span className="font-medium">{(team.chemistry * 100).toFixed(0)}</span>
+                                            <span className="text-muted-foreground">Chemistry</span>
+                                            <span className="font-mono font-medium">{(team.chemistry * 100).toFixed(0)}</span>
                                         </div>
-                                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                        <div className="prob-bar">
                                             <div
-                                                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all"
+                                                className="prob-bar-fill bg-foreground"
                                                 style={{ width: `${team.chemistry * 100}%` }}
                                             />
                                         </div>

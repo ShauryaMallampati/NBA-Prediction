@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     youtube_api_key: str = Field(default="", alias="YOUTUBE_API_KEY")
     ors_api_key: str = Field(default="", alias="ORS_API_KEY")
     odds_api_key: str = Field(default="", alias="ODDS_API_KEY")
+    rapidapi_key: str = Field(default="", alias="RAPIDAPI_KEY")
 
     # Database
     database_url: str = Field(default="postgresql://postgres:postgres@localhost:5432/nba_intel")

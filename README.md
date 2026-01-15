@@ -1,13 +1,15 @@
-# NBA Prediction Platform �
+# NBA Prediction Platform 🏀
 
-An **ML-powered prediction system** for NBA games with explainable AI and automated accuracy tracking.
+An **ML-powered prediction system** for NBA games with multi-modal AI, explainable predictions, and automated accuracy tracking.
 
 ## Features
 
 - **Ensemble Model**: XGBoost + LightGBM + CatBoost (67.7% accuracy)
+- **Vision CNN**: VideoMAE-based video analysis for game footage understanding
+- **Player Chemistry**: Graph-based player synergy analysis
 - **Explainable AI**: SHAP-based feature importance for every prediction
-- **Daily Automation**: Auto-fetches results and tracks prediction accuracy
-- **Modern Frontend**: Next.js dashboard with real-time predictions
+- **Daily Automation**: GitHub Actions auto-fetches results and tracks accuracy
+- **Modern Frontend**: Next.js dark-mode dashboard with real-time predictions
 - **Betting Strategy**: Kelly Criterion for optimal bet sizing
 
 ## Quick Start
@@ -28,20 +30,27 @@ poetry run python src/api/ensemble_predictions.py
 npm run dev
 ```
 
-Visit: http://localhost:3000/ensemble-predictions
+Visit: http://localhost:3000
 
-## Daily Predictions
+## Architecture
 
-Run automatically each morning:
-```bash
-poetry run python scripts/daily_runner.py
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    World Model Ensemble                      │
+├──────────────┬──────────────┬──────────────┬────────────────┤
+│   XGBoost    │   LightGBM   │   CatBoost   │  Vision CNN    │
+│ (stats-based)│ (stats-based)│ (stats-based)│ (video-based)  │
+└──────────────┴──────────────┴──────────────┴────────────────┘
 ```
 
-This script:
-1. Fetches yesterday's actual results
-2. Compares predictions vs actuals
-3. Logs accuracy to database
-4. Generates new predictions for today
+## Datasets Used
+
+| Dataset | Description | Source |
+|---------|-------------|--------|
+| **BASKET** (CVPR 2025) | 4,477 hours of basketball video, 32K players | [HuggingFace](https://huggingface.co/datasets/yulupan/BASKET) |
+| **Basketball-51** | 51 basketball activity classes | [Kaggle](https://www.kaggle.com/datasets/sarbagyashakya/basketball-51-dataset) |
+| **NBA Stats API** | Live game statistics | [nba_api](https://github.com/swar/nba_api) |
+| **The Odds API** | Real-time betting odds | [The Odds API](https://the-odds-api.com/) |
 
 ## Project Structure
 
@@ -49,11 +58,14 @@ This script:
 ├── app/                 # Next.js frontend
 ├── src/
 │   ├── api/             # FastAPI endpoints
-│   ├── models/          # ML models & training
+│   ├── models/          # ML models
+│   │   ├── vision/      # Vision CNN (VideoMAE)
+│   │   └── chemistry_gnn.py  # Player chemistry
 │   └── common/          # Shared utilities
 ├── scripts/             # Automation scripts
-├── artifacts/           # Model artifacts & data
-└── tests/               # Test suite
+├── colab/               # Cloud training notebooks
+│   └── train_vision_cnn.ipynb
+└── .github/workflows/   # GitHub Actions
 ```
 
 ## API Endpoints
@@ -61,17 +73,20 @@ This script:
 | Endpoint | Description |
 |----------|-------------|
 | `/predictions` | Today's game predictions |
+| `/accuracy` | Dynamic accuracy stats |
+| `/live_schedule` | 14-day game schedule |
 | `/explain/{game_id}` | SHAP explanation |
-| `/scouting-report/{game_id}` | AI-generated report |
-| `/health` | Service health check |
+| `/chemistry/league` | Team chemistry rankings |
 
 ## Tech Stack
 
-- **Backend**: Python, FastAPI, scikit-learn, XGBoost
-- **Frontend**: Next.js, TypeScript, Tailwind CSS
-- **Data**: NBA API, Odds API
-- **ML**: Ensemble learning, SHAP, calibrated classifiers
+- **Backend**: Python, FastAPI, XGBoost, LightGBM, CatBoost
+- **Vision**: VideoMAE, TimeSformer (HuggingFace Transformers)
+- **Frontend**: Next.js, TypeScript
+- **Data**: NBA API, Odds API, Supabase
+- **ML**: Ensemble learning, SHAP, Platt scaling
 
 ## License
 
 MIT
+

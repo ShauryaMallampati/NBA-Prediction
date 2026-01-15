@@ -7,6 +7,7 @@ export const API_ENDPOINTS = {
     schedule: '/live_schedule',
     modelInfo: '/model/info',
     health: '/health',
+    accuracy: '/accuracy',
     chemistryLeague: '/chemistry/league',
     chemistryMatchup: (home: string, away: string) => `/chemistry/matchup/${home}/${away}`,
     explain: (gameId: string) => `/explain/${gameId}`,

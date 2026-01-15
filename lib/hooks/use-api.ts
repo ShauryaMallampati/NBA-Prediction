@@ -85,3 +85,26 @@ export function useRefreshPredictions() {
         queryClient.invalidateQueries({ queryKey: queryKeys.predictions })
     }
 }
+
+// Accuracy hook - fetches dynamic model accuracy
+export function useAccuracy() {
+    return useQuery({
+        queryKey: ['accuracy'] as const,
+        queryFn: async () => {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/accuracy`)
+            if (!response.ok) {
+                throw new Error('Failed to fetch accuracy')
+            }
+            return response.json() as Promise<{
+                success: boolean
+                accuracy: number
+                total_games: number
+                total_correct: number
+                days_evaluated: number
+                source: string
+            }>
+        },
+        staleTime: 1000 * 60 * 10, // 10 minutes
+        retry: 1,
+    })
+}

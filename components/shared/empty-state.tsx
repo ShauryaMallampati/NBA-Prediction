@@ -35,8 +35,8 @@ export function EmptyState({
                 className
             )}
         >
-            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                <Icon className="h-8 w-8 text-muted-foreground" />
+            <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center mb-4">
+                <Icon className="h-6 w-6 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold">{title}</h3>
             {description && (
@@ -45,7 +45,7 @@ export function EmptyState({
             {action && (
                 <button
                     onClick={action.onClick}
-                    className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    className="btn-primary mt-4"
                 >
                     <RefreshCw className="h-4 w-4" />
                     {action.label}

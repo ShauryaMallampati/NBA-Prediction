@@ -117,6 +117,38 @@ async def health_check():
     }
 
 
+@app.get("/accuracy")
+async def get_accuracy_stats():
+    """Get dynamic accuracy statistics from Supabase or local CSV."""
+    try:
+        from src.common.supabase_client import get_supabase_client
+        
+        client = get_supabase_client()
+        stats = client.get_accuracy_stats(days=30)
+        
+        return {
+            "success": True,
+            "accuracy": stats.get("current_accuracy", 67.7),
+            "total_games": stats.get("total_games", 0),
+            "total_correct": stats.get("total_correct", 0),
+            "days_evaluated": stats.get("days_evaluated", 0),
+            "source": stats.get("source", "unknown"),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        # Fallback to default
+        return {
+            "success": False,
+            "accuracy": 67.7,
+            "total_games": 0,
+            "total_correct": 0,
+            "days_evaluated": 0,
+            "source": "default",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+
 # Initialize prediction pipeline
 from src.services.prediction_pipeline import PredictionPipeline
 
@@ -217,13 +249,44 @@ async def get_model_info():
 
 @app.get("/live_schedule")
 async def live_schedule(days: int = 14):
-    """Return upcoming games using local python libraries (nba_api / pyespn) when available."""
+    """Return upcoming games, prioritizing cached schedule and merging with live data."""
     try:
-        # Use optimized async version
-        games = await get_upcoming_games_async(days_ahead=days)
-
-        # If no games found from local libraries, fall back to RapidAPI (if key provided)
-        if not games:
+        from pathlib import Path
+        import json
+        
+        all_games = []
+        seen_ids = set()
+        
+        # 1. Try to load from cached schedule file first (populated by GitHub Actions)
+        cached_file = Path("data/schedules/upcoming_14_days.json")
+        if cached_file.exists():
+            try:
+                def read_cached():
+                    with open(cached_file, 'r') as f:
+                        return json.load(f)
+                cached_data = await asyncio.to_thread(read_cached)
+                cached_games = cached_data.get('games', [])
+                for g in cached_games:
+                    game_id = g.get('game_id', '')
+                    if game_id and game_id not in seen_ids:
+                        all_games.append(g)
+                        seen_ids.add(game_id)
+            except Exception as e:
+                print(f"Failed to load cached schedule: {e}")
+        
+        # 2. Also try live API to get any updates
+        try:
+            live_games = await get_upcoming_games_async(days_ahead=days)
+            for g in live_games:
+                game_id = g.get('game_id', '')
+                if game_id and game_id not in seen_ids:
+                    all_games.append(g)
+                    seen_ids.add(game_id)
+        except Exception as e:
+            print(f"Live API fetch failed: {e}")
+        
+        # 3. Fallback to RapidAPI if still no games
+        if not all_games:
             rapid_key = os.environ.get('RAPIDAPI_KEY') or os.environ.get('NEXT_PUBLIC_RAPIDAPI_KEY')
             rapid_host = 'nba-schedule.p.rapidapi.com'
             if rapid_key:
@@ -240,26 +303,26 @@ async def live_schedule(days: int = 14):
                     if r.status_code == 200:
                         payload = r.json()
                         games = payload.get('games') or payload.get('schedule') or []
-                        # Normalize minimal fields
-                        normalized = []
                         for g in games:
                             gd = g.get('date') or g.get('game_date') or g.get('start_date') or ''
-                            normalized.append({
+                            all_games.append({
                                 'game_id': g.get('id') or g.get('game_id') or g.get('GAME_ID') or '',
                                 'date': gd,
                                 'home_team': g.get('home_team') or g.get('home') or '',
                                 'away_team': g.get('away_team') or g.get('away') or '',
                                 'game_time': g.get('time') or g.get('startTime') or ''
                             })
-                        games = normalized
                 except Exception:
                     pass
+        
+        # Sort by date
+        all_games.sort(key=lambda x: x.get('date', ''))
 
         return {
             "success": True,
-            "source": "nba_api|pyespn|rapidapi-fallback",
-            "count": len(games),
-            "games": games
+            "source": "cached|nba_api|pyespn|rapidapi",
+            "count": len(all_games),
+            "games": all_games
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

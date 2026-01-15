@@ -57,33 +57,21 @@ class NBAWorldModel:
         else:
             logger.warning("⚠️ Live RNN model file not found")
             
-        # Load Vision CNN
-        cnn_path = self.models_dir / "vision_mnv3.pt"
-        # Try to import vision model factory if available (deferred import)
+        # Load Vision CNN (The "Eyes") - using our new VisionModel
         try:
-            from src.models.vision.model import get_vision_model
-
-            # If a saved TorchScript exists, prefer loading it
-            if cnn_path.exists():
-                try:
-                    self.vision_cnn = torch.jit.load(str(cnn_path), map_location=self.device)
-                    self.vision_cnn_loaded = True
-                    logger.info("✅ Vision CNN loaded from TorchScript")
-                except Exception as e:
-                    logger.warning(f"⚠️ Failed to load Vision CNN TorchScript: {e}")
-                    try:
-                        self.vision_cnn = get_vision_model().to(self.device)
-                        logger.info("✅ Vision CNN instantiated (untrained)")
-                    except Exception as e2:
-                        logger.warning(f"⚠️ Failed to instantiate Vision CNN: {e2}")
+            from src.models.vision import VisionModel
+            
+            # Try loading our new vision model
+            self.vision_cnn = VisionModel()
+            if self.vision_cnn.load(use_finetuned=True):
+                self.vision_cnn_loaded = True
+                logger.info(f"✅ Vision CNN loaded (finetuned: {self.vision_cnn.is_finetuned})")
             else:
-                try:
-                    self.vision_cnn = get_vision_model().to(self.device)
-                    logger.info("⚠️ Vision CNN model file not found — instantiated default model")
-                except Exception as e:
-                    logger.warning(f"⚠️ Failed to instantiate Vision CNN: {e}")
-        except Exception as e:
+                logger.warning("⚠️ Vision CNN failed to load (dependencies may be missing)")
+        except ImportError as e:
             logger.warning(f"⚠️ Vision dependencies not available: {e}")
+        except Exception as e:
+            logger.warning(f"⚠️ Vision CNN loading error: {e}")
             
     def predict_pregame(self, features: pd.DataFrame) -> pd.DataFrame:
         """Get pregame predictions from the ensemble"""

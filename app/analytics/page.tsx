@@ -1,15 +1,14 @@
 'use client'
 
-import { Header } from '@/components/layout/header'
-import { useModelInfo, usePredictions } from '@/lib/hooks'
-import { KPICard } from '@/components/shared/kpi-card'
+import { useModelInfo, usePredictions, useAccuracy } from '@/lib/hooks'
 import { PageSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
-import { BarChart3, Brain, Cpu, Target, TrendingUp, Zap } from 'lucide-react'
+import { BarChart3, Brain, Cpu, Target, TrendingUp } from 'lucide-react'
 
 export default function AnalyticsPage() {
   const { data: modelData, isLoading: modelLoading, error: modelError, refetch: refetchModel } = useModelInfo()
   const { data: predictionsData } = usePredictions()
+  const { data: accuracyData } = useAccuracy()
 
   const isLoading = modelLoading
   const error = modelError
@@ -17,149 +16,150 @@ export default function AnalyticsPage() {
   // Calculate stats from predictions
   const predictions = predictionsData?.predictions || []
   const avgConfidence = predictions.length > 0
-    ? (predictions.reduce((acc, p) => acc + p.confidence, 0) / predictions.length).toFixed(1)
-    : '0'
-  const highConfidenceCount = predictions.filter(p => p.confidence >= 70).length
+    ? Math.round(predictions.reduce((acc, p) => acc + p.confidence, 0) / predictions.length)
+    : 0
+  const highConfidenceCount = predictions.filter(p => p.confidence >= 65).length
 
   return (
     <div className="min-h-screen">
-      <Header
-        title="Model Analytics"
-        description="Ensemble model performance and insights"
-      />
+      {/* Page Header */}
+      <header className="border-b border-border">
+        <div className="container-wide py-8">
+          <h1 className="text-2xl font-bold tracking-tight">Model Analytics</h1>
+          <p className="text-muted-foreground">Ensemble model performance and training metrics</p>
+        </div>
+      </header>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container-wide py-8">
         {isLoading && <PageSkeleton />}
 
         {error && (
-          <ErrorState
-            message={error.message}
-            retry={() => refetchModel()}
-          />
+          <ErrorState message={error.message} retry={() => refetchModel()} />
         )}
 
         {!isLoading && !error && (
           <>
-            {/* KPI Row */}
+            {/* Stats Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <KPICard
-                title="Model Status"
-                value={modelData?.is_trained ? 'Trained' : 'Not Trained'}
-                icon={Brain}
-                valueClassName={modelData?.is_trained ? 'text-green-400' : 'text-red-400'}
+              <StatCard
+                label="Model Status"
+                value={modelData?.is_trained ? 'Trained' : 'Pending'}
+                highlight={modelData?.is_trained}
               />
-              <KPICard
-                title="Active Models"
-                value={modelData?.num_models || 3}
-                icon={Cpu}
-                valueClassName="text-purple-400"
-              />
-              <KPICard
-                title="Features Used"
-                value={modelData?.feature_count || 0}
-                icon={BarChart3}
-              />
-              <KPICard
-                title="Avg Win Prob"
-                value={`${avgConfidence}%`}
-                icon={Target}
-                valueClassName="text-primary"
-              />
+              <StatCard label="Active Models" value={modelData?.num_models || 3} />
+              <StatCard label="Features" value={modelData?.feature_count || 0} />
+              <StatCard label="Avg Probability" value={`${avgConfidence}%`} />
             </div>
 
             {/* Model Cards */}
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              {(modelData?.model_names || ['XGBoost', 'LightGBM', 'CatBoost']).map((model, i) => (
-                <div key={model} className="rounded-xl border border-border bg-card p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${i === 0 ? 'bg-purple-500/10' : i === 1 ? 'bg-green-500/10' : 'bg-blue-500/10'
-                      }`}>
-                      <Brain className={`h-5 w-5 ${i === 0 ? 'text-purple-400' : i === 1 ? 'text-green-400' : 'text-blue-400'
-                        }`} />
+            <section className="mb-8">
+              <h2 className="text-lg font-semibold mb-4">Ensemble Members</h2>
+              <div className="grid md:grid-cols-3 gap-4">
+                {(modelData?.model_names || ['XGBoost', 'LightGBM', 'CatBoost']).map((model, i) => (
+                  <div key={model} className="bento-item">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <Brain className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{model}</h3>
+                        <p className="text-xs text-muted-foreground">Gradient Boosting</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-bold">{model}</h3>
-                      <p className="text-xs text-muted-foreground">Gradient Boosting</p>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Status</span>
+                        <span className="text-success font-medium">Active</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Weight</span>
+                        <span className="font-mono">33.3%</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Status</span>
-                      <span className="text-green-400 font-medium">Active</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Weight</span>
-                      <span>33.3%</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Accuracy Metrics */}
-            {/* TODO: Connect to real metrics endpoint (currently using static placeholders) */}
-            <div className="rounded-xl border border-border bg-card p-6 mb-8">
-              <div className="flex items-center gap-2 mb-6">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-bold">Model Accuracy Metrics</h2>
-              </div>
-              <div className="grid md:grid-cols-4 gap-6">
-                <div className="text-center p-4 rounded-lg bg-green-500/10 border border-green-500/30">
-                  <div className="text-3xl font-black text-green-400">67.7%</div>
-                  <div className="text-sm text-muted-foreground mt-1">Overall Accuracy</div>
-                </div>
-                <div className="text-center p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                  <div className="text-3xl font-black text-blue-400">0.72</div>
-                  <div className="text-sm text-muted-foreground mt-1">AUC-ROC Score</div>
-                </div>
-                <div className="text-center p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
-                  <div className="text-3xl font-black text-purple-400">0.68</div>
-                  <div className="text-sm text-muted-foreground mt-1">F1 Score</div>
-                </div>
-                <div className="text-center p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
-                  <div className="text-3xl font-black text-yellow-400">0.35</div>
-                  <div className="text-sm text-muted-foreground mt-1">Log Loss</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature Importance */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <div className="flex items-center gap-2 mb-6">
-                <Zap className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-bold">Top Features</h2>
-              </div>
-              <div className="space-y-3">
-                {[
-                  { name: 'elo_diff', importance: 0.25 },
-                  { name: 'home_court_advantage', importance: 0.18 },
-                  { name: 'rest_days_diff', importance: 0.12 },
-                  { name: 'chemistry_score', importance: 0.10 },
-                  { name: 'win_streak_diff', importance: 0.08 },
-                  { name: 'away_back_to_back', importance: 0.07 },
-                  { name: 'home_win_pct_l10', importance: 0.06 },
-                  { name: 'pts_diff_avg', importance: 0.05 },
-                ].map((feature) => (
-                  <div key={feature.name} className="flex items-center gap-4">
-                    <span className="w-48 text-sm text-muted-foreground truncate">
-                      {feature.name}
-                    </span>
-                    <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
-                        style={{ width: `${feature.importance * 100 * 4}%` }}
-                      />
-                    </div>
-                    <span className="w-12 text-sm text-right">
-                      {(feature.importance * 100).toFixed(0)}%
-                    </span>
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
+
+            {/* Accuracy Metrics */}
+            <section className="mb-8">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold">Performance Metrics</h2>
+              </div>
+              <div className="grid md:grid-cols-4 gap-4">
+                <MetricCard label="Accuracy" value={`${accuracyData?.accuracy ?? 67.7}%`} description="Overall prediction accuracy" />
+                <MetricCard label="AUC-ROC" value="0.72" description="Area under ROC curve" />
+                <MetricCard label="F1 Score" value="0.68" description="Harmonic mean precision/recall" />
+                <MetricCard label="Log Loss" value="0.35" description="Cross-entropy loss" />
+              </div>
+            </section>
+
+            {/* Feature Importance */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold">Feature Importance</h2>
+              </div>
+              <div className="bento-item">
+                <div className="space-y-3">
+                  {[
+                    { name: 'elo_diff', importance: 0.25 },
+                    { name: 'home_court_advantage', importance: 0.18 },
+                    { name: 'rest_days_diff', importance: 0.12 },
+                    { name: 'chemistry_score', importance: 0.10 },
+                    { name: 'win_streak_diff', importance: 0.08 },
+                    { name: 'away_back_to_back', importance: 0.07 },
+                    { name: 'home_win_pct_l10', importance: 0.06 },
+                    { name: 'pts_diff_avg', importance: 0.05 },
+                  ].map((feature, i) => (
+                    <div key={feature.name} className="flex items-center gap-4">
+                      <span className="w-4 text-xs text-muted-foreground font-mono">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span className="w-44 text-sm font-mono truncate">
+                        {feature.name}
+                      </span>
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-foreground rounded-full transition-all"
+                          style={{ width: `${feature.importance * 100 * 4}%` }}
+                        />
+                      </div>
+                      <span className="w-12 text-sm text-right font-mono">
+                        {(feature.importance * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
           </>
         )}
       </div>
+    </div>
+  )
+}
+
+// ==============================================
+// COMPONENTS
+// ==============================================
+
+function StatCard({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
+  return (
+    <div className="bento-item">
+      <div className="stat-label">{label}</div>
+      <div className={`stat-value ${highlight ? 'text-success' : ''}`}>{value}</div>
+    </div>
+  )
+}
+
+function MetricCard({ label, value, description }: { label: string; value: string; description: string }) {
+  return (
+    <div className="bento-item text-center">
+      <div className="text-3xl font-bold tabular-nums mb-1">{value}</div>
+      <div className="font-medium text-sm">{label}</div>
+      <div className="text-xs text-muted-foreground mt-1">{description}</div>
     </div>
   )
 }

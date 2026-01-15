@@ -1,16 +1,16 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { GeistSans } from "geist/font/sans"
+import { GeistMono } from "geist/font/mono"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/lib/providers"
 import { Sidebar } from "@/components/layout/sidebar"
 import { MobileNav } from "@/components/layout/mobile-nav"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
-
 export const metadata: Metadata = {
-  title: "NBA Intel - ML-Powered Game Predictions",
-  description: "Advanced NBA analytics and predictions using ensemble machine learning models",
+  title: "NBA Intel — ML Game Predictions",
+  description: "Ensemble machine learning predictions for NBA games. XGBoost, LightGBM, CatBoost voting with SHAP explanations.",
+  keywords: ["NBA", "predictions", "machine learning", "sports analytics", "basketball"],
 }
 
 export default function RootLayout({
@@ -19,16 +19,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className="font-sans antialiased">
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
           <QueryProvider>
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-background texture-paper">
               {/* Sidebar (desktop) */}
               <Sidebar />
 
