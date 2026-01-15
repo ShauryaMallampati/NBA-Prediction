@@ -50,9 +50,16 @@ jobs:
         git config --global user.name "NBA Intel Bot"
         git config --global user.email "bot@nbaintel.com"
         
-        # Add new data files
-        git add data/predictions/
-        git add data/metrics/daily_accuracy.csv
+        # Add new data files if they exist
+        if [ -d "data/predictions" ]; then
+          git add data/predictions/
+        else
+          echo "No predictions directory found."
+        fi
+        
+        if [ -f "data/metrics/daily_accuracy.csv" ]; then
+          git add data/metrics/daily_accuracy.csv
+        fi
         
         # Determine if there are changes
         if git diff --staged --quiet; then
