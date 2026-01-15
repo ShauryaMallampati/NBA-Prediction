@@ -39,8 +39,9 @@ jobs:
       run: |
         poetry run python scripts/fetch_schedule.py --days 14
 
-    # === NEW: Refresh Chemistry Data ===
+    # === NEW: Refresh Chemistry Data (Weekly) ===
     - name: Refresh Chemistry Data
+      if: github.event.schedule.cron == '0 12 * * 0' || github.event_name == 'workflow_dispatch'
       run: |
         poetry run python scripts/fetch_lineup_data.py || echo "Chemistry fetch skipped (optional)"
 
