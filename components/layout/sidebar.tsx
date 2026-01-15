@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-    BarChart3,
+    Brain,
     Calendar,
     FlaskConical,
     Home,
@@ -18,7 +18,7 @@ const navigation = [
     { name: 'Predictions', href: '/predictions', icon: Target },
     { name: 'Schedule', href: '/schedule', icon: Calendar },
     { name: 'Teams', href: '/teams', icon: Users },
-    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { name: 'Analysis', href: '/analysis', icon: Brain },
     { name: 'Chemistry', href: '/chemistry', icon: FlaskConical },
 ]
 

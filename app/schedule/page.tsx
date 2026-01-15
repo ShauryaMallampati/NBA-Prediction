@@ -38,7 +38,7 @@ export default function SchedulePage() {
       <header className="border-b border-border">
         <div className="container-wide py-8">
           <h1 className="text-2xl font-bold tracking-tight">Schedule</h1>
-          <p className="text-muted-foreground">Upcoming NBA games over the next 14 days</p>
+          <p className="text-muted-foreground">Upcoming NBA games for the 2024-25 season</p>
         </div>
       </header>
 
@@ -91,8 +91,8 @@ export default function SchedulePage() {
                   key={date}
                   onClick={() => setSelectedDate(date)}
                   className={`flex-shrink-0 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${date === displayDate
-                      ? 'bg-foreground text-background'
-                      : 'border border-border hover:bg-accent'
+                    ? 'bg-foreground text-background'
+                    : 'border border-border hover:bg-accent'
                     }`}
                 >
                   {formatShortDate(date + 'T12:00:00')}

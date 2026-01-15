@@ -248,70 +248,52 @@ async def get_model_info():
 
 
 @app.get("/live_schedule")
-async def live_schedule(days: int = 14):
-    """Return upcoming games, prioritizing cached schedule and merging with live data."""
+async def live_schedule(days: int = 365):
+    """Return upcoming games from the full season schedule JSON."""
     try:
         from pathlib import Path
         import json
+        from datetime import datetime, timedelta
         
         all_games = []
-        seen_ids = set()
+        today = datetime.now().date()
+        end_date = today + timedelta(days=days)
         
-        # 1. Try to load from cached schedule file first (populated by GitHub Actions)
-        cached_file = Path("data/schedules/upcoming_14_days.json")
-        if cached_file.exists():
+        # Primary source: Full season schedule JSON (1,225 games)
+        season_file = Path("data/nba_season_schedule_2024_25.json")
+        if season_file.exists():
             try:
-                def read_cached():
-                    with open(cached_file, 'r') as f:
-                        return json.load(f)
-                cached_data = await asyncio.to_thread(read_cached)
-                cached_games = cached_data.get('games', [])
-                for g in cached_games:
-                    game_id = g.get('game_id', '')
-                    if game_id and game_id not in seen_ids:
-                        all_games.append(g)
-                        seen_ids.add(game_id)
+                with open(season_file, 'r') as f:
+                    season_data = json.load(f)
+                
+                # Flatten games from all months
+                for month, games in season_data.get('months', {}).items():
+                    for g in games:
+                        game_date_str = g.get('date', '')
+                        try:
+                            game_date = datetime.strptime(game_date_str, '%Y-%m-%d').date()
+                            # Only include upcoming games
+                            if today <= game_date <= end_date:
+                                all_games.append({
+                                    'game_id': g.get('game_id', ''),
+                                    'date': game_date_str,
+                                    'home_team': g.get('home_team', ''),
+                                    'away_team': g.get('away_team', ''),
+                                    'game_time': g.get('time', '')
+                                })
+                        except ValueError:
+                            continue
             except Exception as e:
-                print(f"Failed to load cached schedule: {e}")
+                print(f"Failed to load season schedule: {e}")
         
-        # 2. Also try live API to get any updates
-        try:
-            live_games = await get_upcoming_games_async(days_ahead=days)
-            for g in live_games:
-                game_id = g.get('game_id', '')
-                if game_id and game_id not in seen_ids:
-                    all_games.append(g)
-                    seen_ids.add(game_id)
-        except Exception as e:
-            print(f"Live API fetch failed: {e}")
-        
-        # 3. Fallback to RapidAPI if still no games
+        # Fallback: Try cached 14-day file if no season file
         if not all_games:
-            rapid_key = os.environ.get('RAPIDAPI_KEY') or os.environ.get('NEXT_PUBLIC_RAPIDAPI_KEY')
-            rapid_host = 'nba-schedule.p.rapidapi.com'
-            if rapid_key:
+            cached_file = Path("data/schedules/upcoming_14_days.json")
+            if cached_file.exists():
                 try:
-                    import httpx
-                    url = f"https://{rapid_host}/schedule"
-                    headers = {
-                        'x-rapidapi-key': rapid_key,
-                        'x-rapidapi-host': rapid_host
-                    }
-                    async with httpx.AsyncClient() as client:
-                        r = await client.get(url, headers=headers, timeout=10.0)
-                    
-                    if r.status_code == 200:
-                        payload = r.json()
-                        games = payload.get('games') or payload.get('schedule') or []
-                        for g in games:
-                            gd = g.get('date') or g.get('game_date') or g.get('start_date') or ''
-                            all_games.append({
-                                'game_id': g.get('id') or g.get('game_id') or g.get('GAME_ID') or '',
-                                'date': gd,
-                                'home_team': g.get('home_team') or g.get('home') or '',
-                                'away_team': g.get('away_team') or g.get('away') or '',
-                                'game_time': g.get('time') or g.get('startTime') or ''
-                            })
+                    with open(cached_file, 'r') as f:
+                        cached_data = json.load(f)
+                    all_games = cached_data.get('games', [])
                 except Exception:
                     pass
         
@@ -320,7 +302,7 @@ async def live_schedule(days: int = 14):
 
         return {
             "success": True,
-            "source": "cached|nba_api|pyespn|rapidapi",
+            "source": "season_schedule_2024_25",
             "count": len(all_games),
             "games": all_games
         }
@@ -428,6 +410,38 @@ async def get_matchup_chemistry(home_team: str, away_team: str):
         return model.predict_chemistry_impact(home_team.upper(), away_team.upper())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/analysis")
+async def get_wrong_predictions_analysis(date: str = None):
+    """Get analysis of wrong predictions with AI reasoning."""
+    from pathlib import Path
+    from datetime import datetime, timedelta
+    
+    target_date = date or (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    analysis_file = Path(f"data/analysis/analysis_{target_date}.json")
+    
+    if analysis_file.exists():
+        try:
+            with open(analysis_file, 'r') as f:
+                analyses = json.load(f)
+            return {
+                "success": True,
+                "date": target_date,
+                "count": len(analyses),
+                "analyses": analyses
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e), "date": target_date, "analyses": []}
+    
+    # No analysis file - return empty with message
+    return {
+        "success": True,
+        "date": target_date,
+        "count": 0,
+        "analyses": [],
+        "message": f"No analysis available for {target_date}. Run: python scripts/analyze_wrong_predictions.py --date {target_date}"
+    }
 
 
 if __name__ == "__main__":
