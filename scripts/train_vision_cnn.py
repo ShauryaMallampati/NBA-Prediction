@@ -217,6 +217,8 @@ def train_epoch(
     for batch_idx, (frames, labels) in enumerate(dataloader):
         # Skip batches if resuming mid-epoch
         if batch_idx < start_batch:
+            if (batch_idx + 1) % 50 == 0:
+                logger.info(f"  ⏭️ Resuming: Fast-forwarding through batch {batch_idx + 1}/{start_batch}...")
             continue
             
         frames = frames.to(device)
