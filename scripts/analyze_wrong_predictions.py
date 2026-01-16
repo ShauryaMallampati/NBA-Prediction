@@ -22,8 +22,8 @@ PREDICTIONS_DIR = Path("data/predictions")
 METRICS_DIR = Path("data/metrics")
 OUTPUT_DIR = Path("data/analysis")
 
-# Gemini model choice (Gemini 2.5 Flash = best balance of speed, quality, and cost)
-GEMINI_MODEL = "gemini-2.5-flash"
+# Gemini model choice (Gemini 3 Flash Preview = Latest, smartest, and fastest)
+GEMINI_MODEL = "gemini-3-flash-preview"
 
 
 class WrongPredictionAnalyzer:
