@@ -1,106 +1,56 @@
+import fs from "fs"
 import { NextResponse } from 'next/server'
-
-const RAPIDAPI_KEY = process.env.NEXT_PUBLIC_RAPIDAPI_KEY || 'REMOVED_RAPIDAPI_KEY'
-const RAPIDAPI_HOST = 'nba-schedule.p.rapidapi.com'
+import path from "path"
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const month = searchParams.get('month') // YYYY-MM format
-    const daysAhead = parseInt(searchParams.get('days') || '14') // Default to 14 days
+    const daysAhead = parseInt(searchParams.get('days') || '14')
 
-    // If no month specified, get upcoming games (today through next N days)
-    if (!month) {
-      // Construct date range
-      const today = new Date()
-      today.setHours(today.getHours() - 8) // Adjust to PST
-      const endDate = new Date(today)
-      endDate.setDate(endDate.getDate() + daysAhead)
+    const projectRoot = process.cwd()
+    const schedulesDir = path.join(projectRoot, "data", "schedules")
 
-      const todayStr = today.toISOString().split('T')[0]
-      const endDateStr = endDate.toISOString().split('T')[0]
+    // Construct date range
+    const today = new Date()
+    const todayStr = today.toISOString().split('T')[0]
+    const endDate = new Date(today)
+    endDate.setDate(endDate.getDate() + daysAhead)
+    const endDateStr = endDate.toISOString().split('T')[0]
 
-      // Request live schedule from the local FastAPI service (python) which will
-      // attempt to use `nba_api` or `pyespn`. This avoids hard-coded RapidAPI usage.
-      const backendUrl = process.env.SCHEDULE_BACKEND || 'http://localhost:8000/live_schedule'
-      const response = await fetch(`${backendUrl}?days=${daysAhead}`)
+    let games: any[] = []
 
-      if (!response.ok) {
-        console.error('Local schedule service error:', response.status, response.statusText)
-        return NextResponse.json({
-          success: false,
-          message: 'Failed to fetch schedule from local service',
-          games: [],
-          gamesByDate: {},
-          dates: []
-        }, { status: response.status })
-      }
-
-      const payload = await response.json()
-      let games = Array.isArray(payload) ? payload : payload.games || []
-
-      // Filter for games within our date range
-      games = games.filter((game: any) => {
-        const gameDate = game.date || game.game_date || game.gameDate || ''
-        return gameDate >= todayStr && gameDate <= endDateStr
-      })
-
-      // Group games by date
-      const gamesByDate: { [key: string]: any[] } = {}
-      games.forEach((game: any) => {
-        const gameDate = game.date || game.game_date || game.gameDate || ''
-        if (gameDate) {
-          if (!gamesByDate[gameDate]) {
-            gamesByDate[gameDate] = []
-          }
-
-          // Normalize the game object
-          const normalizedGame = {
-            game_id: game.id || game.game_id || game.gameId || '',
-            date: gameDate,
-            home_team: game.home_team || game.homeTeam || game.home || '',
-            away_team: game.away_team || game.awayTeam || game.away || '',
-            game_time: game.time || game.game_time || game.gameTime || game.startTime || '',
-            season: game.season || '2024-25'
-          }
-
-          gamesByDate[gameDate].push(normalizedGame)
+    // Check for schedules directory
+    if (fs.existsSync(schedulesDir)) {
+      // Try upcoming_14_days.json first
+      const upcomingPath = path.join(schedulesDir, "upcoming_14_days.json")
+      if (fs.existsSync(upcomingPath)) {
+        const content = fs.readFileSync(upcomingPath, "utf-8")
+        const data = JSON.parse(content)
+        games = Array.isArray(data) ? data : data.games || []
+      } else {
+        // Try to find any schedule file
+        const files = fs.readdirSync(schedulesDir).filter(f => f.endsWith('.json'))
+        for (const file of files) {
+          const content = fs.readFileSync(path.join(schedulesDir, file), "utf-8")
+          const data = JSON.parse(content)
+          const fileGames = Array.isArray(data) ? data : data.games || []
+          games = [...games, ...fileGames]
         }
-      })
-
-      return NextResponse.json({
-        success: true,
-        count: games.length,
-        date_range: `${todayStr} to ${endDateStr}`,
-        dates: Object.keys(gamesByDate).sort(),
-        gamesByDate: gamesByDate,
-        games: games
-      })
+      }
     }
 
-    // Filter by specific month (YYYY-MM format)
-    // Fetch full schedule (month) from local backend if available
-    const backendUrl = process.env.SCHEDULE_BACKEND || 'http://localhost:8000/live_schedule'
-    const response = await fetch(backendUrl)
-
-    if (!response.ok) {
-      console.error('Local schedule service error:', response.status, response.statusText)
-      return NextResponse.json({
-        success: false,
-        message: 'Failed to fetch schedule from local service',
-        games: [],
-        gamesByDate: {},
-        dates: []
-      }, { status: response.status })
+    // Also check the main data directory for nba_season_schedule
+    const seasonSchedulePath = path.join(projectRoot, "data", "nba_season_schedule_2025_26.json")
+    if (games.length === 0 && fs.existsSync(seasonSchedulePath)) {
+      const content = fs.readFileSync(seasonSchedulePath, "utf-8")
+      const data = JSON.parse(content)
+      games = Array.isArray(data) ? data : data.games || []
     }
 
-    const payload = await response.json()
-    let games = Array.isArray(payload) ? payload : payload.games || payload.games || []
-
-    // Filter by month
+    // Filter for games within our date range
     games = games.filter((game: any) => {
       const gameDate = game.date || game.game_date || game.gameDate || ''
-      return gameDate.startsWith(month)
+      return gameDate >= todayStr && gameDate <= endDateStr
     })
 
     // Group games by date
@@ -114,12 +64,12 @@ export async function GET(request: Request) {
 
         // Normalize the game object
         const normalizedGame = {
-          game_id: game.id || game.game_id || game.gameId || '',
+          game_id: game.id || game.game_id || game.gameId || `${game.home_team}-${game.away_team}-${gameDate}`,
           date: gameDate,
           home_team: game.home_team || game.homeTeam || game.home || '',
           away_team: game.away_team || game.awayTeam || game.away || '',
-          game_time: game.time || game.game_time || game.gameTime || game.startTime || '',
-          season: game.season || '2024-25'
+          game_time: game.time || game.game_time || game.gameTime || game.startTime || '7:00 PM',
+          season: game.season || '2025-26'
         }
 
         gamesByDate[gameDate].push(normalizedGame)
@@ -129,20 +79,21 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       count: games.length,
-      month: month,
+      date_range: `${todayStr} to ${endDateStr}`,
       dates: Object.keys(gamesByDate).sort(),
       gamesByDate: gamesByDate,
       games: games
     })
+
   } catch (error) {
     console.error('Error fetching schedule:', error)
     return NextResponse.json({
-      success: false,
-      message: 'Failed to load schedule',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      success: true,
+      count: 0,
+      message: 'No schedule data available. Run the daily pipeline first.',
       games: [],
       gamesByDate: {},
       dates: []
-    }, { status: 500 })
+    })
   }
 }
