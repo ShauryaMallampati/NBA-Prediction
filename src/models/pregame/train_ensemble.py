@@ -126,6 +126,14 @@ class EnsembleTrainer:
         # Features
         X = df[feature_cols].fillna(0)  # Fill NaN with 0
         
+        # Force check for critical features
+        critical_features = ['elo_diff', 'rest_differential', 'elo_win_prob']
+        for feat in critical_features:
+            if feat not in X.columns:
+                logger.warning(f"⚠️ Critical feature missing: {feat}")
+            else:
+                logger.info(f"✅ Critical feature verified: {feat}")
+        
         logger.info(f"✅ Prepared {len(feature_cols)} features for {len(X)} games")
         logger.info(f"  Target distribution: {y.mean():.1%} home wins")
         
@@ -200,23 +208,23 @@ class EnsembleTrainer:
         y_pred = calibrated_model.predict_proba(X)[:, 1]
         y_pred_binary = (y_pred > 0.5).astype(int)
         
-        accuracy = accuracy_score(y, y_pred_binary)
-        auc = roc_auc_score(y, y_pred)
-        logloss = log_loss(y, y_pred)
-        brier = brier_score_loss(y, y_pred)
+        # Reset Metric Reporting: Use mean CV scores for primary metrics
+        mean_cv_acc = np.mean([s['accuracy'] for s in cv_scores])
+        mean_cv_auc = np.mean([s['auc'] for s in cv_scores])
+        
+        metrics = {
+            'accuracy': mean_cv_acc,
+            'auc': mean_cv_auc,
+            'logloss': logloss,
+            'brier': brier,
+            'cv_scores': cv_scores,
+            'in_sample_accuracy': accuracy,  # Keep for reference but don't use as primary
+        }
         
         self.xgb_model = final_model
         self.xgb_calibrated = calibrated_model
         
-        metrics = {
-            'accuracy': accuracy,
-            'auc': auc,
-            'logloss': logloss,
-            'brier': brier,
-            'cv_scores': cv_scores,
-        }
-        
-        logger.info(f"✅ XGBoost trained: Accuracy={accuracy:.3f}, AUC={auc:.3f}")
+        logger.info(f"✅ XGBoost trained: CV Accuracy={mean_cv_acc:.3f}, CV AUC={mean_cv_auc:.3f} (In-sample: {accuracy:.3f})")
         
         return metrics
     
@@ -298,23 +306,23 @@ class EnsembleTrainer:
         y_pred = calibrated_model.predict_proba(X)[:, 1]
         y_pred_binary = (y_pred > 0.5).astype(int)
         
-        accuracy = accuracy_score(y, y_pred_binary)
-        auc = roc_auc_score(y, y_pred)
-        logloss = log_loss(y, y_pred)
-        brier = brier_score_loss(y, y_pred)
+        # Reset Metric Reporting: Use mean CV scores for primary metrics
+        mean_cv_acc = np.mean([s['accuracy'] for s in cv_scores])
+        mean_cv_auc = np.mean([s['auc'] for s in cv_scores])
+        
+        metrics = {
+            'accuracy': mean_cv_acc,
+            'auc': mean_cv_auc,
+            'logloss': logloss,
+            'brier': brier,
+            'cv_scores': cv_scores,
+            'in_sample_accuracy': accuracy,
+        }
         
         self.lgb_model = final_model
         self.lgb_calibrated = calibrated_model
         
-        metrics = {
-            'accuracy': accuracy,
-            'auc': auc,
-            'logloss': logloss,
-            'brier': brier,
-            'cv_scores': cv_scores,
-        }
-        
-        logger.info(f"✅ LightGBM trained: Accuracy={accuracy:.3f}, AUC={auc:.3f}")
+        logger.info(f"✅ LightGBM trained: CV Accuracy={mean_cv_acc:.3f}, CV AUC={mean_cv_auc:.3f} (In-sample: {accuracy:.3f})")
         
         return metrics
     
@@ -385,23 +393,23 @@ class EnsembleTrainer:
         y_pred = calibrated_model.predict_proba(X)[:, 1]
         y_pred_binary = (y_pred > 0.5).astype(int)
         
-        accuracy = accuracy_score(y, y_pred_binary)
-        auc = roc_auc_score(y, y_pred)
-        logloss = log_loss(y, y_pred)
-        brier = brier_score_loss(y, y_pred)
+        # Reset Metric Reporting: Use mean CV scores for primary metrics
+        mean_cv_acc = np.mean([s['accuracy'] for s in cv_scores])
+        mean_cv_auc = np.mean([s['auc'] for s in cv_scores])
+        
+        metrics = {
+            'accuracy': mean_cv_acc,
+            'auc': mean_cv_auc,
+            'logloss': logloss,
+            'brier': brier,
+            'cv_scores': cv_scores,
+            'in_sample_accuracy': accuracy,
+        }
         
         self.cat_model = final_model
         self.cat_calibrated = calibrated_model
         
-        metrics = {
-            'accuracy': accuracy,
-            'auc': auc,
-            'logloss': logloss,
-            'brier': brier,
-            'cv_scores': cv_scores,
-        }
-        
-        logger.info(f"✅ CatBoost trained: Accuracy={accuracy:.3f}, AUC={auc:.3f}")
+        logger.info(f"✅ CatBoost trained: CV Accuracy={mean_cv_acc:.3f}, CV AUC={mean_cv_auc:.3f} (In-sample: {accuracy:.3f})")
         
         return metrics
     
