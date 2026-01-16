@@ -12,6 +12,19 @@ import asyncio
 
 logger = logging.getLogger(__name__)
 
+# Try to load full season schedule first
+try:
+    import json
+    from pathlib import Path
+    schedule_path = Path("data/nba_season_schedule_2025_26.json")
+    if schedule_path.exists():
+        with open(schedule_path, 'r') as f:
+            FULL_SEASON_SCHEDULE = json.load(f)
+    else:
+        FULL_SEASON_SCHEDULE = []
+except Exception:
+    FULL_SEASON_SCHEDULE = []
+
 
 def _try_nba_api(days_ahead: int = 14) -> List[Dict[str, Any]]:
     """Attempt to fetch upcoming games using `nba_api` live endpoints."""
@@ -111,6 +124,19 @@ async def get_upcoming_games_async(days_ahead: int = 14) -> List[Dict[str, Any]]
     """
     all_games = []
     
+    # 1. OPTIMIZATION: Check local full schedule first
+    if FULL_SEASON_SCHEDULE:
+        today_str = datetime.utcnow().strftime("%Y-%m-%d")
+        end_date_obj = datetime.utcnow() + timedelta(days=days_ahead)
+        end_date_str = end_date_obj.strftime("%Y-%m-%d")
+        
+        filtered = [
+            g for g in FULL_SEASON_SCHEDULE 
+            if g['date'] >= today_str and g['date'] <= end_date_str
+        ]
+        if filtered:
+            return filtered
+
     # 1. Try nba_api (mostly for today)
     # Since nba_api is sync, run in thread
     todays_games = await asyncio.to_thread(_try_nba_api, days_ahead)

@@ -1,0 +1,4826 @@
+[
+  {
+    "game_id": "0022500002",
+    "date": "2025-10-21",
+    "home_team": "LAL",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500001",
+    "date": "2025-10-21",
+    "home_team": "OKC",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500083",
+    "date": "2025-10-22",
+    "home_team": "BOS",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500003",
+    "date": "2025-10-22",
+    "home_team": "NYK",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500085",
+    "date": "2025-10-22",
+    "home_team": "MEM",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500084",
+    "date": "2025-10-22",
+    "home_team": "CHI",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500087",
+    "date": "2025-10-22",
+    "home_team": "UTA",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500081",
+    "date": "2025-10-22",
+    "home_team": "ORL",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500080",
+    "date": "2025-10-22",
+    "home_team": "CHA",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500088",
+    "date": "2025-10-22",
+    "home_team": "PHX",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500089",
+    "date": "2025-10-22",
+    "home_team": "POR",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500082",
+    "date": "2025-10-22",
+    "home_team": "ATL",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500086",
+    "date": "2025-10-22",
+    "home_team": "MIL",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500004",
+    "date": "2025-10-22",
+    "home_team": "DAL",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500006",
+    "date": "2025-10-23",
+    "home_team": "GSW",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500005",
+    "date": "2025-10-23",
+    "home_team": "IND",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500090",
+    "date": "2025-10-24",
+    "home_team": "ORL",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500091",
+    "date": "2025-10-24",
+    "home_team": "BKN",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500095",
+    "date": "2025-10-24",
+    "home_team": "NOP",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500096",
+    "date": "2025-10-24",
+    "home_team": "DAL",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500099",
+    "date": "2025-10-24",
+    "home_team": "LAC",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500019",
+    "date": "2025-10-24",
+    "home_team": "LAL",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500094",
+    "date": "2025-10-24",
+    "home_team": "MEM",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500092",
+    "date": "2025-10-24",
+    "home_team": "TOR",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500018",
+    "date": "2025-10-24",
+    "home_team": "NYK",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500097",
+    "date": "2025-10-24",
+    "home_team": "POR",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500098",
+    "date": "2025-10-24",
+    "home_team": "SAC",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500093",
+    "date": "2025-10-24",
+    "home_team": "HOU",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500104",
+    "date": "2025-10-25",
+    "home_team": "DEN",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500102",
+    "date": "2025-10-25",
+    "home_team": "PHI",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500103",
+    "date": "2025-10-25",
+    "home_team": "MEM",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500101",
+    "date": "2025-10-25",
+    "home_team": "ATL",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500100",
+    "date": "2025-10-25",
+    "home_team": "ORL",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500106",
+    "date": "2025-10-26",
+    "home_team": "DET",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500107",
+    "date": "2025-10-26",
+    "home_team": "CLE",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500111",
+    "date": "2025-10-26",
+    "home_team": "DAL",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500113",
+    "date": "2025-10-26",
+    "home_team": "SAC",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500108",
+    "date": "2025-10-26",
+    "home_team": "MIA",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500110",
+    "date": "2025-10-26",
+    "home_team": "MIN",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500105",
+    "date": "2025-10-26",
+    "home_team": "SAS",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500109",
+    "date": "2025-10-26",
+    "home_team": "WAS",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500112",
+    "date": "2025-10-26",
+    "home_team": "LAC",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500115",
+    "date": "2025-10-27",
+    "home_team": "CHI",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500116",
+    "date": "2025-10-27",
+    "home_team": "HOU",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500008",
+    "date": "2025-10-27",
+    "home_team": "MIN",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500114",
+    "date": "2025-10-27",
+    "home_team": "PHI",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500120",
+    "date": "2025-10-27",
+    "home_team": "UTA",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500122",
+    "date": "2025-10-27",
+    "home_team": "LAL",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500119",
+    "date": "2025-10-27",
+    "home_team": "DAL",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500121",
+    "date": "2025-10-27",
+    "home_team": "GSW",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500117",
+    "date": "2025-10-27",
+    "home_team": "NOP",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500007",
+    "date": "2025-10-27",
+    "home_team": "DET",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500118",
+    "date": "2025-10-27",
+    "home_team": "SAS",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500124",
+    "date": "2025-10-28",
+    "home_team": "MIA",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500125",
+    "date": "2025-10-28",
+    "home_team": "MIL",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500127",
+    "date": "2025-10-28",
+    "home_team": "GSW",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500123",
+    "date": "2025-10-28",
+    "home_team": "WAS",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500126",
+    "date": "2025-10-28",
+    "home_team": "OKC",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500128",
+    "date": "2025-10-29",
+    "home_team": "BOS",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500134",
+    "date": "2025-10-29",
+    "home_team": "DEN",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500133",
+    "date": "2025-10-29",
+    "home_team": "DAL",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500136",
+    "date": "2025-10-29",
+    "home_team": "MIN",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500137",
+    "date": "2025-10-29",
+    "home_team": "PHX",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500135",
+    "date": "2025-10-29",
+    "home_team": "UTA",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500131",
+    "date": "2025-10-29",
+    "home_team": "TOR",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500130",
+    "date": "2025-10-29",
+    "home_team": "BKN",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500129",
+    "date": "2025-10-29",
+    "home_team": "DET",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500132",
+    "date": "2025-10-29",
+    "home_team": "CHI",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500139",
+    "date": "2025-10-30",
+    "home_team": "MIL",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500138",
+    "date": "2025-10-30",
+    "home_team": "CHA",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500141",
+    "date": "2025-10-30",
+    "home_team": "SAS",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500140",
+    "date": "2025-10-30",
+    "home_team": "OKC",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500021",
+    "date": "2025-10-31",
+    "home_team": "PHI",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500022",
+    "date": "2025-10-31",
+    "home_team": "CLE",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500023",
+    "date": "2025-10-31",
+    "home_team": "CHI",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500026",
+    "date": "2025-10-31",
+    "home_team": "POR",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500027",
+    "date": "2025-10-31",
+    "home_team": "LAC",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500024",
+    "date": "2025-10-31",
+    "home_team": "MEM",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500020",
+    "date": "2025-10-31",
+    "home_team": "IND",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500025",
+    "date": "2025-10-31",
+    "home_team": "PHX",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500147",
+    "date": "2025-11-01",
+    "home_team": "DET",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500142",
+    "date": "2025-11-01",
+    "home_team": "MIL",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500143",
+    "date": "2025-11-01",
+    "home_team": "CHA",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500145",
+    "date": "2025-11-01",
+    "home_team": "WAS",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500146",
+    "date": "2025-11-01",
+    "home_team": "BOS",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500144",
+    "date": "2025-11-01",
+    "home_team": "IND",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500151",
+    "date": "2025-11-02",
+    "home_team": "CLE",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500153",
+    "date": "2025-11-02",
+    "home_team": "NYK",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500155",
+    "date": "2025-11-02",
+    "home_team": "LAL",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500149",
+    "date": "2025-11-02",
+    "home_team": "BKN",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500154",
+    "date": "2025-11-02",
+    "home_team": "PHX",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500148",
+    "date": "2025-11-02",
+    "home_team": "OKC",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500150",
+    "date": "2025-11-02",
+    "home_team": "CHA",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500152",
+    "date": "2025-11-02",
+    "home_team": "TOR",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500162",
+    "date": "2025-11-03",
+    "home_team": "DEN",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500160",
+    "date": "2025-11-03",
+    "home_team": "HOU",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500164",
+    "date": "2025-11-03",
+    "home_team": "LAC",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500157",
+    "date": "2025-11-03",
+    "home_team": "IND",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500156",
+    "date": "2025-11-03",
+    "home_team": "BKN",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500161",
+    "date": "2025-11-03",
+    "home_team": "MEM",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500159",
+    "date": "2025-11-03",
+    "home_team": "NYK",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500158",
+    "date": "2025-11-03",
+    "home_team": "BOS",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500163",
+    "date": "2025-11-03",
+    "home_team": "POR",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500168",
+    "date": "2025-11-04",
+    "home_team": "NOP",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500167",
+    "date": "2025-11-04",
+    "home_team": "CHI",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500170",
+    "date": "2025-11-04",
+    "home_team": "LAC",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500165",
+    "date": "2025-11-04",
+    "home_team": "TOR",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500166",
+    "date": "2025-11-04",
+    "home_team": "ATL",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500169",
+    "date": "2025-11-04",
+    "home_team": "GSW",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500174",
+    "date": "2025-11-05",
+    "home_team": "BOS",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500171",
+    "date": "2025-11-05",
+    "home_team": "CLE",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500176",
+    "date": "2025-11-05",
+    "home_team": "MEM",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500175",
+    "date": "2025-11-05",
+    "home_team": "NYK",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500179",
+    "date": "2025-11-05",
+    "home_team": "LAL",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500180",
+    "date": "2025-11-05",
+    "home_team": "POR",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500172",
+    "date": "2025-11-05",
+    "home_team": "DET",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500177",
+    "date": "2025-11-05",
+    "home_team": "DAL",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500181",
+    "date": "2025-11-05",
+    "home_team": "SAC",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500178",
+    "date": "2025-11-05",
+    "home_team": "DEN",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500173",
+    "date": "2025-11-05",
+    "home_team": "IND",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500182",
+    "date": "2025-11-06",
+    "home_team": "PHX",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500035",
+    "date": "2025-11-07",
+    "home_team": "MIL",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500037",
+    "date": "2025-11-07",
+    "home_team": "DEN",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500028",
+    "date": "2025-11-07",
+    "home_team": "ORL",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500038",
+    "date": "2025-11-07",
+    "home_team": "SAC",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500032",
+    "date": "2025-11-07",
+    "home_team": "SAS",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500036",
+    "date": "2025-11-07",
+    "home_team": "MIN",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500031",
+    "date": "2025-11-07",
+    "home_team": "BKN",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500030",
+    "date": "2025-11-07",
+    "home_team": "ATL",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500029",
+    "date": "2025-11-07",
+    "home_team": "WAS",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500033",
+    "date": "2025-11-07",
+    "home_team": "MIA",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500034",
+    "date": "2025-11-07",
+    "home_team": "MEM",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500188",
+    "date": "2025-11-08",
+    "home_team": "SAS",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500186",
+    "date": "2025-11-08",
+    "home_team": "CLE",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500189",
+    "date": "2025-11-08",
+    "home_team": "DEN",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500187",
+    "date": "2025-11-08",
+    "home_team": "MIA",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500190",
+    "date": "2025-11-08",
+    "home_team": "LAC",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500185",
+    "date": "2025-11-08",
+    "home_team": "ATL",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500184",
+    "date": "2025-11-08",
+    "home_team": "PHI",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500183",
+    "date": "2025-11-08",
+    "home_team": "WAS",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500196",
+    "date": "2025-11-09",
+    "home_team": "GSW",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500191",
+    "date": "2025-11-09",
+    "home_team": "MIL",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500197",
+    "date": "2025-11-09",
+    "home_team": "SAC",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500192",
+    "date": "2025-11-09",
+    "home_team": "NYK",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500193",
+    "date": "2025-11-09",
+    "home_team": "ORL",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500195",
+    "date": "2025-11-09",
+    "home_team": "PHI",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500194",
+    "date": "2025-11-09",
+    "home_team": "MEM",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500206",
+    "date": "2025-11-10",
+    "home_team": "LAC",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500202",
+    "date": "2025-11-10",
+    "home_team": "CHI",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500204",
+    "date": "2025-11-10",
+    "home_team": "PHX",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500199",
+    "date": "2025-11-10",
+    "home_team": "DET",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500201",
+    "date": "2025-11-10",
+    "home_team": "MIA",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500203",
+    "date": "2025-11-10",
+    "home_team": "DAL",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500200",
+    "date": "2025-11-10",
+    "home_team": "ORL",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500205",
+    "date": "2025-11-10",
+    "home_team": "UTA",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500198",
+    "date": "2025-11-10",
+    "home_team": "CHA",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500208",
+    "date": "2025-11-11",
+    "home_team": "NYK",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500211",
+    "date": "2025-11-11",
+    "home_team": "UTA",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500212",
+    "date": "2025-11-11",
+    "home_team": "SAC",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500210",
+    "date": "2025-11-11",
+    "home_team": "OKC",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500207",
+    "date": "2025-11-11",
+    "home_team": "BKN",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500209",
+    "date": "2025-11-11",
+    "home_team": "PHI",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500223",
+    "date": "2025-11-12",
+    "home_team": "SAC",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500216",
+    "date": "2025-11-12",
+    "home_team": "BOS",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500219",
+    "date": "2025-11-12",
+    "home_team": "NOP",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500214",
+    "date": "2025-11-12",
+    "home_team": "DET",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500221",
+    "date": "2025-11-12",
+    "home_team": "DAL",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500220",
+    "date": "2025-11-12",
+    "home_team": "SAS",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500218",
+    "date": "2025-11-12",
+    "home_team": "HOU",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500224",
+    "date": "2025-11-12",
+    "home_team": "LAC",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500222",
+    "date": "2025-11-12",
+    "home_team": "OKC",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500213",
+    "date": "2025-11-12",
+    "home_team": "CHA",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500217",
+    "date": "2025-11-12",
+    "home_team": "MIA",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500215",
+    "date": "2025-11-12",
+    "home_team": "NYK",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500225",
+    "date": "2025-11-13",
+    "home_team": "CLE",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500226",
+    "date": "2025-11-13",
+    "home_team": "PHX",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500227",
+    "date": "2025-11-13",
+    "home_team": "UTA",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500045",
+    "date": "2025-11-14",
+    "home_team": "NOP",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500039",
+    "date": "2025-11-14",
+    "home_team": "NYK",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500044",
+    "date": "2025-11-14",
+    "home_team": "MIN",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500040",
+    "date": "2025-11-14",
+    "home_team": "ORL",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500041",
+    "date": "2025-11-14",
+    "home_team": "DET",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500047",
+    "date": "2025-11-14",
+    "home_team": "SAS",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500046",
+    "date": "2025-11-14",
+    "home_team": "DAL",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500042",
+    "date": "2025-11-14",
+    "home_team": "HOU",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500043",
+    "date": "2025-11-14",
+    "home_team": "MIL",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500231",
+    "date": "2025-11-15",
+    "home_team": "MIL",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500230",
+    "date": "2025-11-15",
+    "home_team": "IND",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500229",
+    "date": "2025-11-15",
+    "home_team": "CHA",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500228",
+    "date": "2025-11-15",
+    "home_team": "CLE",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500232",
+    "date": "2025-11-15",
+    "home_team": "MIN",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500239",
+    "date": "2025-11-16",
+    "home_team": "PHX",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500237",
+    "date": "2025-11-16",
+    "home_team": "NOP",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500240",
+    "date": "2025-11-16",
+    "home_team": "UTA",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500238",
+    "date": "2025-11-16",
+    "home_team": "DAL",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500236",
+    "date": "2025-11-16",
+    "home_team": "HOU",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500234",
+    "date": "2025-11-16",
+    "home_team": "SAS",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500235",
+    "date": "2025-11-16",
+    "home_team": "WAS",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500233",
+    "date": "2025-11-16",
+    "home_team": "BOS",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500241",
+    "date": "2025-11-17",
+    "home_team": "CLE",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500248",
+    "date": "2025-11-17",
+    "home_team": "DEN",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500244",
+    "date": "2025-11-17",
+    "home_team": "MIA",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500247",
+    "date": "2025-11-17",
+    "home_team": "NOP",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500246",
+    "date": "2025-11-17",
+    "home_team": "MIN",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500243",
+    "date": "2025-11-17",
+    "home_team": "PHI",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500242",
+    "date": "2025-11-17",
+    "home_team": "DET",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500245",
+    "date": "2025-11-17",
+    "home_team": "TOR",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500250",
+    "date": "2025-11-18",
+    "home_team": "BKN",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500253",
+    "date": "2025-11-18",
+    "home_team": "LAL",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500249",
+    "date": "2025-11-18",
+    "home_team": "ORL",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500254",
+    "date": "2025-11-18",
+    "home_team": "POR",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500252",
+    "date": "2025-11-18",
+    "home_team": "SAS",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500251",
+    "date": "2025-11-18",
+    "home_team": "ATL",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500255",
+    "date": "2025-11-19",
+    "home_team": "CLE",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500263",
+    "date": "2025-11-19",
+    "home_team": "POR",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500262",
+    "date": "2025-11-19",
+    "home_team": "DAL",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500257",
+    "date": "2025-11-19",
+    "home_team": "MIA",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500256",
+    "date": "2025-11-19",
+    "home_team": "IND",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500261",
+    "date": "2025-11-19",
+    "home_team": "OKC",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500259",
+    "date": "2025-11-19",
+    "home_team": "MIN",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500258",
+    "date": "2025-11-19",
+    "home_team": "PHI",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500260",
+    "date": "2025-11-19",
+    "home_team": "NOP",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500267",
+    "date": "2025-11-20",
+    "home_team": "SAS",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500264",
+    "date": "2025-11-20",
+    "home_team": "ORL",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500266",
+    "date": "2025-11-20",
+    "home_team": "MIL",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500265",
+    "date": "2025-11-20",
+    "home_team": "MEM",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500052",
+    "date": "2025-11-21",
+    "home_team": "DAL",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500051",
+    "date": "2025-11-21",
+    "home_team": "CHI",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500054",
+    "date": "2025-11-21",
+    "home_team": "HOU",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500056",
+    "date": "2025-11-21",
+    "home_team": "GSW",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500049",
+    "date": "2025-11-21",
+    "home_team": "BOS",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500048",
+    "date": "2025-11-21",
+    "home_team": "CLE",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500053",
+    "date": "2025-11-21",
+    "home_team": "PHX",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500055",
+    "date": "2025-11-21",
+    "home_team": "UTA",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500050",
+    "date": "2025-11-21",
+    "home_team": "TOR",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500273",
+    "date": "2025-11-22",
+    "home_team": "DAL",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500268",
+    "date": "2025-11-22",
+    "home_team": "CHA",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500272",
+    "date": "2025-11-22",
+    "home_team": "MIL",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500271",
+    "date": "2025-11-22",
+    "home_team": "CHI",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500274",
+    "date": "2025-11-22",
+    "home_team": "DEN",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500269",
+    "date": "2025-11-22",
+    "home_team": "ORL",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500270",
+    "date": "2025-11-22",
+    "home_team": "NOP",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500276",
+    "date": "2025-11-23",
+    "home_team": "ATL",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500278",
+    "date": "2025-11-23",
+    "home_team": "CLE",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500282",
+    "date": "2025-11-23",
+    "home_team": "UTA",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500275",
+    "date": "2025-11-23",
+    "home_team": "PHI",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500277",
+    "date": "2025-11-23",
+    "home_team": "BOS",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500281",
+    "date": "2025-11-23",
+    "home_team": "PHX",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500280",
+    "date": "2025-11-23",
+    "home_team": "OKC",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500279",
+    "date": "2025-11-23",
+    "home_team": "TOR",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500284",
+    "date": "2025-11-24",
+    "home_team": "TOR",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500289",
+    "date": "2025-11-24",
+    "home_team": "NOP",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500286",
+    "date": "2025-11-24",
+    "home_team": "MIA",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500287",
+    "date": "2025-11-24",
+    "home_team": "MEM",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500290",
+    "date": "2025-11-24",
+    "home_team": "PHX",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500288",
+    "date": "2025-11-24",
+    "home_team": "MIL",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500283",
+    "date": "2025-11-24",
+    "home_team": "IND",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500291",
+    "date": "2025-11-24",
+    "home_team": "GSW",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500292",
+    "date": "2025-11-24",
+    "home_team": "SAC",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500285",
+    "date": "2025-11-24",
+    "home_team": "BKN",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500059",
+    "date": "2025-11-25",
+    "home_team": "LAL",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500058",
+    "date": "2025-11-25",
+    "home_team": "PHI",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500057",
+    "date": "2025-11-25",
+    "home_team": "WAS",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500060",
+    "date": "2025-11-26",
+    "home_team": "BOS",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500061",
+    "date": "2025-11-26",
+    "home_team": "CHA",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500068",
+    "date": "2025-11-26",
+    "home_team": "SAC",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500067",
+    "date": "2025-11-26",
+    "home_team": "POR",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500064",
+    "date": "2025-11-26",
+    "home_team": "OKC",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500066",
+    "date": "2025-11-26",
+    "home_team": "GSW",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500062",
+    "date": "2025-11-26",
+    "home_team": "MIA",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500063",
+    "date": "2025-11-26",
+    "home_team": "TOR",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500065",
+    "date": "2025-11-26",
+    "home_team": "NOP",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500069",
+    "date": "2025-11-28",
+    "home_team": "ATL",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500071",
+    "date": "2025-11-28",
+    "home_team": "CHA",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500076",
+    "date": "2025-11-28",
+    "home_team": "DEN",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500072",
+    "date": "2025-11-28",
+    "home_team": "DET",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500070",
+    "date": "2025-11-28",
+    "home_team": "BKN",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500075",
+    "date": "2025-11-28",
+    "home_team": "OKC",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500073",
+    "date": "2025-11-28",
+    "home_team": "IND",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500078",
+    "date": "2025-11-28",
+    "home_team": "LAL",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500079",
+    "date": "2025-11-28",
+    "home_team": "LAC",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500074",
+    "date": "2025-11-28",
+    "home_team": "NYK",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500077",
+    "date": "2025-11-28",
+    "home_team": "UTA",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500293",
+    "date": "2025-11-29",
+    "home_team": "MIN",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500298",
+    "date": "2025-11-29",
+    "home_team": "GSW",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500300",
+    "date": "2025-11-29",
+    "home_team": "LAC",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500297",
+    "date": "2025-11-29",
+    "home_team": "MIL",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500294",
+    "date": "2025-11-29",
+    "home_team": "CHA",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500295",
+    "date": "2025-11-29",
+    "home_team": "IND",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500296",
+    "date": "2025-11-29",
+    "home_team": "MIA",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500299",
+    "date": "2025-11-29",
+    "home_team": "PHX",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500304",
+    "date": "2025-11-30",
+    "home_team": "PHI",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500302",
+    "date": "2025-11-30",
+    "home_team": "CLE",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500308",
+    "date": "2025-11-30",
+    "home_team": "LAL",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500306",
+    "date": "2025-11-30",
+    "home_team": "MIN",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500303",
+    "date": "2025-11-30",
+    "home_team": "NYK",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500305",
+    "date": "2025-11-30",
+    "home_team": "POR",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500307",
+    "date": "2025-11-30",
+    "home_team": "SAC",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500301",
+    "date": "2025-11-30",
+    "home_team": "UTA",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500309",
+    "date": "2025-12-01",
+    "home_team": "DET",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500315",
+    "date": "2025-12-01",
+    "home_team": "DEN",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500316",
+    "date": "2025-12-01",
+    "home_team": "UTA",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500317",
+    "date": "2025-12-01",
+    "home_team": "LAL",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500313",
+    "date": "2025-12-01",
+    "home_team": "MIA",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500312",
+    "date": "2025-12-01",
+    "home_team": "BKN",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500314",
+    "date": "2025-12-01",
+    "home_team": "ORL",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500311",
+    "date": "2025-12-01",
+    "home_team": "WAS",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500310",
+    "date": "2025-12-01",
+    "home_team": "IND",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500320",
+    "date": "2025-12-02",
+    "home_team": "BOS",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500318",
+    "date": "2025-12-02",
+    "home_team": "PHI",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500319",
+    "date": "2025-12-02",
+    "home_team": "TOR",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500322",
+    "date": "2025-12-02",
+    "home_team": "SAS",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500323",
+    "date": "2025-12-02",
+    "home_team": "GSW",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500321",
+    "date": "2025-12-02",
+    "home_team": "NOP",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500327",
+    "date": "2025-12-03",
+    "home_team": "ATL",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500332",
+    "date": "2025-12-03",
+    "home_team": "DAL",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500325",
+    "date": "2025-12-03",
+    "home_team": "IND",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500326",
+    "date": "2025-12-03",
+    "home_team": "ORL",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500330",
+    "date": "2025-12-03",
+    "home_team": "HOU",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500331",
+    "date": "2025-12-03",
+    "home_team": "MIL",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500328",
+    "date": "2025-12-03",
+    "home_team": "NYK",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500329",
+    "date": "2025-12-03",
+    "home_team": "CHI",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500324",
+    "date": "2025-12-03",
+    "home_team": "CLE",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500334",
+    "date": "2025-12-04",
+    "home_team": "WAS",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500335",
+    "date": "2025-12-04",
+    "home_team": "BKN",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500336",
+    "date": "2025-12-04",
+    "home_team": "TOR",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500333",
+    "date": "2025-12-04",
+    "home_team": "PHI",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500337",
+    "date": "2025-12-04",
+    "home_team": "NOP",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500339",
+    "date": "2025-12-05",
+    "home_team": "ORL",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500344",
+    "date": "2025-12-05",
+    "home_team": "TOR",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500343",
+    "date": "2025-12-05",
+    "home_team": "NYK",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500341",
+    "date": "2025-12-05",
+    "home_team": "CLE",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500340",
+    "date": "2025-12-05",
+    "home_team": "ATL",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500347",
+    "date": "2025-12-05",
+    "home_team": "MEM",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500345",
+    "date": "2025-12-05",
+    "home_team": "CHI",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500348",
+    "date": "2025-12-05",
+    "home_team": "MIL",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500338",
+    "date": "2025-12-05",
+    "home_team": "BOS",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500349",
+    "date": "2025-12-05",
+    "home_team": "OKC",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500346",
+    "date": "2025-12-05",
+    "home_team": "HOU",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500342",
+    "date": "2025-12-05",
+    "home_team": "DET",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500351",
+    "date": "2025-12-06",
+    "home_team": "WAS",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500353",
+    "date": "2025-12-06",
+    "home_team": "DET",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500352",
+    "date": "2025-12-06",
+    "home_team": "CLE",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500354",
+    "date": "2025-12-06",
+    "home_team": "MIA",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500355",
+    "date": "2025-12-06",
+    "home_team": "MIN",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500356",
+    "date": "2025-12-06",
+    "home_team": "DAL",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500350",
+    "date": "2025-12-06",
+    "home_team": "BKN",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500357",
+    "date": "2025-12-07",
+    "home_team": "NYK",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500358",
+    "date": "2025-12-07",
+    "home_team": "TOR",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500361",
+    "date": "2025-12-07",
+    "home_team": "CHI",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500362",
+    "date": "2025-12-07",
+    "home_team": "PHI",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500363",
+    "date": "2025-12-07",
+    "home_team": "UTA",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500360",
+    "date": "2025-12-07",
+    "home_team": "MEM",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500359",
+    "date": "2025-12-07",
+    "home_team": "CHA",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500364",
+    "date": "2025-12-08",
+    "home_team": "IND",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500365",
+    "date": "2025-12-08",
+    "home_team": "MIN",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500366",
+    "date": "2025-12-08",
+    "home_team": "NOP",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501202",
+    "date": "2025-12-09",
+    "home_team": "TOR",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501201",
+    "date": "2025-12-09",
+    "home_team": "ORL",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501203",
+    "date": "2025-12-10",
+    "home_team": "OKC",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501204",
+    "date": "2025-12-10",
+    "home_team": "LAL",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501206",
+    "date": "2025-12-11",
+    "home_team": "MIL",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501205",
+    "date": "2025-12-11",
+    "home_team": "HOU",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501208",
+    "date": "2025-12-11",
+    "home_team": "SAC",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501207",
+    "date": "2025-12-11",
+    "home_team": "NOP",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501211",
+    "date": "2025-12-12",
+    "home_team": "PHI",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501210",
+    "date": "2025-12-12",
+    "home_team": "DET",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501212",
+    "date": "2025-12-12",
+    "home_team": "WAS",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501213",
+    "date": "2025-12-12",
+    "home_team": "MEM",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501214",
+    "date": "2025-12-12",
+    "home_team": "DAL",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501215",
+    "date": "2025-12-12",
+    "home_team": "GSW",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501209",
+    "date": "2025-12-12",
+    "home_team": "CHA",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501230",
+    "date": "2025-12-13",
+    "home_team": "OKC",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501229",
+    "date": "2025-12-13",
+    "home_team": "ORL",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501218",
+    "date": "2025-12-14",
+    "home_team": "CLE",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501220",
+    "date": "2025-12-14",
+    "home_team": "MIN",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501228",
+    "date": "2025-12-14",
+    "home_team": "PHX",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501221",
+    "date": "2025-12-14",
+    "home_team": "POR",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501217",
+    "date": "2025-12-14",
+    "home_team": "ATL",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501219",
+    "date": "2025-12-14",
+    "home_team": "BKN",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501216",
+    "date": "2025-12-14",
+    "home_team": "IND",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501223",
+    "date": "2025-12-14",
+    "home_team": "CHI",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501227",
+    "date": "2025-12-15",
+    "home_team": "MIA",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501222",
+    "date": "2025-12-15",
+    "home_team": "BOS",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501224",
+    "date": "2025-12-15",
+    "home_team": "UTA",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501226",
+    "date": "2025-12-15",
+    "home_team": "LAC",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022501225",
+    "date": "2025-12-15",
+    "home_team": "DEN",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500367",
+    "date": "2025-12-17",
+    "home_team": "CHI",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500368",
+    "date": "2025-12-17",
+    "home_team": "MIN",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500372",
+    "date": "2025-12-18",
+    "home_team": "IND",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500369",
+    "date": "2025-12-18",
+    "home_team": "OKC",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500371",
+    "date": "2025-12-18",
+    "home_team": "CHA",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500374",
+    "date": "2025-12-18",
+    "home_team": "MIL",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500373",
+    "date": "2025-12-18",
+    "home_team": "BKN",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500375",
+    "date": "2025-12-18",
+    "home_team": "NOP",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500376",
+    "date": "2025-12-18",
+    "home_team": "DAL",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500379",
+    "date": "2025-12-18",
+    "home_team": "UTA",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500378",
+    "date": "2025-12-18",
+    "home_team": "PHX",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500370",
+    "date": "2025-12-18",
+    "home_team": "SAS",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500377",
+    "date": "2025-12-18",
+    "home_team": "DEN",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500380",
+    "date": "2025-12-18",
+    "home_team": "POR",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500381",
+    "date": "2025-12-19",
+    "home_team": "BOS",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500383",
+    "date": "2025-12-19",
+    "home_team": "ATL",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500384",
+    "date": "2025-12-19",
+    "home_team": "CLE",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500382",
+    "date": "2025-12-19",
+    "home_team": "NYK",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500385",
+    "date": "2025-12-19",
+    "home_team": "MIN",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500388",
+    "date": "2025-12-20",
+    "home_team": "TOR",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500387",
+    "date": "2025-12-20",
+    "home_team": "PHI",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500391",
+    "date": "2025-12-20",
+    "home_team": "MEM",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500395",
+    "date": "2025-12-20",
+    "home_team": "LAC",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500394",
+    "date": "2025-12-20",
+    "home_team": "SAC",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500386",
+    "date": "2025-12-20",
+    "home_team": "DEN",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500393",
+    "date": "2025-12-20",
+    "home_team": "UTA",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500392",
+    "date": "2025-12-20",
+    "home_team": "GSW",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500390",
+    "date": "2025-12-20",
+    "home_team": "DET",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500389",
+    "date": "2025-12-20",
+    "home_team": "NOP",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500396",
+    "date": "2025-12-21",
+    "home_team": "ATL",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500398",
+    "date": "2025-12-21",
+    "home_team": "NYK",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500397",
+    "date": "2025-12-21",
+    "home_team": "BKN",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500399",
+    "date": "2025-12-21",
+    "home_team": "WAS",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500401",
+    "date": "2025-12-21",
+    "home_team": "SAC",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500400",
+    "date": "2025-12-21",
+    "home_team": "MIN",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500403",
+    "date": "2025-12-22",
+    "home_team": "BOS",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500404",
+    "date": "2025-12-22",
+    "home_team": "NOP",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500402",
+    "date": "2025-12-22",
+    "home_team": "CLE",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500406",
+    "date": "2025-12-22",
+    "home_team": "OKC",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500407",
+    "date": "2025-12-22",
+    "home_team": "GSW",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500408",
+    "date": "2025-12-22",
+    "home_team": "POR",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500405",
+    "date": "2025-12-22",
+    "home_team": "DEN",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500411",
+    "date": "2025-12-23",
+    "home_team": "ATL",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500412",
+    "date": "2025-12-23",
+    "home_team": "CLE",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500410",
+    "date": "2025-12-23",
+    "home_team": "PHI",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500409",
+    "date": "2025-12-23",
+    "home_team": "CHA",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500414",
+    "date": "2025-12-23",
+    "home_team": "MIA",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500413",
+    "date": "2025-12-23",
+    "home_team": "IND",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500415",
+    "date": "2025-12-23",
+    "home_team": "DAL",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500416",
+    "date": "2025-12-23",
+    "home_team": "MIN",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500419",
+    "date": "2025-12-23",
+    "home_team": "UTA",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500417",
+    "date": "2025-12-23",
+    "home_team": "SAS",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500420",
+    "date": "2025-12-23",
+    "home_team": "POR",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500418",
+    "date": "2025-12-23",
+    "home_team": "PHX",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500422",
+    "date": "2025-12-23",
+    "home_team": "LAC",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500421",
+    "date": "2025-12-23",
+    "home_team": "SAC",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500009",
+    "date": "2025-12-25",
+    "home_team": "NYK",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500010",
+    "date": "2025-12-25",
+    "home_team": "OKC",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500012",
+    "date": "2025-12-25",
+    "home_team": "LAL",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500013",
+    "date": "2025-12-25",
+    "home_team": "DEN",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500011",
+    "date": "2025-12-25",
+    "home_team": "GSW",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500427",
+    "date": "2025-12-26",
+    "home_team": "CHI",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500426",
+    "date": "2025-12-26",
+    "home_team": "IND",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500423",
+    "date": "2025-12-26",
+    "home_team": "ATL",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500425",
+    "date": "2025-12-26",
+    "home_team": "WAS",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500428",
+    "date": "2025-12-26",
+    "home_team": "MEM",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500429",
+    "date": "2025-12-26",
+    "home_team": "NOP",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500430",
+    "date": "2025-12-26",
+    "home_team": "UTA",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500431",
+    "date": "2025-12-26",
+    "home_team": "POR",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500424",
+    "date": "2025-12-26",
+    "home_team": "ORL",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500432",
+    "date": "2025-12-27",
+    "home_team": "SAC",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500434",
+    "date": "2025-12-27",
+    "home_team": "NOP",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500433",
+    "date": "2025-12-27",
+    "home_team": "ORL",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500439",
+    "date": "2025-12-27",
+    "home_team": "MIN",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500437",
+    "date": "2025-12-27",
+    "home_team": "CHI",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500438",
+    "date": "2025-12-27",
+    "home_team": "HOU",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500435",
+    "date": "2025-12-27",
+    "home_team": "ATL",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500436",
+    "date": "2025-12-27",
+    "home_team": "MIA",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500440",
+    "date": "2025-12-27",
+    "home_team": "SAS",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500442",
+    "date": "2025-12-28",
+    "home_team": "OKC",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500441",
+    "date": "2025-12-28",
+    "home_team": "TOR",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500446",
+    "date": "2025-12-28",
+    "home_team": "LAL",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500443",
+    "date": "2025-12-28",
+    "home_team": "WAS",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500445",
+    "date": "2025-12-28",
+    "home_team": "LAC",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500444",
+    "date": "2025-12-28",
+    "home_team": "POR",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500447",
+    "date": "2025-12-29",
+    "home_team": "CHA",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500451",
+    "date": "2025-12-29",
+    "home_team": "TOR",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500450",
+    "date": "2025-12-29",
+    "home_team": "MIA",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500449",
+    "date": "2025-12-29",
+    "home_team": "BKN",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500452",
+    "date": "2025-12-29",
+    "home_team": "CHI",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500456",
+    "date": "2025-12-29",
+    "home_team": "SAS",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500448",
+    "date": "2025-12-29",
+    "home_team": "WAS",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500453",
+    "date": "2025-12-29",
+    "home_team": "HOU",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500454",
+    "date": "2025-12-29",
+    "home_team": "NOP",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500455",
+    "date": "2025-12-29",
+    "home_team": "OKC",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500457",
+    "date": "2025-12-29",
+    "home_team": "POR",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500458",
+    "date": "2025-12-30",
+    "home_team": "MEM",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500459",
+    "date": "2025-12-30",
+    "home_team": "UTA",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500461",
+    "date": "2025-12-30",
+    "home_team": "LAC",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500460",
+    "date": "2025-12-30",
+    "home_team": "LAL",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500465",
+    "date": "2025-12-31",
+    "home_team": "CLE",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500462",
+    "date": "2025-12-31",
+    "home_team": "CHA",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500463",
+    "date": "2025-12-31",
+    "home_team": "ATL",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500464",
+    "date": "2025-12-31",
+    "home_team": "IND",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500466",
+    "date": "2025-12-31",
+    "home_team": "CHI",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500468",
+    "date": "2025-12-31",
+    "home_team": "TOR",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500467",
+    "date": "2025-12-31",
+    "home_team": "SAS",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500469",
+    "date": "2025-12-31",
+    "home_team": "MIL",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500470",
+    "date": "2025-12-31",
+    "home_team": "OKC",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500472",
+    "date": "2026-01-01",
+    "home_team": "DET",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500473",
+    "date": "2026-01-01",
+    "home_team": "DAL",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500474",
+    "date": "2026-01-01",
+    "home_team": "SAC",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500475",
+    "date": "2026-01-01",
+    "home_team": "LAC",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500471",
+    "date": "2026-01-01",
+    "home_team": "BKN",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500481",
+    "date": "2026-01-02",
+    "home_team": "MIL",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500476",
+    "date": "2026-01-02",
+    "home_team": "IND",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500477",
+    "date": "2026-01-02",
+    "home_team": "WAS",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500479",
+    "date": "2026-01-02",
+    "home_team": "NYK",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500480",
+    "date": "2026-01-02",
+    "home_team": "CHI",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500482",
+    "date": "2026-01-02",
+    "home_team": "NOP",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500483",
+    "date": "2026-01-02",
+    "home_team": "PHX",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500484",
+    "date": "2026-01-02",
+    "home_team": "GSW",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500485",
+    "date": "2026-01-02",
+    "home_team": "LAL",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500478",
+    "date": "2026-01-02",
+    "home_team": "CLE",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500490",
+    "date": "2026-01-03",
+    "home_team": "SAS",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500488",
+    "date": "2026-01-03",
+    "home_team": "TOR",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500487",
+    "date": "2026-01-03",
+    "home_team": "NYK",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500489",
+    "date": "2026-01-03",
+    "home_team": "CHI",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500491",
+    "date": "2026-01-03",
+    "home_team": "DAL",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500492",
+    "date": "2026-01-03",
+    "home_team": "GSW",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500493",
+    "date": "2026-01-03",
+    "home_team": "LAC",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500486",
+    "date": "2026-01-03",
+    "home_team": "MIA",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500494",
+    "date": "2026-01-04",
+    "home_team": "CLE",
+    "away_team": "DET",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500496",
+    "date": "2026-01-04",
+    "home_team": "BKN",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500497",
+    "date": "2026-01-04",
+    "home_team": "MIA",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500498",
+    "date": "2026-01-04",
+    "home_team": "WAS",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500495",
+    "date": "2026-01-04",
+    "home_team": "ORL",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500499",
+    "date": "2026-01-04",
+    "home_team": "PHX",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500500",
+    "date": "2026-01-04",
+    "home_team": "SAC",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500501",
+    "date": "2026-01-04",
+    "home_team": "LAL",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500504",
+    "date": "2026-01-05",
+    "home_team": "TOR",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500502",
+    "date": "2026-01-05",
+    "home_team": "DET",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500503",
+    "date": "2026-01-05",
+    "home_team": "BOS",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500505",
+    "date": "2026-01-05",
+    "home_team": "HOU",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500506",
+    "date": "2026-01-05",
+    "home_team": "OKC",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500507",
+    "date": "2026-01-05",
+    "home_team": "PHI",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500509",
+    "date": "2026-01-05",
+    "home_team": "POR",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500508",
+    "date": "2026-01-05",
+    "home_team": "LAC",
+    "away_team": "GSW",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500510",
+    "date": "2026-01-06",
+    "home_team": "IND",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500512",
+    "date": "2026-01-06",
+    "home_team": "MEM",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500511",
+    "date": "2026-01-06",
+    "home_team": "WAS",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500514",
+    "date": "2026-01-06",
+    "home_team": "NOP",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500513",
+    "date": "2026-01-06",
+    "home_team": "MIN",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500515",
+    "date": "2026-01-06",
+    "home_team": "SAC",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500518",
+    "date": "2026-01-07",
+    "home_team": "PHI",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500517",
+    "date": "2026-01-07",
+    "home_team": "DET",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500516",
+    "date": "2026-01-07",
+    "home_team": "CHA",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500522",
+    "date": "2026-01-07",
+    "home_team": "NYK",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500520",
+    "date": "2026-01-07",
+    "home_team": "BOS",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500519",
+    "date": "2026-01-07",
+    "home_team": "ATL",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500521",
+    "date": "2026-01-07",
+    "home_team": "BKN",
+    "away_team": "ORL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500524",
+    "date": "2026-01-07",
+    "home_team": "MEM",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500525",
+    "date": "2026-01-07",
+    "home_team": "OKC",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500523",
+    "date": "2026-01-07",
+    "home_team": "SAS",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500526",
+    "date": "2026-01-07",
+    "home_team": "GSW",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500527",
+    "date": "2026-01-07",
+    "home_team": "POR",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500528",
+    "date": "2026-01-08",
+    "home_team": "CHA",
+    "away_team": "IND",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500530",
+    "date": "2026-01-08",
+    "home_team": "MIN",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500531",
+    "date": "2026-01-08",
+    "home_team": "UTA",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500534",
+    "date": "2026-01-09",
+    "home_team": "WAS",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500532",
+    "date": "2026-01-09",
+    "home_team": "BOS",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500533",
+    "date": "2026-01-09",
+    "home_team": "ORL",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500536",
+    "date": "2026-01-09",
+    "home_team": "MEM",
+    "away_team": "OKC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500537",
+    "date": "2026-01-09",
+    "home_team": "DEN",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500538",
+    "date": "2026-01-09",
+    "home_team": "PHX",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500539",
+    "date": "2026-01-09",
+    "home_team": "GSW",
+    "away_team": "SAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500540",
+    "date": "2026-01-09",
+    "home_team": "POR",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500541",
+    "date": "2026-01-09",
+    "home_team": "LAL",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500535",
+    "date": "2026-01-09",
+    "home_team": "BKN",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500543",
+    "date": "2026-01-10",
+    "home_team": "IND",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500544",
+    "date": "2026-01-10",
+    "home_team": "DET",
+    "away_team": "LAC",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500545",
+    "date": "2026-01-10",
+    "home_team": "BOS",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500546",
+    "date": "2026-01-10",
+    "home_team": "CHI",
+    "away_team": "DAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500547",
+    "date": "2026-01-10",
+    "home_team": "UTA",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500542",
+    "date": "2026-01-10",
+    "home_team": "CLE",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500549",
+    "date": "2026-01-11",
+    "home_team": "MEM",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500551",
+    "date": "2026-01-11",
+    "home_team": "POR",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500553",
+    "date": "2026-01-11",
+    "home_team": "OKC",
+    "away_team": "MIA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500552",
+    "date": "2026-01-11",
+    "home_team": "MIN",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500554",
+    "date": "2026-01-11",
+    "home_team": "DEN",
+    "away_team": "MIL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500550",
+    "date": "2026-01-11",
+    "home_team": "TOR",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500556",
+    "date": "2026-01-11",
+    "home_team": "GSW",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500557",
+    "date": "2026-01-11",
+    "home_team": "SAC",
+    "away_team": "HOU",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500548",
+    "date": "2026-01-11",
+    "home_team": "ORL",
+    "away_team": "NOP",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500555",
+    "date": "2026-01-11",
+    "home_team": "PHX",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500558",
+    "date": "2026-01-12",
+    "home_team": "CLE",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500560",
+    "date": "2026-01-12",
+    "home_team": "TOR",
+    "away_team": "PHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500559",
+    "date": "2026-01-12",
+    "home_team": "IND",
+    "away_team": "BOS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500561",
+    "date": "2026-01-12",
+    "home_team": "DAL",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500562",
+    "date": "2026-01-12",
+    "home_team": "SAC",
+    "away_team": "LAL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500563",
+    "date": "2026-01-12",
+    "home_team": "LAC",
+    "away_team": "CHA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500565",
+    "date": "2026-01-13",
+    "home_team": "HOU",
+    "away_team": "CHI",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500564",
+    "date": "2026-01-13",
+    "home_team": "MIA",
+    "away_team": "PHX",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500568",
+    "date": "2026-01-13",
+    "home_team": "OKC",
+    "away_team": "SAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500566",
+    "date": "2026-01-13",
+    "home_team": "MIL",
+    "away_team": "MIN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500567",
+    "date": "2026-01-13",
+    "home_team": "NOP",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500569",
+    "date": "2026-01-13",
+    "home_team": "LAL",
+    "away_team": "ATL",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500570",
+    "date": "2026-01-13",
+    "home_team": "GSW",
+    "away_team": "POR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500572",
+    "date": "2026-01-14",
+    "home_team": "PHI",
+    "away_team": "CLE",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500571",
+    "date": "2026-01-14",
+    "home_team": "IND",
+    "away_team": "TOR",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500574",
+    "date": "2026-01-14",
+    "home_team": "NOP",
+    "away_team": "BKN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500573",
+    "date": "2026-01-14",
+    "home_team": "CHI",
+    "away_team": "UTA",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500576",
+    "date": "2026-01-14",
+    "home_team": "SAC",
+    "away_team": "NYK",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500575",
+    "date": "2026-01-14",
+    "home_team": "DAL",
+    "away_team": "DEN",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500577",
+    "date": "2026-01-14",
+    "home_team": "LAC",
+    "away_team": "WAS",
+    "game_time": "Final",
+    "played": true
+  },
+  {
+    "game_id": "0022500578",
+    "date": "2026-01-15",
+    "home_team": "ORL",
+    "away_team": "MEM",
+    "game_time": "Final",
+    "played": true
+  }
+]
