@@ -2,20 +2,20 @@ name: NBA Daily Pipeline
 
 on:
   schedule:
-    # Run at 7:00 AM ET (12:00 UTC) every day
-    - cron: '0 12 * * *'
+    # Run at 1:30 AM ET (06:30 UTC) every day
+    - cron: '30 6 * * *'
   # Allow manual trigger
   workflow_dispatch:
   # Run on push to main (for testing) - only on code changes
-  push:
-    branches: [ "main" ]
-    paths:
-      - 'src/**'
-      - 'scripts/**'
-      - 'tests/**'
-      - '.github/workflows/**'
-      - 'pyproject.toml'
-      - 'package.json'
+  # push:
+  #   branches: [ "main" ]
+  #   paths:
+  #     - 'src/**'
+  #     - 'scripts/**'
+  #     - 'tests/**'
+  #     - '.github/workflows/**'
+  #     - 'pyproject.toml'
+  #     - 'package.json'
 
 jobs:
   daily-nba-jobs:
@@ -71,11 +71,11 @@ jobs:
         # Find highlights and simulate vision training
         poetry run python scripts/daily_vision_agent.py
 
-    - name: Run Post-Game Analysis (Qwen + Web Search)
+    - name: Run Post-Game Analysis (Gemini AI)
       env:
-        OPENAI_API_KEY: "dummy" # Qwen is local, but just in case
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: |
-        # Explain why predictions were wrong using AI + Trends
+        # Explain why predictions were wrong using Gemini AI
         poetry run python scripts/analyze_wrong_predictions.py
 
     # === NEW: Sync to Supabase ===
@@ -96,9 +96,10 @@ jobs:
           git add -f data/predictions/ 2>/dev/null || echo "No new predictions"
         fi
         
-        if [ -d "data/schedules" ]; then
-          git add -f data/schedules/ 2>/dev/null || echo "No new schedules"
-        fi
+        # Schedules are NOT committed (generated daily)
+        # if [ -d "data/schedules" ]; then
+        #   git add -f data/schedules/ 2>/dev/null || echo "No new schedules"
+        # fi
         
         if [ -d "data/chemistry" ]; then
           git add -f data/chemistry/ 2>/dev/null || echo "No new chemistry"

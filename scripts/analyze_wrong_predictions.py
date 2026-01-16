@@ -2,8 +2,8 @@
 """
 Wrong Prediction Analysis Script
 
-Uses Qwen2.5-3B to analyze and explain why predictions were incorrect.
-Combines box score analysis with web-scraped storylines.
+Uses Gemini 2.5 Flash to analyze and explain why predictions were incorrect.
+Generates brief, insightful analysis for each wrong prediction.
 """
 
 import os
@@ -11,7 +11,7 @@ import json
 import logging
 from pathlib import Path
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import asyncio
 
 logging.basicConfig(level=logging.INFO)
@@ -22,43 +22,42 @@ PREDICTIONS_DIR = Path("data/predictions")
 METRICS_DIR = Path("data/metrics")
 OUTPUT_DIR = Path("data/analysis")
 
+# Gemini model choice (Gemini 2.5 Flash = best balance of speed, quality, and cost)
+GEMINI_MODEL = "gemini-2.5-flash"
+
 
 class WrongPredictionAnalyzer:
-    """Analyzes wrong predictions using Qwen2.5-3B."""
+    """Analyzes wrong predictions using Gemini 2.5 Flash API."""
     
-    def __init__(self, model_name: str = "Qwen/Qwen2.5-3B-Instruct"):
-        self.model_name = model_name
-        self.model = None
-        self.tokenizer = None
+    def __init__(self):
         self._loaded = False
+        self._gemini_model = None
         
     def load_model(self) -> bool:
-        """Load Qwen2.5-3B model."""
+        """Initialize Gemini API client."""
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+        
+        if not gemini_key:
+            logger.error("❌ GEMINI_API_KEY environment variable not set")
+            logger.info("   Set it with: export GEMINI_API_KEY='your-api-key'")
+            return False
+        
         try:
-            from transformers import AutoModelForCausalLM, AutoTokenizer
-            import torch
+            import google.generativeai as genai
+            genai.configure(api_key=gemini_key)
             
-            logger.info(f"Loading {self.model_name}...")
-            
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_name, 
-                trust_remote_code=True
-            )
-            
-            # Use float16 for memory efficiency
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_name,
-                torch_dtype=torch.float16,
-                device_map="auto",
-                trust_remote_code=True
-            )
-            
+            # Using Gemini 2.5 Flash (fast, high quality, generous free tier)
+            self._gemini_model = genai.GenerativeModel(GEMINI_MODEL)
             self._loaded = True
-            logger.info("✅ Qwen2.5-3B loaded successfully")
+            logger.info(f"✅ {GEMINI_MODEL} API configured successfully")
             return True
             
+        except ImportError:
+            logger.error("❌ google-generativeai package not installed")
+            logger.info("   Install with: pip install google-generativeai")
+            return False
         except Exception as e:
-            logger.error(f"Failed to load model: {e}")
+            logger.error(f"❌ Failed to configure Gemini: {e}")
             return False
     
     def get_wrong_predictions(self, date: str) -> List[Dict[str, Any]]:
@@ -95,51 +94,11 @@ class WrongPredictionAnalyzer:
         
         return wrong
     
-    async def scrape_game_storyline(self, home_team: str, away_team: str, date: str) -> str:
-        """Scrape game storyline and social sentiment/trends."""
-        storyline = []
-        try:
-            import httpx
-            from bs4 import BeautifulSoup
-            
-            # 1. Basic Game Recap Search
-            search_query = f"{away_team} vs {home_team} {date} NBA game recap reaction"
-            # Using a public search interface (e.g., html.duckduckgo.com) to simulate 'reading the internet'
-            # In a real deployed agent, we might use a dedicated SERP API
-            
-            url = f"https://html.duckduckgo.com/html/?q={search_query.replace(' ', '+')}"
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url, headers=headers)
-                
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                results = soup.find_all('a', class_='result__a')
-                
-                # Collect top 3 headlines/snippets
-                for i, res in enumerate(results[:3]):
-                    title = res.get_text()
-                    storyline.append(f"- Trend {i+1}: {title}")
-                    
-            # 2. Add 'Twitter/Social' Context (Simulated via search trends)
-            storyline.append(f"\nSocial Sentiment: Fans discussing {away_team}'s performance and {home_team}'s key plays.")
-            
-            return "\n".join(storyline)
-            
-        except Exception as e:
-            logger.warning(f"Failed to scrape trends: {e}")
-            return f"Game between {away_team} @ {home_team} on {date}"
-    
-    def analyze_prediction(
-        self, 
-        prediction: Dict[str, Any],
-        storyline: str = ""
-    ) -> str:
-        """Generate analysis for a wrong prediction using Qwen2.5."""
+    def analyze_prediction(self, prediction: Dict[str, Any]) -> str:
+        """Generate analysis for a wrong prediction using Gemini."""
         if not self._loaded:
             if not self.load_model():
-                return "Model not available - cannot generate analysis"
+                return "Analysis unavailable - Gemini API not configured"
         
         home_team = prediction.get('home_team', 'Home')
         away_team = prediction.get('away_team', 'Away')
@@ -157,46 +116,15 @@ PREDICTION DETAILS:
 - Actual Result: {actual} won ({away_team} {away_score} - {home_team} {home_score})
 - Our Confidence: {confidence}%
 
-TRENDS & SOCIAL CONTEXT:
-{storyline}
-
-Provide a brief analysis (2-3 sentences). Incorporate the trends/news above if relevant (e.g., injuries, player drama, viral moments). If the trends mention specific player performances, cite them."""
-
+Provide a brief analysis (2-3 sentences max) explaining why our prediction was wrong.
+Consider factors like: injuries, recent team form, home court advantage, key player performances, or matchup issues.
+Be specific and insightful."""
 
         try:
-            import torch
-            
-            messages = [
-                {"role": "user", "content": prompt}
-            ]
-            
-            text = self.tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True
-            )
-            
-            inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
-            
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_new_tokens=200,
-                    temperature=0.7,
-                    do_sample=True,
-                    pad_token_id=self.tokenizer.eos_token_id
-                )
-            
-            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
-            # Extract just the assistant's response
-            if "assistant" in response.lower():
-                response = response.split("assistant")[-1].strip()
-            
-            return response
-            
+            response = self._gemini_model.generate_content(prompt)
+            return response.text.strip()
         except Exception as e:
-            logger.error(f"Generation failed: {e}")
+            logger.error(f"Gemini generation failed: {e}")
             return f"Analysis unavailable: {str(e)}"
     
     async def analyze_date(self, date: str) -> List[Dict[str, Any]]:
@@ -211,17 +139,12 @@ Provide a brief analysis (2-3 sentences). Incorporate the trends/news above if r
         
         results = []
         for pred in wrong_predictions:
-            storyline = await self.scrape_game_storyline(
-                pred.get('home_team', ''),
-                pred.get('away_team', ''),
-                date
-            )
-            
-            analysis = self.analyze_prediction(pred, storyline)
+            analysis = self.analyze_prediction(pred)
             
             results.append({
                 **pred,
                 'analysis': analysis,
+                'model_used': GEMINI_MODEL,
                 'analyzed_at': datetime.now().isoformat()
             })
         
@@ -238,7 +161,7 @@ Provide a brief analysis (2-3 sentences). Incorporate the trends/news above if r
 async def main():
     import argparse
     
-    parser = argparse.ArgumentParser(description="Analyze wrong predictions")
+    parser = argparse.ArgumentParser(description="Analyze wrong predictions using Gemini AI")
     parser.add_argument(
         "--date", 
         type=str, 
@@ -250,6 +173,7 @@ async def main():
     target_date = args.date or (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
     
     logger.info(f"📊 Analyzing wrong predictions for {target_date}")
+    logger.info(f"🤖 Using model: {GEMINI_MODEL}")
     
     analyzer = WrongPredictionAnalyzer()
     results = await analyzer.analyze_date(target_date)
