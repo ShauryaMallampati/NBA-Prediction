@@ -73,3 +73,7 @@ htmlcov/
 *.pkl
 *.h5
 *.pth
+# Kaggle credentials
+**/.kaggle/
+.kaggle/
+archive.zip

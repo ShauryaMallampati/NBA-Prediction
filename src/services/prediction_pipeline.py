@@ -129,7 +129,52 @@ class PredictionPipeline:
             except Exception as e:
                 logger.warning(f"Failed to apply chemistry adjustment: {e}")
 
-            # 7. Format Results
+            # 7. Apply Vision "Late Fusion" Adjustment (Research Phase 1)
+            try:
+                from src.models.vision.vision_analytics import vision_analytics
+                
+                # Apply vision delta to each game
+                vision_adjustments = []
+                vision_metadata_list = []
+                
+                for idx, row in enumerate(df.to_dict('records')):
+                    delta, meta = vision_analytics.get_matchup_vision_delta(
+                        row['home_team'], row['away_team']
+                    )
+                    vision_adjustments.append(delta)
+                    vision_metadata_list.append(meta)
+                
+                blended_probs = blended_probs + np.array(vision_adjustments)
+                blended_probs = np.clip(blended_probs, 0.05, 0.95)
+                # logger.info(f"Applied vision adjustments to {len(df)} games")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to apply vision adjustment: {e}")
+                vision_metadata_list = [{}] * len(df)
+
+            # 8. Apply Momentum Transformer Adjustment (Research Phase 2)
+            try:
+                from src.models.momentum.momentum_transformer import momentum_analytics
+                
+                # Apply momentum delta to each game
+                momentum_adjustments = []
+                momentum_metadata_list = []
+                
+                for idx, row in enumerate(df.to_dict('records')):
+                    delta, meta = momentum_analytics.get_matchup_momentum_delta(
+                        row['home_team'], row['away_team']
+                    )
+                    momentum_adjustments.append(delta)
+                    momentum_metadata_list.append(meta)
+                
+                blended_probs = blended_probs + np.array(momentum_adjustments)
+                blended_probs = np.clip(blended_probs, 0.05, 0.95)
+                    
+            except Exception as e:
+                logger.warning(f"Failed to apply momentum adjustment: {e}")
+                momentum_metadata_list = [{}] * len(df)
+
+            # 9. Format Results
             results = []
             
             # Get individual model votes for transparency
@@ -171,7 +216,10 @@ class PredictionPipeline:
                     "individual_votes": votes,
                     "models_agree": "3/3", # Placeholder logic retained from API
                     "consensus_percentage": 100.0, # Placeholder
-                    "model_version": "ensemble_v2_polyglot" 
+                    "model_version": "ensemble_v2_polyglot",
+                    "vision_impact": vision_metadata_list[idx] if idx < len(vision_metadata_list) else {,
+                    "momentum_impact": momentum_metadata_list[idx] if idx < len(momentum_metadata_list) else {}
+                }
                 }
                 results.append(result)
                 
@@ -251,7 +299,52 @@ class PredictionPipeline:
             except Exception as e:
                 logger.warning(f"Failed to apply chemistry adjustment: {e}")
 
-            # 7. Format Results
+            # 7. Apply Vision "Late Fusion" Adjustment (Research Phase 1)
+            try:
+                from src.models.vision.vision_analytics import vision_analytics
+                
+                # Apply vision delta to each game
+                vision_adjustments = []
+                vision_metadata_list = []
+                
+                for idx, row in enumerate(df.to_dict('records')):
+                    delta, meta = vision_analytics.get_matchup_vision_delta(
+                        row['home_team'], row['away_team']
+                    )
+                    vision_adjustments.append(delta)
+                    vision_metadata_list.append(meta)
+                
+                blended_probs = blended_probs + np.array(vision_adjustments)
+                blended_probs = np.clip(blended_probs, 0.05, 0.95)
+                # logger.info(f"Applied vision adjustments to {len(df)} games")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to apply vision adjustment: {e}")
+                vision_metadata_list = [{}] * len(df)
+
+            # 8. Apply Momentum Transformer Adjustment (Research Phase 2)
+            try:
+                from src.models.momentum.momentum_transformer import momentum_analytics
+                
+                # Apply momentum delta to each game
+                momentum_adjustments = []
+                momentum_metadata_list = []
+                
+                for idx, row in enumerate(df.to_dict('records')):
+                    delta, meta = momentum_analytics.get_matchup_momentum_delta(
+                        row['home_team'], row['away_team']
+                    )
+                    momentum_adjustments.append(delta)
+                    momentum_metadata_list.append(meta)
+                
+                blended_probs = blended_probs + np.array(momentum_adjustments)
+                blended_probs = np.clip(blended_probs, 0.05, 0.95)
+                    
+            except Exception as e:
+                logger.warning(f"Failed to apply momentum adjustment: {e}")
+                momentum_metadata_list = [{}] * len(df)
+
+            # 9. Format Results
             results = []
             xgb_p = self.trainer.xgb_calibrated.predict_proba(X_input)[:, 1]
             lgb_p = self.trainer.lgb_calibrated.predict_proba(X_input)[:, 1]
@@ -284,7 +377,8 @@ class PredictionPipeline:
                     "individual_votes": votes,
                     "models_agree": "3/3",
                     "consensus_percentage": 100.0,
-                    "model_version": "ensemble_v2_polyglot"
+                    "model_version": "ensemble_v2_polyglot",
+                    "vision_impact": vision_metadata_list[idx] if idx < len(vision_metadata_list) else {}
                 }
                 results.append(result)
             return results
