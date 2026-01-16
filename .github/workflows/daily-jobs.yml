@@ -58,6 +58,19 @@ jobs:
         # (Script defaults to yesterday if no date provided)
         poetry run python scripts/run_daily_evaluation.py
 
+    # === NEW: Daily Agent Loop (Vision + Analysis) ===
+    - name: Run Daily Vision Agent
+      run: |
+        # Find highlights and simulate vision training
+        poetry run python scripts/daily_vision_agent.py
+
+    - name: Run Post-Game Analysis (Qwen + Web Search)
+      env:
+        OPENAI_API_KEY: "dummy" # Qwen is local, but just in case
+      run: |
+        # Explain why predictions were wrong using AI + Trends
+        poetry run python scripts/analyze_wrong_predictions.py
+
     # === NEW: Sync to Supabase ===
     - name: Sync to Supabase
       env:
