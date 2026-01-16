@@ -17,10 +17,14 @@ from datetime import date, datetime
 from src.services.betting_api import app
 from fastapi.testclient import TestClient
 
-client = TestClient(app)
+
+@pytest.fixture
+def client():
+    """Create a test client for the betting API."""
+    return TestClient(app)
 
 
-def test_health_check():
+def test_health_check(client):
     """Test API health endpoint."""
     response = client.get("/")
     
@@ -30,7 +34,7 @@ def test_health_check():
     assert "version" in data
 
 
-def test_player_props_endpoint():
+def test_player_props_endpoint(client):
     """Test /player-props endpoint."""
     response = client.get("/player-props?game_date=2024-10-26")
     
@@ -49,7 +53,7 @@ def test_player_props_endpoint():
         assert 0 <= pred["predicted_prob"] <= 1
 
 
-def test_bet_opportunities_endpoint():
+def test_bet_opportunities_endpoint(client):
     """Test /bet-opportunities endpoint."""
     response = client.get("/bet-opportunities?min_edge=0.03")
     
@@ -67,7 +71,7 @@ def test_bet_opportunities_endpoint():
         assert opp["edge"] >= 0.03  # Should meet minimum
 
 
-def test_performance_endpoint():
+def test_performance_endpoint(client):
     """Test /performance endpoint."""
     response = client.get("/performance")
     
@@ -81,7 +85,7 @@ def test_performance_endpoint():
     assert "total_profit" in data
 
 
-def test_log_and_update_bet():
+def test_log_and_update_bet(client):
     """Test full bet logging flow."""
     
     # Step 1: Log a bet
@@ -129,7 +133,7 @@ def test_log_and_update_bet():
     assert data["total_bets"] > 0  # Should have at least our bet
 
 
-def test_edge_filter():
+def test_edge_filter(client):
     """Test that edge filtering works."""
     
     # Request high edge only

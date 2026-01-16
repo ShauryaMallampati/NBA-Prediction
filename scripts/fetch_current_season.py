@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 
 def fetch_full_2025_26_schedule():
-    print("Fetching 2025-26 NBA Schedule...")
+    print("Fetching 2025-26 NBA Schedule...") 
     
     # In nba_api, '2025-26' is the season string
     # We use LeagueGameLog to get played games, but we might need a different endpoint for the full schedule including future games.

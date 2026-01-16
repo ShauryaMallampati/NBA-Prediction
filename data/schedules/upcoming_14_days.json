@@ -1,28 +1,28 @@
 {
-  "fetched_at": "2026-01-15T23:14:05.284575",
+  "fetched_at": "2026-01-15T20:03:11.209152",
   "days_covered": 14,
-  "total_games": 11,
+  "total_games": 8,
   "games": [
     {
       "game_id": "e2a3dbd8d101d617f49495df16db2d11",
       "date": "2026-01-16",
       "home_team": "Detroit Pistons",
       "away_team": "Phoenix Suns",
-      "game_time": "2026-01-16T00:10:00Z"
+      "game_time": "2026-01-16T00:13:00Z"
     },
     {
       "game_id": "363cf226fe2602130e774d952f7aba95",
       "date": "2026-01-16",
       "home_team": "Miami Heat",
       "away_team": "Boston Celtics",
-      "game_time": "2026-01-16T00:40:00Z"
+      "game_time": "2026-01-16T00:42:00Z"
     },
     {
       "game_id": "2ad9e0affab10cad1a66f8c7bc1ad959",
       "date": "2026-01-16",
       "home_team": "Houston Rockets",
       "away_team": "Oklahoma City Thunder",
-      "game_time": "2026-01-16T00:40:00Z"
+      "game_time": "2026-01-16T00:43:00Z"
     },
     {
       "game_id": "2bb59ddfd831a67347299ff05ffd9937",
@@ -58,27 +58,6 @@
       "home_team": "Los Angeles Lakers",
       "away_team": "Charlotte Hornets",
       "game_time": "2026-01-16T03:40:00Z"
-    },
-    {
-      "game_id": "7cde35496195f0d6f99ee352fa0bba65",
-      "date": "2026-01-17",
-      "home_team": "Philadelphia 76ers",
-      "away_team": "Cleveland Cavaliers",
-      "game_time": "2026-01-17T00:10:00Z"
-    },
-    {
-      "game_id": "7e6506c4bcd0439f38393b5c1efac771",
-      "date": "2026-01-17",
-      "home_team": "Indiana Pacers",
-      "away_team": "New Orleans Pelicans",
-      "game_time": "2026-01-17T00:10:00Z"
-    },
-    {
-      "game_id": "d149b0e5ad9dd363c76d6308dea81c74",
-      "date": "2026-01-18",
-      "home_team": "Memphis Grizzlies",
-      "away_team": "Orlando Magic",
-      "game_time": "2026-01-18T17:00:00Z"
     }
   ]
 }

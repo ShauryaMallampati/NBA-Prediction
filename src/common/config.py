@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str = Field(default="postgresql://postgres:postgres@localhost:5432/nba_intel")
     redis_url: str = Field(default="redis://localhost:6379/0")
+
+    # Supabase
+    supabase_url: str = Field(default="", alias="SUPABASE_URL")
+    supabase_key: str = Field(default="", alias="SUPABASE_KEY")
 
     # Application
     simplified_mode: bool = Field(default=True)
@@ -46,9 +50,11 @@ class Settings(BaseSettings):
     min_edge: float = Field(default=0.05, alias="MIN_EDGE")
     max_bet_pct: float = Field(default=0.05, alias="MAX_BET_PCT")
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore"
+    )
 
 
 
