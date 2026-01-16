@@ -79,7 +79,7 @@ export default function AnalysisPage() {
                         <h1 className="text-2xl font-bold tracking-tight">Why I Was Wrong</h1>
                     </div>
                     <p className="text-muted-foreground">
-                        AI analysis of incorrect predictions using Qwen2.5-3B reasoning
+                        AI analysis of incorrect predictions using Gemini 2.5 Flash
                     </p>
                 </div>
             </header>
