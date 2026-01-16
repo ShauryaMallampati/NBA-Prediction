@@ -12,6 +12,10 @@ import random
 from pathlib import Path
 from typing import List, Tuple, Dict
 import json
+import os
+
+# Enable MPS fallback for 3D operations not yet supported on Apple Silicon
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
 import torch
 import torch.nn as nn
