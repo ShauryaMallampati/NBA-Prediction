@@ -324,20 +324,30 @@ def main():
     best_val_acc = 0
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     checkpoint_path = OUTPUT_DIR / "checkpoint_latest.pt"
+    best_model_path = OUTPUT_DIR / "basketball_shot_classifier.pt"
 
     # Checkpoint callback for batch-level saving
     def save_checkpoint(epoch: int, batch_idx: int):
-        torch.save({
+        checkpoint_data = {
             'epoch': epoch,
             'batch': batch_idx,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': scheduler.state_dict(),
             'best_val_acc': best_val_acc,
-        }, checkpoint_path)
+        }
+        torch.save(checkpoint_data, checkpoint_path)
+        logger.info(f"     ✓ Batch checkpoint saved at epoch {epoch}, batch {batch_idx}")
 
-    # Resume logic
-    if args.resume and checkpoint_path.exists():
+    # Auto-load best model if it exists, or resume from checkpoint
+    if best_model_path.exists() and not args.resume:
+        logger.info(f"📦 Loading best model from previous training: {best_model_path}")
+        best_checkpoint = torch.load(best_model_path, map_location=device)
+        model.load_state_dict(best_checkpoint['model_state_dict'])
+        best_val_acc = best_checkpoint.get('best_val_acc', 0)
+        logger.info(f"   Loaded best model (previous best val_acc: {best_val_acc:.2f}%)")
+        start_epoch = 1  # Start from epoch 1 with the best model
+    elif args.resume and checkpoint_path.exists():
         logger.info(f"🔄 Resuming from checkpoint: {checkpoint_path}")
         checkpoint = torch.load(checkpoint_path, map_location=device)
         model.load_state_dict(checkpoint['model_state_dict'])
@@ -352,7 +362,7 @@ def main():
             start_epoch += 1
         logger.info(f"   Resuming at Epoch {start_epoch}, Batch {start_batch} (Best Val Acc: {best_val_acc:.2f}%)")
     elif args.resume:
-        logger.warning(f"⚠️ Resume requested but no checkpoint found at {checkpoint_path}. Starting fresh.")
+        logger.warning(f"⚠️ Resume requested but no checkpoint found. Starting fresh.")
     
     # Training loop
     for epoch in range(start_epoch, num_epochs + 1):
@@ -376,27 +386,30 @@ def main():
         logger.info(f"  Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%")
         
         # Save end-of-epoch checkpoint (batch=0 signals complete epoch)
-        torch.save({
+        checkpoint_data = {
             'epoch': epoch,
             'batch': 0,  # 0 means epoch completed
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': scheduler.state_dict(),
             'best_val_acc': best_val_acc,
-        }, checkpoint_path)
+        }
+        torch.save(checkpoint_data, checkpoint_path)
+        logger.info(f"  💾 Epoch checkpoint saved")
         
         # Save best model
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            save_path = OUTPUT_DIR / "basketball_shot_classifier.pt"
-            torch.save({
+            best_checkpoint = {
                 'model_state_dict': model.state_dict(),
                 'num_classes': 8,
                 'num_frames': num_frames,
                 'labels': LABELS,
                 'best_val_acc': best_val_acc,
-            }, save_path)
-            logger.info(f"  ✅ Saved best model (val_acc: {val_acc:.2f}%)")
+                'epoch': epoch,
+            }
+            torch.save(best_checkpoint, best_model_path)
+            logger.info(f"  ✅ Saved best model at epoch {epoch} (val_acc: {val_acc:.2f}%)")
     
     logger.info(f"\n🏆 Training complete! Best validation accuracy: {best_val_acc:.2f}%")
     logger.info(f"   Model saved to: {OUTPUT_DIR / 'basketball_shot_classifier.pt'}")

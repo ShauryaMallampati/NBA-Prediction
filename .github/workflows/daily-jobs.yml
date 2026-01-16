@@ -91,15 +91,14 @@ jobs:
         git config --global user.name "NBA Intel Bot"
         git config --global user.email "bot@nbaintel.com"
         
-        # Add new data files with force to bypass .gitignore if needed
+        # Add ALL generated data files
         if [ -d "data/predictions" ]; then
           git add -f data/predictions/ 2>/dev/null || echo "No new predictions"
         fi
         
-        # Schedules are NOT committed (generated daily)
-        # if [ -d "data/schedules" ]; then
-        #   git add -f data/schedules/ 2>/dev/null || echo "No new schedules"
-        # fi
+        if [ -d "data/schedules" ]; then
+          git add -f data/schedules/ 2>/dev/null || echo "No new schedules"
+        fi
         
         if [ -d "data/chemistry" ]; then
           git add -f data/chemistry/ 2>/dev/null || echo "No new chemistry"
@@ -112,6 +111,9 @@ jobs:
         if [ -f "data/metrics/daily_accuracy.csv" ]; then
           git add -f data/metrics/daily_accuracy.csv 2>/dev/null || echo "No new metrics"
         fi
+        
+        # Also add any other loose data files that might exist
+        git add -f data/ 2>/dev/null || echo "No data changes"
         
         # Determine if there are changes
         if git diff --staged --quiet; then
@@ -126,9 +128,20 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "Push attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES"
             
+            # Stash any unstaged changes before rebase
+            git stash --include-untracked || echo "Nothing to stash"
+            
             # Fetch latest and rebase our commit on top
             git fetch origin main
-            git rebase origin/main
+            git rebase origin/main || {
+              echo "Rebase failed, aborting and trying force push"
+              git rebase --abort 2>/dev/null || true
+              git stash pop 2>/dev/null || true
+              git push origin main --force-with-lease && break
+            }
+            
+            # Pop stash after successful rebase
+            git stash pop 2>/dev/null || echo "No stash to pop"
             
             # Try to push
             if git push origin main; then
