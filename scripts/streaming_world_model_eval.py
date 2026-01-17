@@ -474,9 +474,10 @@ class StreamingWorldModelEvaluator:
         for idx, row in games.iterrows():
             self.evaluate_game(row)
             
-            # Save intermediate results every 50 games
-            if len(self.results) % 50 == 0:
+            # Save intermediate results every 10 games for robustness
+            if len(self.results) % 10 == 0 and len(self.results) > 0:
                 self._save_results(season, partial=True)
+                logger.info(f"📊 Checkpoint: {sum(r['correct'] for r in self.results)}/{len(self.results)} correct ({sum(r['correct'] for r in self.results)/len(self.results)*100:.1f}%)")
         
         # Final save
         self._save_results(season, partial=False)
