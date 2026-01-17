@@ -171,15 +171,21 @@ class MomentumAnalytics:
         if os.path.exists(self.model_path):
             try:
                 checkpoint = torch.load(self.model_path, map_location='cpu')
-                # Initialize with V2 architecture params
+                # Initialize with V2 architecture params (max_seq_len=15 to match training)
                 self.model = MomentumTransformer(
                     input_dim=5,
                     d_model=64,
                     n_heads=4,
                     n_layers=4,
-                    d_feedforward=128
+                    d_feedforward=128,
+                    max_seq_len=15  # Must match training
                 )
-                self.model.load_state_dict(checkpoint['model_state_dict'])
+                # Handle both wrapped and raw state dict formats
+                if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+                    self.model.load_state_dict(checkpoint['model_state_dict'])
+                else:
+                    # Raw state dict without wrapper
+                    self.model.load_state_dict(checkpoint)
                 self.model.eval()
                 self.loaded = True
                 logger.info("✅ MomentumTransformer loaded")

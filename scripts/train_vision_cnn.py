@@ -217,8 +217,6 @@ def train_epoch(
     for batch_idx, (frames, labels) in enumerate(dataloader):
         # Skip batches if resuming mid-epoch
         if batch_idx < start_batch:
-            if (batch_idx + 1) % 50 == 0:
-                logger.info(f"  ⏭️ Resuming: Fast-forwarding through batch {batch_idx + 1}/{start_batch}...")
             continue
             
         frames = frames.to(device)
@@ -261,7 +259,7 @@ def evaluate(
     total = 0
     
     with torch.no_grad():
-        for i, (frames, labels) in enumerate(dataloader):
+        for frames, labels in dataloader:
             frames = frames.to(device)
             labels = labels.to(device)
             
@@ -272,9 +270,6 @@ def evaluate(
             _, predicted = outputs.max(1)
             total += labels.size(0)
             correct += predicted.eq(labels).sum().item()
-            
-            if (i + 1) % 50 == 0:
-                logger.info(f"  🧪 Evaluation: Batch {i + 1}/{len(dataloader)}...")
     
     accuracy = 100.0 * correct / total
     avg_loss = total_loss / len(dataloader)
