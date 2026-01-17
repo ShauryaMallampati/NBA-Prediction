@@ -64,12 +64,12 @@ class MomentumTransformer(nn.Module):
     
     def __init__(
         self,
-        input_dim: int = 3,          # Features per game: is_home, win, margin
+        input_dim: int = 5,          # Features per game: is_home, win, margin, rest, streak
         d_model: int = 64,           # Embedding dimension
         n_heads: int = 4,            # Attention heads
         n_layers: int = 4,           # Transformer layers  
         d_feedforward: int = 128,    # FFN hidden dim
-        dropout: float = 0.1,
+        dropout: float = 0.15,
         max_seq_len: int = 20,       # Max games in sequence
     ):
         super().__init__()
@@ -158,7 +158,7 @@ class MomentumAnalytics:
     Similar to VisionAnalytics but for sequential momentum.
     """
     
-    def __init__(self, model_path: str = "artifacts/models/momentum/momentum_transformer.pt"):
+    def __init__(self, model_path: str = "artifacts/models/momentum/momentum_transformer_v2.pt"):
         self.model_path = model_path
         self.model = None
         self.loaded = False
@@ -171,7 +171,14 @@ class MomentumAnalytics:
         if os.path.exists(self.model_path):
             try:
                 checkpoint = torch.load(self.model_path, map_location='cpu')
-                self.model = MomentumTransformer()
+                # Initialize with V2 architecture params
+                self.model = MomentumTransformer(
+                    input_dim=5,
+                    d_model=64,
+                    n_heads=4,
+                    n_layers=4,
+                    d_feedforward=128
+                )
                 self.model.load_state_dict(checkpoint['model_state_dict'])
                 self.model.eval()
                 self.loaded = True

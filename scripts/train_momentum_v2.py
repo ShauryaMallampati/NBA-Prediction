@@ -95,13 +95,19 @@ class EnhancedSeasonDataset(Dataset):
         logger.info(f"Dataset ({split}): {len(self.sequences)} sequences")
         
     def _build_enhanced_sequences(self):
-        """Build sequences with richer features."""
+        """Build sequences with richer features - OPTIMIZED for speed."""
         sequences = []
         
         # Pre-compute team stats
         all_teams = set(self.df['home'].unique()) | set(self.df['away'].unique())
+        print(f"   Building sequences for {len(all_teams)} teams...")
         
+        team_count = 0
         for team in all_teams:
+            team_count += 1
+            if team_count % 10 == 0:
+                print(f"   Processing team {team_count}/{len(all_teams)}...")
+            
             # Get all games for this team
             mask = (self.df['home'] == team) | (self.df['away'] == team)
             team_games = self.df[mask].sort_values('date').reset_index(drop=True)
@@ -112,29 +118,30 @@ class EnhancedSeasonDataset(Dataset):
             # Track rolling stats
             streak = 0
             last_game_date = None
-            home_count = 0  # track consecutive home/away
+            home_count = 0
             
             game_features = []
             game_targets = []
             
-            for i, game in team_games.iterrows():
+            for idx in range(len(team_games)):
+                game = team_games.iloc[idx]
                 is_home = game['home'] == team
                 win = game['home_win'] if is_home else (1 - game['home_win'])
                 margin = game['margin'] if is_home else -game['margin']
                 
-                # Rest days
+                # Rest days (fast - no lookups)
                 if last_game_date is not None:
                     rest = (game['date'] - last_game_date).days
                 else:
-                    rest = 3  # default
-                rest = min(rest, 7) / 7.0  # normalize to [0, 1]
+                    rest = 3
+                rest = min(rest, 7) / 7.0
                 
                 # Update streak
                 if win == 1:
                     streak = max(1, streak + 1)
                 else:
                     streak = min(-1, streak - 1)
-                streak_norm = np.clip(streak / 10.0, -1, 1)  # normalize
+                streak_norm = np.clip(streak / 10.0, -1, 1)
                 
                 # Home/road context
                 if is_home:
@@ -143,26 +150,13 @@ class EnhancedSeasonDataset(Dataset):
                     home_count = min(-1, home_count - 1)
                 home_context = np.clip(home_count / 5.0, -1, 1)
                 
-                # Opponent strength (simplified - use opponent's index as proxy)
-                opp = game['away'] if is_home else game['home']
-                opp_mask = (self.df['home'] == opp) | (self.df['away'] == opp)
-                opp_games = self.df[opp_mask & (self.df['date'] < game['date'])].tail(10)
-                if len(opp_games) > 0:
-                    opp_wins = sum((opp_games['home'] == opp) & (opp_games['home_win'] == 1)) + \
-                               sum((opp_games['away'] == opp) & (opp_games['home_win'] == 0))
-                    opp_strength = opp_wins / len(opp_games)
-                else:
-                    opp_strength = 0.5
-                
-                # Feature vector (7 features)
+                # Feature vector (5 features - removed slow opponent lookup)
                 features = [
                     float(is_home),           # 1. Is home game
                     float(win),               # 2. Did we win
                     margin / 30.0,            # 3. Margin (normalized)
                     rest,                     # 4. Rest days (normalized)
                     streak_norm,              # 5. Current streak
-                    opp_strength - 0.5,       # 6. Opponent strength (centered)
-                    home_context,             # 7. Home/road context
                 ]
                 
                 game_features.append(features)
@@ -175,6 +169,7 @@ class EnhancedSeasonDataset(Dataset):
                 target = game_targets[i]
                 sequences.append((seq, int(target)))
         
+        print(f"   ✅ Built {len(sequences)} sequences")
         np.random.shuffle(sequences)
         return sequences
     
@@ -197,7 +192,7 @@ def train_epoch(model, dataloader, criterion, optimizer, scheduler, device, epoc
     
     for batch_idx, (sequences, targets) in enumerate(dataloader):
         sequences = sequences.to(device)
-        targets = targets.float().unsqueeze(1).to(device)
+        targets = targets.float().to(device)  # Shape: [batch]
         
         optimizer.zero_grad()
         outputs = model(sequences)
@@ -231,7 +226,7 @@ def evaluate(model, dataloader, criterion, device):
     with torch.no_grad():
         for sequences, targets in dataloader:
             sequences = sequences.to(device)
-            targets = targets.float().unsqueeze(1).to(device)
+            targets = targets.float().to(device)  # Shape: [batch]
             
             outputs = model(sequences)
             loss = criterion(outputs, targets)
@@ -262,7 +257,7 @@ def main():
     EPOCHS = 50
     LEARNING_RATE = 1e-4  # Lower LR
     SEQUENCE_LENGTH = 15
-    INPUT_DIM = 7  # More features
+    INPUT_DIM = 5  # Simplified features (was 7, removed slow opponent lookup)
     
     print(f"\n📋 Hyperparameters:")
     print(f"   Batch Size: {BATCH_SIZE}")
