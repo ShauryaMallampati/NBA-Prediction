@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def load_betting_data() -> Dict:
-    """Load collected betting odds data"""
+    """Load collected betting odds data, with fallback to schedule data"""
     logger.info("📂 Loading betting data...")
     
     data_dir = Path("data/raw/rapid_api_working")
@@ -33,17 +33,69 @@ def load_betting_data() -> Dict:
     # Find most recent data file
     data_files = sorted(data_dir.glob("nba_comprehensive_*.json"))
     
-    if not data_files:
-        logger.error("❌ No betting data found!")
-        return {}
+    if data_files:
+        latest_file = data_files[-1]
+        logger.info(f"   Loading: {latest_file.name}")
+        
+        with open(latest_file, 'r') as f:
+            data = json.load(f)
+        return data
     
-    latest_file = data_files[-1]
-    logger.info(f"   Loading: {latest_file.name}")
+    # Fallback: Try to load from schedule data and create mock odds
+    logger.info("   No betting data found, trying schedule fallback...")
+    schedule_dir = Path("data/schedules")
     
-    with open(latest_file, 'r') as f:
-        data = json.load(f)
+    # Try today's schedule first
+    today = datetime.now().strftime("%Y-%m-%d")
+    schedule_file = schedule_dir / f"{today}_schedule.json"
     
-    return data
+    if not schedule_file.exists():
+        # Try upcoming games file
+        schedule_file = schedule_dir / "upcoming_14_days.json"
+    
+    if schedule_file.exists():
+        logger.info(f"   Using schedule fallback: {schedule_file.name}")
+        with open(schedule_file, 'r') as f:
+            schedule_data = json.load(f)
+        
+        # Convert schedule to odds-like format with mock odds (even money)
+        games = schedule_data.get('games', [])
+        mock_odds = []
+        for game in games:
+            mock_game = {
+                'id': game.get('game_id', ''),
+                'home_team': game.get('home_team', ''),
+                'away_team': game.get('away_team', ''),
+                'commence_time': game.get('game_time', game.get('date', '')),
+                'bookmakers': [
+                    {
+                        'key': 'mock',
+                        'markets': [
+                            {
+                                'key': 'h2h',
+                                'outcomes': [
+                                    {'name': game.get('home_team', ''), 'price': 1.91},
+                                    {'name': game.get('away_team', ''), 'price': 1.91}
+                                ]
+                            },
+                            {
+                                'key': 'spreads',
+                                'outcomes': [
+                                    {'name': game.get('home_team', ''), 'point': -2.5},
+                                    {'name': game.get('away_team', ''), 'point': 2.5}
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+            mock_odds.append(mock_game)
+        
+        logger.info(f"   Created mock odds for {len(mock_odds)} games")
+        return {'endpoints': {'nba_odds': mock_odds}}
+    
+    logger.error("❌ No betting data or schedule found!")
+    return {}
 
 
 def create_features_from_odds(odds_data: Dict) -> pd.DataFrame:

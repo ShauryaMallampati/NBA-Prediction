@@ -42,7 +42,7 @@ BEST_MODEL_PATH = OUTPUT_DIR / "momentum_transformer.pt"
 
 
 def train_epoch(model, dataloader, criterion, optimizer, device, epoch, total_epochs):
-    """Train for one epoch with progress logging."""
+    """Train for one epoch with verbose progress logging."""
     model.train()
     total_loss = 0
     correct = 0
@@ -50,6 +50,10 @@ def train_epoch(model, dataloader, criterion, optimizer, device, epoch, total_ep
     num_batches = len(dataloader)
     
     start_time = time.time()
+    
+    print(f"\n{'='*60}")
+    print(f"📈 EPOCH {epoch}/{total_epochs} - TRAINING")
+    print(f"{'='*60}")
     
     for batch_idx, (sequences, targets) in enumerate(dataloader):
         sequences = sequences.to(device)
@@ -63,21 +67,37 @@ def train_epoch(model, dataloader, criterion, optimizer, device, epoch, total_ep
         
         total_loss += loss.item()
         predictions = (outputs > 0.5).float()
-        correct += (predictions == targets).sum().item()
+        batch_correct = (predictions == targets).sum().item()
+        correct += batch_correct
         total += targets.size(0)
         
-        # Log progress every 100 batches
-        if (batch_idx + 1) % 100 == 0:
+        # Running accuracy
+        running_acc = correct / total * 100
+        
+        # Log progress every 50 batches for more visibility
+        if (batch_idx + 1) % 50 == 0:
             elapsed = time.time() - start_time
             batches_per_sec = (batch_idx + 1) / elapsed
             remaining = (num_batches - batch_idx - 1) / batches_per_sec
-            logger.info(f"  Batch {batch_idx + 1}/{num_batches} "
-                       f"({100*(batch_idx+1)/num_batches:.1f}%) "
-                       f"| Loss: {loss.item():.4f} "
-                       f"| ETA: {remaining:.0f}s")
+            
+            print(f"  📊 Batch {batch_idx + 1:>5}/{num_batches} "
+                  f"({100*(batch_idx+1)/num_batches:>5.1f}%) "
+                  f"| Loss: {loss.item():.4f} "
+                  f"| Acc: {running_acc:.2f}% "
+                  f"| Speed: {batches_per_sec:.1f} batch/s "
+                  f"| ETA: {remaining/60:.1f}min")
     
     epoch_time = time.time() - start_time
-    return total_loss / len(dataloader), correct / total * 100, epoch_time
+    final_acc = correct / total * 100
+    avg_loss = total_loss / len(dataloader)
+    
+    print(f"\n  ✅ Epoch {epoch} Complete!")
+    print(f"     Train Loss: {avg_loss:.4f}")
+    print(f"     Train Accuracy: {final_acc:.2f}%")
+    print(f"     Time: {epoch_time:.1f}s ({epoch_time/60:.1f} min)")
+    
+    return avg_loss, final_acc, epoch_time
+
 
 
 def evaluate(model, dataloader, criterion, device):
@@ -108,11 +128,13 @@ def main():
     parser.add_argument('--resume', action='store_true', help='Resume from checkpoint')
     args = parser.parse_args()
     
-    print("=" * 60)
-    print("📈 MOMENTUM TRANSFORMER TRAINING")
+    print("\n" + "=" * 70)
+    print("🏀 MOMENTUM TRANSFORMER TRAINING")
+    print("=" * 70)
     print(f"   Device: {DEVICE}")
     print(f"   Resume: {args.resume}")
-    print("=" * 60)
+    print(f"   Output: {OUTPUT_DIR}")
+    print("=" * 70)
     
     # Create output directory
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -123,11 +145,31 @@ def main():
     LEARNING_RATE = 5e-4
     SEQUENCE_LENGTH = 15  # Longer sequences capture more momentum patterns
     
+    print("\n📋 HYPERPARAMETERS:")
+    print(f"   Batch Size: {BATCH_SIZE}")
+    print(f"   Epochs: {EPOCHS}")
+    print(f"   Learning Rate: {LEARNING_RATE}")
+    print(f"   Sequence Length: {SEQUENCE_LENGTH} games")
+    print(f"   Optimizer: AdamW (weight_decay=0.01)")
+    print(f"   Scheduler: CosineAnnealingWarmRestarts (T_0=20)")
+    
     # Load datasets
-    logger.info("📂 Loading datasets...")
+    print("\n📂 LOADING DATASETS...")
+    print("   ⏳ Loading training data...")
+    import time as time_module
+    load_start = time_module.time()
     train_ds = SeasonSequenceDataset(split="train", sequence_length=SEQUENCE_LENGTH)
+    print(f"   ✅ Train loaded: {len(train_ds):,} sequences ({time_module.time()-load_start:.1f}s)")
+    
+    print("   ⏳ Loading validation data...")
+    load_start = time_module.time()
     val_ds = SeasonSequenceDataset(split="val", sequence_length=SEQUENCE_LENGTH)
+    print(f"   ✅ Val loaded: {len(val_ds):,} sequences ({time_module.time()-load_start:.1f}s)")
+    
+    print("   ⏳ Loading test data...")
+    load_start = time_module.time()
     test_ds = SeasonSequenceDataset(split="test", sequence_length=SEQUENCE_LENGTH)
+    print(f"   ✅ Test loaded: {len(test_ds):,} sequences ({time_module.time()-load_start:.1f}s)")
     
     train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE, shuffle=False)
@@ -135,11 +177,21 @@ def main():
     
     num_batches = len(train_loader)
     
-    logger.info(f"   Train: {len(train_ds)} sequences ({num_batches} batches of {BATCH_SIZE})")
-    logger.info(f"   Val: {len(val_ds)} sequences")
-    logger.info(f"   Test: {len(test_ds)} sequences")
+    print(f"\n📊 DATA SUMMARY:")
+    print(f"   Train: {len(train_ds):,} sequences → {num_batches:,} batches of {BATCH_SIZE}")
+    print(f"   Val: {len(val_ds):,} sequences → {len(val_loader):,} batches")
+    print(f"   Test: {len(test_ds):,} sequences → {len(test_loader):,} batches")
+    print(f"   Feature Dim: {train_ds.feature_dim}")
     
     # Initialize model (OPTIMIZED architecture)
+    print("\n🧠 INITIALIZING MODEL...")
+    print(f"   Architecture: Transformer Encoder")
+    print(f"   d_model: 128 (embedding dimension)")
+    print(f"   n_heads: 8 (attention heads)")
+    print(f"   n_layers: 6 (transformer layers)")
+    print(f"   d_feedforward: 256 (FFN hidden size)")
+    print(f"   dropout: 0.15")
+    
     model = MomentumTransformer(
         input_dim=train_ds.feature_dim,
         d_model=128,      # Wider model (was 64)
@@ -149,9 +201,17 @@ def main():
         dropout=0.15,     # Slightly more dropout
     ).to(DEVICE)
     
+    # Count parameters
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"   ✅ Model created!")
+    print(f"   Total Parameters: {total_params:,}")
+    print(f"   Trainable Parameters: {trainable_params:,}")
+    
     criterion = nn.BCELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=0.01)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=20, T_mult=2)
+
     
     start_epoch = 1
     best_val_acc = 0

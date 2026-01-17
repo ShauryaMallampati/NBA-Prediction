@@ -208,6 +208,11 @@ class EnsembleTrainer:
         y_pred = calibrated_model.predict_proba(X)[:, 1]
         y_pred_binary = (y_pred > 0.5).astype(int)
         
+        # Calculate in-sample metrics
+        accuracy = accuracy_score(y, y_pred_binary)
+        logloss = log_loss(y, y_pred)
+        brier = brier_score_loss(y, y_pred)
+        
         # Reset Metric Reporting: Use mean CV scores for primary metrics
         mean_cv_acc = np.mean([s['accuracy'] for s in cv_scores])
         mean_cv_auc = np.mean([s['auc'] for s in cv_scores])
@@ -306,6 +311,11 @@ class EnsembleTrainer:
         y_pred = calibrated_model.predict_proba(X)[:, 1]
         y_pred_binary = (y_pred > 0.5).astype(int)
         
+        # Calculate in-sample metrics
+        accuracy = accuracy_score(y, y_pred_binary)
+        logloss = log_loss(y, y_pred)
+        brier = brier_score_loss(y, y_pred)
+        
         # Reset Metric Reporting: Use mean CV scores for primary metrics
         mean_cv_acc = np.mean([s['accuracy'] for s in cv_scores])
         mean_cv_auc = np.mean([s['auc'] for s in cv_scores])
@@ -392,6 +402,11 @@ class EnsembleTrainer:
         # Calculate final metrics
         y_pred = calibrated_model.predict_proba(X)[:, 1]
         y_pred_binary = (y_pred > 0.5).astype(int)
+        
+        # Calculate in-sample metrics
+        accuracy = accuracy_score(y, y_pred_binary)
+        logloss = log_loss(y, y_pred)
+        brier = brier_score_loss(y, y_pred)
         
         # Reset Metric Reporting: Use mean CV scores for primary metrics
         mean_cv_acc = np.mean([s['accuracy'] for s in cv_scores])

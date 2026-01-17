@@ -52,8 +52,10 @@ class TestEnsemblePredictor:
     def test_predictor_loads(self, predictor):
         """Test that predictor loads successfully"""
         assert predictor is not None
-        assert hasattr(predictor, 'models')
-        assert len(predictor.models) > 0
+        # Check that all three models are loaded
+        assert predictor.xgb_model is not None
+        assert predictor.lgb_model is not None
+        assert predictor.cat_model is not None
     
     def test_prediction_output_format(self, predictor, sample_features):
         """Test that predictions return correct format"""

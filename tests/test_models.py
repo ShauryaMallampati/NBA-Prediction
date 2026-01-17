@@ -17,13 +17,15 @@ sys.path.insert(0, str(project_root))
 
 
 class TestLiveGRUModel:
-    """Test live win probability GRU model"""
+    """Test live win probability GRU model - DEPRECATED: GRU model has been removed"""
     
+    @pytest.mark.skip(reason="GRU model has been deprecated and removed")
     def test_model_exists(self):
         """Test that GRU model file exists"""
         model_path = Path("artifacts/models/live_gru_winprob.pt")
         assert model_path.exists(), "GRU model should be trained and saved"
     
+    @pytest.mark.skip(reason="GRU model has been deprecated and removed")
     def test_model_loading(self):
         """Test loading the trained GRU model"""
         model_path = Path("artifacts/models/live_gru_winprob.pt")
@@ -31,6 +33,7 @@ class TestLiveGRUModel:
             model = torch.jit.load(str(model_path))
             assert model is not None
     
+    @pytest.mark.skip(reason="GRU model has been deprecated and removed")
     def test_model_inference(self):
         """Test GRU model inference"""
         model_path = Path("artifacts/models/live_gru_winprob.pt")
@@ -51,6 +54,7 @@ class TestLiveGRUModel:
         assert output.shape == (1, 1)
         assert 0 <= output.item() <= 1
     
+    @pytest.mark.skip(reason="GRU model has been deprecated and removed")
     def test_gru_dataset_loading(self):
         """Test LiveSeqDataset loads correctly"""
         from src.models.live.dataset import LiveSeqDataset
@@ -70,6 +74,7 @@ class TestLiveGRUModel:
         assert isinstance(target, torch.Tensor)
         assert target.item() in [0.0, 1.0]  # Binary label
     
+    @pytest.mark.skip(reason="GRU model has been deprecated and removed")
     def test_gru_batch_processing(self):
         """Test GRU model can process batches"""
         model_path = Path("artifacts/models/live_gru_winprob.pt")

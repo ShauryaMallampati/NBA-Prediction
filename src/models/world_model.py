@@ -34,10 +34,14 @@ class NBAWorldModel:
         logger.info("🌍 Loading World Model components...")
         
         # Load Ensemble
-        if self.ensemble.load():
-            logger.info("✅ Pregame Ensemble loaded")
-        else:
-            logger.warning("⚠️ Pregame Ensemble not found")
+        try:
+            self.ensemble.load_models()
+            if self.ensemble.loaded:
+                logger.info("✅ Pregame Ensemble loaded")
+            else:
+                logger.warning("⚠️ Pregame Ensemble not found")
+        except Exception as e:
+            logger.warning(f"⚠️ Pregame Ensemble loading error: {e}")
             
         # Load Vision CNN (The "Eyes") - using our new VisionModel
         try:
@@ -57,9 +61,9 @@ class NBAWorldModel:
             
     def predict_pregame(self, features: pd.DataFrame) -> pd.DataFrame:
         """Get pregame predictions from the ensemble"""
-        if not self.ensemble.is_trained:
+        if not self.ensemble.loaded:
             return pd.DataFrame()
-        return self.ensemble.predict_with_probabilities(features)
+        return self.ensemble.predict(features)
         
     # predict_live_win_prob removed (GRU deprecated)
             

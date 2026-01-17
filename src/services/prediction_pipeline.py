@@ -217,9 +217,8 @@ class PredictionPipeline:
                     "models_agree": "3/3", # Placeholder logic retained from API
                     "consensus_percentage": 100.0, # Placeholder
                     "model_version": "ensemble_v2_polyglot",
-                    "vision_impact": vision_metadata_list[idx] if idx < len(vision_metadata_list) else {,
+                    "vision_impact": vision_metadata_list[idx] if idx < len(vision_metadata_list) else {},
                     "momentum_impact": momentum_metadata_list[idx] if idx < len(momentum_metadata_list) else {}
-                }
                 }
                 results.append(result)
                 

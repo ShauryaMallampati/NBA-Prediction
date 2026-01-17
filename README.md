@@ -55,13 +55,20 @@ poetry run python scripts/analyze_wrong_predictions.py
 
 ## Architecture
 
+![Multi-Modal NBA Prediction Architecture](docs/architecture_diagram.png)
+
+Our **Multi-Modal World Model** fuses four data modalities through Late Fusion:
+
+| Module | Input | Model | Output |
+|--------|-------|-------|--------|
+| **Statistical** | Box scores, Elo ratings | XGBoost + LightGBM + CatBoost | Base win probability |
+| **Vision** | Game highlights | 3D CNN (ResNet) | Visual execution score |
+| **Chemistry** | Player relationships | Graph Neural Network | Team synergy adjustment |
+| **Momentum** | Season history (15 games) | Transformer Encoder | Momentum adjustment |
+
+### Late Fusion Formula:
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    World Model Ensemble                      │
-├──────────────┬──────────────┬──────────────┬────────────────┤
-│   XGBoost    │   LightGBM   │   CatBoost   │  Vision CNN    │
-│ (stats-based)│ (stats-based)│ (stats-based)│ (video-based)  │
-└──────────────┴──────────────┴──────────────┴────────────────┘
+P(win) = σ(P_ensemble + Δ_chemistry + Δ_vision + Δ_momentum)
 ```
 
 ## Datasets Used

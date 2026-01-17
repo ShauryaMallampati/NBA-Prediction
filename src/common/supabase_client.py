@@ -67,10 +67,10 @@ class SupabaseClient:
                 "home_team": prediction.get("home_team"),
                 "away_team": prediction.get("away_team"),
                 "prediction": prediction.get("prediction"),
-                "home_win_probability": prediction.get("home_win_probability"),
-                "away_win_probability": prediction.get("away_win_probability"),
+                # Schema uses short names: home_win_prob, away_win_prob
+                "home_win_prob": prediction.get("home_win_probability"),
+                "away_win_prob": prediction.get("away_win_probability"),
                 "confidence": prediction.get("confidence"),
-                "model_version": prediction.get("model_version", "ensemble_v2"),
             }
             
             self.client.table("predictions").upsert(data, on_conflict="game_id,date").execute()
