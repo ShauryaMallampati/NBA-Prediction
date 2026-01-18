@@ -52,6 +52,7 @@ pytube = "^15.0.0"
 pytubefix = "^10.3.6"
 selenium = "<4.30.0"
 undetected-chromedriver = "^3.5.5"
+curl-cffi = "^0.14.0"
 
 
 [tool.poetry.group.dev.dependencies]
