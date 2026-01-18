@@ -368,7 +368,6 @@ class StreamingWorldModelEvaluator:
             
             cmd = [
                 "yt-dlp",
-                "--proxy", "socks5://127.0.0.1:9050",  # Tor proxy for IP rotation
                 "--cookies", "cookies.txt",  # Bypass bot detection
                 "--user-agent", user_agent,  # Spoof browser
                 "--sleep-requests", "2",     # Sleep between internal requests
@@ -485,7 +484,6 @@ class StreamingWorldModelEvaluator:
             
             cmd = [
                 "yt-dlp",
-                "--proxy", "socks5://127.0.0.1:9050",  # Tor proxy for IP rotation
                 "--cookies", str(cookie_file),
                 "--user-agent", user_agent,
                 url,
