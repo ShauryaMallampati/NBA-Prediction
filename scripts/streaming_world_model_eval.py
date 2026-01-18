@@ -200,14 +200,17 @@ class StreamingWorldModelEvaluator:
                             # Parse teams
                             if ' at ' in teams_part:
                                 away, home = teams_part.split(' at ')
-                                away = away.strip().upper()
-                                home = home.strip().upper()
+                                away = away.strip().upper().replace(" ", "")
+                                home = home.strip().upper().replace(" ", "")
                                 
                                 # Create lookup key
                                 key = f"{home}_{away}_{date_part}"
                                 self.playlist_index[key] = video_id
                 
                 logger.info(f"✅ Playlist indexed: {len(self.playlist_index)} games found")
+                # Log a few keys for debugging
+                if len(self.playlist_index) > 0:
+                    logger.info(f"   Sample key: {list(self.playlist_index.keys())[0]}")
             else:
                 logger.warning("⚠️ Failed to fetch playlist")
         except Exception as e:
@@ -217,28 +220,39 @@ class StreamingWorldModelEvaluator:
         """Download YouTube highlight for a game using playlist index."""
         # Convert date to playlist format: "January 16, 2026"
         date_obj = datetime.strptime(date, "%Y-%m-%d")
-        date_str = date_obj.strftime("%B %d, %Y")  # Note: comma included
-        date_str_no_comma = date_obj.strftime("%B %d %Y")
+        date_str = date_obj.strftime("%B %d, %Y")  # Playlist usually has comma
         
-        # Normalize team names to uppercase short form
+        # Normalize team names to uppercase short form (no spaces)
+        # "Trail Blazers" -> "TRAILBLAZERS"
+        # "76ers" -> "76ERS"
         home_upper = home.upper().replace(" ", "")
         away_upper = away.upper().replace(" ", "")
         
         # Try to find video in playlist index
+        # We try multiple date formats just in case
         possible_keys = [
-            f"{home_upper}_{away_upper}_{date_str}",
-            f"{home_upper}_{away_upper}_{date_str_no_comma}",
+            f"{home_upper}_{away_upper}_{date_str}",  # "BULLS_NETS_January 16, 2026"
+            f"{home_upper}_{away_upper}_{date_obj.strftime('%B %d %Y')}", # No comma
+            f"{home_upper}_{away_upper}_{date_obj.strftime('%b %d, %Y')}", # Short month
         ]
         
         video_id = None
         for key in possible_keys:
-            # Try partial matches
-            for idx_key, vid_id in self.playlist_index.items():
-                if home_upper in idx_key and away_upper in idx_key and date_obj.strftime("%B %d") in idx_key:
-                    video_id = vid_id
-                    break
-            if video_id:
+            if key in self.playlist_index:
+                video_id = self.playlist_index[key]
+                logger.info(f"🎯 Found in playlist: {key}")
                 break
+        
+        # If not found, try fuzzy match on date only (if strictly one game per matchup per day)
+        if not video_id:
+            for idx_key, vid_id in self.playlist_index.items():
+                # Check if teams match and date is close or matches
+                if home_upper in idx_key and away_upper in idx_key:
+                    # Very simple date check - if month and day match
+                    if date_obj.strftime("%B %d") in idx_key:
+                        video_id = vid_id
+                        logger.info(f"🎯 Fuzzy match in playlist: {idx_key}")
+                        break
         
         output_path = TEMP_VIDEO_DIR / f"temp_{date}_{home}_{away}.mp4"
         
@@ -258,9 +272,10 @@ class StreamingWorldModelEvaluator:
                 # Fallback to search
                 home_full = TEAM_NAMES.get(home, home)
                 away_full = TEAM_NAMES.get(away, away)
-                query = f"{away_full} vs {home_full} Full Game Highlights {date_str_no_comma}"
+                date_str_search = date_obj.strftime("%B %d %Y")
+                query = f"{away_full} vs {home_full} Full Game Highlights {date_str_search}"
                 url = f"ytsearch1:{query}"
-                logger.info(f"🔍 Searching: {query[:50]}...")
+                logger.info(f"🔍 Searching (not in playlist): {query}")
             
             cmd = [
                 "yt-dlp",
