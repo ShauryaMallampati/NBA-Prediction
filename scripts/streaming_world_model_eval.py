@@ -516,9 +516,12 @@ class StreamingWorldModelEvaluator:
         """Get past N games for a team before the current date."""
         try:
             target_date = pd.to_datetime(current_date)
+            # Strict filter: Only consider Regular Season/Playoff games (Oct 22, 2024 onwards)
+            # This excludes Preseason and Exhibition games (Abu Dhabi, etc.)
             past_games = self.games_df[
                 ((self.games_df['home'] == team) | (self.games_df['away'] == team)) &
-                (self.games_df['date'] < target_date)
+                (self.games_df['date'] < target_date) & 
+                (self.games_df['date'] >= '2024-10-22') 
             ].sort_values('date', ascending=False).head(limit)
             return past_games.to_dict('records')
         except Exception as e:
