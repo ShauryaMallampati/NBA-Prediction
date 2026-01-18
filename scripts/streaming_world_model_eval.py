@@ -170,6 +170,14 @@ class StreamingWorldModelEvaluator:
         # Results storage
         self.results = []
         
+        # Video cache for historical analysis (pregame only!)
+        self.video_cache_dir = Path("data/video_cache")
+        self.video_cache_dir.mkdir(parents=True, exist_ok=True)
+        self.max_videos_per_team = 5  # Keep last 5 videos per team
+        self.min_games_for_vision = 3  # Need at least 3 past games for vision analysis
+        self.team_vision_cache = {}  # {team: [list of (date, score) tuples]}
+        logger.info(f"📁 Video cache dir: {self.video_cache_dir}")
+        
         # Build playlist index from NBA official playlist
         self.playlist_index = {}
         self._build_playlist_index()
@@ -192,10 +200,15 @@ class StreamingWorldModelEvaluator:
                     if '|||' in line:
                         title, video_id = line.split('|||')
                         # Parse: "BULLS at NETS | FULL GAME HIGHLIGHTS | January 16, 2026"
+                        # or "EXTENDED: BULLS at NETS | FULL GAME HIGHLIGHTS | January 16, 2026"
                         parts = title.split('|')
                         if len(parts) >= 3 and 'FULL GAME HIGHLIGHTS' in parts[1]:
-                            teams_part = parts[0].strip()  # "BULLS at NETS"
+                            teams_part = parts[0].strip()  # "BULLS at NETS" or "EXTENDED: BULLS at NETS"
                             date_part = parts[2].strip()   # "January 16, 2026"
+                            
+                            # Strip "EXTENDED:" prefix if present
+                            if teams_part.startswith("EXTENDED:"):
+                                teams_part = teams_part[9:].strip()  # Remove "EXTENDED:" (9 chars)
                             
                             # Parse teams
                             if ' at ' in teams_part:
@@ -284,15 +297,23 @@ class StreamingWorldModelEvaluator:
                 "-f", "best[height<=480]",  # Lower quality for speed
                 "--max-filesize", "150M",
                 "--no-playlist",
-                "--quiet",
-                "--no-warnings",
+                # Removed --quiet and --no-warnings to see errors
             ]
             
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+            logger.info(f"📂 Output path: {output_path}")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)  # 60s timeout
             
             if result.returncode == 0 and output_path.exists():
+                file_size = output_path.stat().st_size / (1024 * 1024)
+                logger.info(f"✅ Downloaded: {file_size:.1f} MB")
                 return output_path
             else:
+                # Log the error
+                if result.stderr:
+                    logger.warning(f"yt-dlp error: {result.stderr[:200]}")
+                if result.stdout:
+                    logger.info(f"yt-dlp output: {result.stdout[:200]}")
+                logger.warning(f"Return code: {result.returncode}, File exists: {output_path.exists()}")
                 return None
                 
         except Exception as e:
@@ -468,8 +489,94 @@ class StreamingWorldModelEvaluator:
         except Exception as e:
             return 0.0
     
+    def _get_past_games(self, team: str, current_date: str, limit: int = 5) -> list:
+        """Get past N games for a team before the current date."""
+        try:
+            target_date = pd.to_datetime(current_date)
+            past_games = self.games_df[
+                ((self.games_df['home'] == team) | (self.games_df['away'] == team)) &
+                (self.games_df['date'] < target_date)
+            ].sort_values('date', ascending=False).head(limit)
+            return past_games.to_dict('records')
+        except Exception as e:
+            logger.warning(f"Error getting past games for {team}: {e}")
+            return []
+    
+    def _download_past_game_video(self, game: dict) -> Optional[Path]:
+        """Download video for a past game and cache it."""
+        home = game['home']
+        away = game['away']
+        date = game['date'].strftime('%Y-%m-%d') if hasattr(game['date'], 'strftime') else str(game['date'])[:10]
+        
+        # Check if already cached
+        cache_key = f"{date}_{home}_{away}"
+        cache_path = self.video_cache_dir / f"{cache_key}.mp4"
+        
+        if cache_path.exists():
+            return cache_path
+        
+        # Download using existing method
+        video_path = self.download_video(home, away, date)
+        
+        if video_path and video_path.exists():
+            # Move to cache
+            try:
+                import shutil
+                shutil.move(str(video_path), str(cache_path))
+                return cache_path
+            except:
+                return video_path
+        
+        return None
+    
+    def get_team_vision_score(self, team: str, current_date: str) -> tuple:
+        """
+        Get vision score for a team based on their PAST games (pregame only!).
+        Returns (score, num_games_analyzed).
+        """
+        # Get past games for this team
+        past_games = self._get_past_games(team, current_date, limit=self.max_videos_per_team)
+        
+        if len(past_games) < self.min_games_for_vision:
+            logger.info(f"   📊 {team}: Only {len(past_games)} past games (need {self.min_games_for_vision}) → neutral")
+            return 0.5, len(past_games)  # Not enough history = neutral
+        
+        # Analyze each past game's video
+        scores = []
+        for game in past_games[:self.max_videos_per_team]:
+            video_path = self._download_past_game_video(game)
+            if video_path:
+                score = self.analyze_video_with_cnn(video_path)
+                scores.append(score)
+        
+        if len(scores) == 0:
+            return 0.5, 0
+        
+        # Weight recent games higher (exponential decay)
+        weights = [0.35, 0.25, 0.20, 0.12, 0.08][:len(scores)]
+        weights = [w / sum(weights) for w in weights]  # Normalize
+        
+        weighted_score = sum(s * w for s, w in zip(scores, weights))
+        return weighted_score, len(scores)
+    
+    def _cleanup_old_cache(self):
+        """Remove old cached videos to save disk space."""
+        cache_files = sorted(self.video_cache_dir.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
+        max_total_cache = 30 * self.max_videos_per_team  # ~150 videos max
+        
+        while len(cache_files) > max_total_cache:
+            oldest = cache_files.pop(0)
+            try:
+                oldest.unlink()
+                logger.info(f"🗑️ Removed old cache: {oldest.name}")
+            except:
+                pass
+    
     def evaluate_game(self, row: pd.Series) -> Dict:
-        """Evaluate a single game with real video."""
+        """
+        Evaluate a single game using PREGAME data only.
+        Vision CNN analyzes each team's PAST games (not current game!).
+        """
         home = row['home']
         away = row['away']
         date = row['date'].strftime('%Y-%m-%d')
@@ -477,36 +584,46 @@ class StreamingWorldModelEvaluator:
         
         logger.info(f"🎮 {away} @ {home} ({date})")
         
-        # Step 1: Download video
-        video_path = self.download_video(home, away, date)
+        # ============================================================
+        # STEP 1: Get HISTORICAL vision scores (pregame only!)
+        # ============================================================
+        logger.info(f"   📹 Analyzing {home}'s past games...")
+        home_vision, home_games_analyzed = self.get_team_vision_score(home, date)
         
-        if video_path is None:
-            logger.warning(f"   ⚠️ Video not found, using proxy")
-            home_vision = 0.5
-            away_vision = 0.5
-            video_used = False
-        else:
-            # Step 2: Analyze with CNN
-            logger.info(f"   🎥 Analyzing video with CNN...")
-            
-            # For simplicity, we analyze the home team's performance
-            # In a more sophisticated version, we'd analyze both teams' clips
-            home_vision = self.analyze_video_with_cnn(video_path)
-            away_vision = 1.0 - home_vision  # Inverse as approximation
-            
-            video_used = True
-            
-            # Step 3: Delete video
-            try:
-                video_path.unlink()
-                logger.info(f"   🗑️ Video deleted")
-            except:
-                pass
+        logger.info(f"   📹 Analyzing {away}'s past games...")
+        away_vision, away_games_analyzed = self.get_team_vision_score(away, date)
         
-        # Step 4: Run World Model
+        video_used = (home_games_analyzed >= self.min_games_for_vision or 
+                      away_games_analyzed >= self.min_games_for_vision)
+        
+        logger.info(f"   📊 Vision: {home}={home_vision:.3f} ({home_games_analyzed} games), {away}={away_vision:.3f} ({away_games_analyzed} games)")
+        
+        # ============================================================
+        # STEP 2: Run World Model prediction (all pregame data)
+        # ============================================================
         predicted_prob = self.predict_game(home, away, date, home_vision, away_vision, row=row)
         predicted_home_win = 1 if predicted_prob > 0.5 else 0
         correct = predicted_home_win == actual_home_win
+        
+        # ============================================================
+        # STEP 3: Cache the CURRENT game's video for future use
+        # ============================================================
+        # This game's video will be used for FUTURE predictions
+        current_video = self.download_video(home, away, date)
+        if current_video:
+            try:
+                cache_key = f"{date}_{home}_{away}"
+                cache_path = self.video_cache_dir / f"{cache_key}.mp4"
+                import shutil
+                shutil.move(str(current_video), str(cache_path))
+                logger.info(f"   💾 Cached video for future predictions")
+            except Exception as e:
+                if current_video.exists():
+                    current_video.unlink()
+        
+        # Cleanup old cache periodically
+        if len(self.results) % 20 == 0:
+            self._cleanup_old_cache()
         
         result = {
             "date": date,
@@ -547,7 +664,8 @@ class StreamingWorldModelEvaluator:
         df['date'] = pd.to_datetime(df['date'])
         
         if season == "2025-26":
-            games = df[(df['date'] >= '2025-10-01') & (df['date'] <= '2026-06-30')]
+            # Start from Oct 21 (first regular season game in playlist)
+            games = df[(df['date'] >= '2025-10-21') & (df['date'] <= '2026-06-30')]
         else:
             games = df[(df['date'] >= '2024-10-01') & (df['date'] <= '2025-06-30')]
         
