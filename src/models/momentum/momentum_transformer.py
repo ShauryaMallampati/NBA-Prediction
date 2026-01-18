@@ -248,10 +248,11 @@ class MomentumAnalytics:
                 # No games yet - return neutral
                 return 0.5
             
-            # Build feature sequence: [is_home, win, margin, rest_days, streak]
+            # Build feature sequence: [is_home, win, margin, rest, streak, fatigue, elo_prob] (7 features)
             sequence = []
             prev_date = None
             streak = 0
+            games_last_7 = 0
             
             for _, game in team_games.iterrows():
                 is_home = 1.0 if game['home'] == team else 0.0
@@ -277,7 +278,16 @@ class MomentumAnalytics:
                     streak = min(streak, 0) - 1
                 streak_norm = np.clip(streak / 10.0, -1, 1)
                 
-                sequence.append([is_home, won, margin, rest, streak_norm])
+                # Fatigue: games in last 7 days (approximate)
+                fatigue = min(games_last_7 / 4.0, 1.0)
+                games_last_7 = min(games_last_7 + 1, 4)
+                
+                # ELO probability (use stored value or estimate)
+                elo_prob = game.get('elo_win_prob', 0.5)
+                if not is_home:
+                    elo_prob = 1.0 - elo_prob
+                
+                sequence.append([is_home, won, margin, rest, streak_norm, fatigue, elo_prob])
                 prev_date = game['date']
             
             # Reverse to chronological order and take last 15
@@ -289,7 +299,7 @@ class MomentumAnalytics:
                     x = torch.tensor([sequence], dtype=torch.float32)
                     # Pad if needed
                     if x.shape[1] < 15:
-                        pad = torch.zeros(1, 15 - x.shape[1], 5)
+                        pad = torch.zeros(1, 15 - x.shape[1], 7)  # 7 features now
                         x = torch.cat([pad, x], dim=1)
                     
                     output = self.model(x)

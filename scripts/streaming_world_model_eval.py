@@ -455,25 +455,30 @@ class StreamingWorldModelEvaluator:
         X_input = X[model_features]
         
         base_prob = self.ensemble.predict_ensemble(X_input)[0]
+        print(f"      🎯 [ENSEMBLE] Base Prob: {base_prob:.3f}")
         
         # 4. COMPONENT 2: MOMENTUM TRANSFORMER
         momentum_delta, _ = self.momentum.get_matchup_momentum_delta(
             home, away, current_date=date, games_df=self.games_df
         )
+        print(f"      🔥 [MOMENTUM] Delta: {momentum_delta:+.4f}")
         
         # 5. COMPONENT 3: CHEMISTRY GNN (progressive)
         chem_diff = self.chemistry.get_chemistry_differential(
             home, away, current_date=date, games_df=self.games_df
         )
         chem_delta = chem_diff * 0.1
+        print(f"      🔗 [CHEMISTRY] Delta: {chem_delta:+.4f}")
         
         # 6. COMPONENT 4: VISION CNN (REAL from video!)
         vision_diff = home_vision_score - away_vision_score
         vision_delta = vision_diff * 0.15
+        print(f"      👁️ [VISION] Delta: {vision_delta:+.4f} (Home={home_vision_score:.3f}, Away={away_vision_score:.3f})")
         
         # LATE FUSION (4 COMPONENTS)
         final_prob = base_prob + momentum_delta + chem_delta + vision_delta
         final_prob = np.clip(final_prob, 0.05, 0.95)
+        print(f"      ✨ [FINAL] {base_prob:.3f} + {momentum_delta:+.4f} + {chem_delta:+.4f} + {vision_delta:+.4f} = {final_prob:.3f}")
         
         return final_prob
 
@@ -676,10 +681,11 @@ class StreamingWorldModelEvaluator:
         df['date'] = pd.to_datetime(df['date'])
         
         if season == "2025-26":
-            # Start from Oct 21 (first regular season game in playlist)
+            # Start from Oct 21 (first regular season game)
             games = df[(df['date'] >= '2025-10-21') & (df['date'] <= '2026-06-30')]
         else:
-            games = df[(df['date'] >= '2024-10-01') & (df['date'] <= '2025-06-30')]
+            # 2024-25 regular season: Oct 22, 2024 (Opening Night) to June 2025
+            games = df[(df['date'] >= '2024-10-22') & (df['date'] <= '2025-06-30')]
         
         games = games.sort_values('date').reset_index(drop=True)
         print(f"\n📅 Evaluating {len(games)} games from {season} season")
