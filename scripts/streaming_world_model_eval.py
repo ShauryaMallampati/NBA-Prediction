@@ -210,9 +210,15 @@ class StreamingWorldModelEvaluator:
         
         for url in playlists:
             try:
+                # Anti-bot User Agent (Chrome on Windows)
+                user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                
                 cmd = [
                     "yt-dlp", "--flat-playlist",
                     "--cookies", "cookies.txt",  # Bypass bot detection
+                    "--user-agent", user_agent,  # Spoof browser
+                    "--sleep-requests", "1",     # Sleep between requests
+                    "--retries", "3",            # Retry failed requests
                     "--print", "%(title)s|||%(id)s",
                     url
                 ]
@@ -339,9 +345,17 @@ class StreamingWorldModelEvaluator:
                 url = f"ytsearch1:{query}"
                 logger.info(f"🔍 Searching (not in playlist): {query}")
             
+            # Anti-bot User Agent (Chrome on Windows)
+            user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            
             cmd = [
                 "yt-dlp",
                 "--cookies", "cookies.txt",  # Bypass bot detection
+                "--user-agent", user_agent,  # Spoof browser
+                "--sleep-requests", "1",     # Sleep between internal requests
+                "--sleep-interval", "2",     # Sleep before download
+                "--retries", "3",            # Retry failed downloads
+                "--fragment-retries", "3",
                 url,
                 "-o", str(output_path),
                 "-f", "best[height<=480]",  # Lower quality for speed
