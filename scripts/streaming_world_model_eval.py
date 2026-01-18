@@ -222,22 +222,50 @@ class StreamingWorldModelEvaluator:
                         if '|||' in line:
                             try:
                                 title, video_id = line.split('|||')
-                                # Parse: "BULLS at NETS | FULL GAME HIGHLIGHTS | January 16, 2026"
+                                # Parse various formats:
+                                # "BULLS at NETS | FULL GAME HIGHLIGHTS | January 16, 2026"
+                                # "#4 PACERS at #1 THUNDER | NBA FINALS GAME 7 HIGHLIGHTS | June 22, 2025"
+                                # "KNICKS at HORNETS | NBA PRESEASON FULL GAME HIGHLIGHTS | October 6, 2024"
                                 parts = title.split('|')
-                                if len(parts) >= 3 and 'FULL GAME HIGHLIGHTS' in parts[1]:
+                                
+                                # Find the date part (last part with month name)
+                                date_part = None
+                                for p in reversed(parts):
+                                    p = p.strip()
+                                    # Check if contains month name
+                                    months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                              'July', 'August', 'September', 'October', 'November', 'December']
+                                    if any(m in p for m in months):
+                                        date_part = p
+                                        break
+                                
+                                # Check if any part contains HIGHLIGHTS
+                                is_highlights = any('HIGHLIGHTS' in p.upper() for p in parts)
+                                
+                                if date_part and is_highlights and len(parts) >= 2:
                                     teams_part = parts[0].strip()
-                                    date_part = parts[2].strip()
                                     
-                                    # Strip "EXTENDED:" prefix
-                                    if teams_part.startswith("EXTENDED:"):
+                                    # Strip EXTENDED: prefix
+                                    if teams_part.upper().startswith("EXTENDED:"):
                                         teams_part = teams_part[9:].strip()
                                     
+                                    # Strip seed numbers like "#1 " or "#4 "
+                                    import re
+                                    teams_part = re.sub(r'#\d+\s*', '', teams_part)
+                                    
                                     if ' at ' in teams_part:
-                                        away, home = teams_part.split(' at ')
+                                        away, home = teams_part.split(' at ', 1)
                                         away = away.strip().upper().replace(" ", "")
                                         home = home.strip().upper().replace(" ", "")
                                         
                                         key = f"{home}_{away}_{date_part}"
+                                        self.playlist_index[key] = video_id
+                                    elif ' vs ' in teams_part:  # Abu Dhabi games use "vs"
+                                        team1, team2 = teams_part.split(' vs ', 1)
+                                        team1 = team1.strip().upper().replace(" ", "")
+                                        team2 = team2.strip().upper().replace(" ", "")
+                                        # For vs games, treat as home_away (order doesn't matter much)
+                                        key = f"{team1}_{team2}_{date_part}"
                                         self.playlist_index[key] = video_id
                             except:
                                 continue
