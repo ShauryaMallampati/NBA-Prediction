@@ -2,27 +2,34 @@
 
 # specialized_system_architecture.md
 
-![NBA World Model Academic Architecture](nba_world_model_academic.png)
+# specialized_system_architecture.md
 
-## 1. State Persistence & Memory Transfer ($T_{-1} \to T_{0}$)
-A critical innovation of this World Model is the preservation of **State** across season boundaries. Unlike traditional models that "reset" to zero, our system transfers learned latent states from the 2024-25 season.
+![NBA World Model Interactive Architecture](nba_world_model_interactive.png)
 
-### What is Remembered?
-| Component | Latent State Transferred ($S_{t-1}$) | Function |
-|:---|:---|:---|
-| **Vision CNN** | **Video Embeddings ($V_{last5}$)** | The model "remembers" the visual playstyle (spacing, tempo) from the 2025 Playoffs. Game 1 prediction uses these priors. |
-| **Momentum** | **Sequence Vector ($Seq_{15}$)** | The transformer's context window includes the last 15 games of the prior season. A championship win streak influences Game 1 confidence. |
-| **Chemistry** | **Variance Metrics ($\sigma^2_{team}$)** | Team consistency scores are initialized from previous performance, stabilizing early-season volatility. |
+## 1. Temporal Progression: 2024-25 $\to$ 2025-26
+The system is continuous. It does not simply "start" in 2025.
+*   **Season 2024-25 (Left)**: Used for calibration and establishing latent states (Momentum, Chemistry).
+*   **State Persistence (Arrow)**: These states are carried over (not reset) into the current season.
+*   **Season 2025-26 (Right)**: Live, game-by-game predictions where the model continues to learn.
 
-## 2. Integrated Reasoning Workflow
-```mermaid
-graph LR
-    H[History 24-25] -->|State Transfer| WM[World Model Core]
-    RT[Real-Time Data] --> WM
-    WM -->|Probability $P(win)$| NS[Neuro-Symbolic Layer]
-    WS[Web Scraper] -->|News Context $C$| NS
-    NS -->|Reasoning $R(P, C)$| Final[Output]
-```
+## 2. The Neuro-Symbolic Dialogue (Center Loop)
+You asked: *"How does the LLM talk to the World Model?"*
+
+The interaction is not a one-way street; it's a **Validation Loop**:
+
+1.  **WM $\to$ LLM ("The Proposal")**:
+    *   *World Model*: "I calculate a **72%** chance of victory. My confidence is high based on recent shooting variance."
+
+2.  **LLM $\to$ Context ("The Verification")**:
+    *   *LLM*: "Let me check the news." (Queries Web Scraper)
+    *   *Result*: "Breaking: Starting Center ruled out 10 minutes ago."
+
+3.  **LLM $\to$ WM ("The Override")**:
+    *   *LLM Logic*: "Your 72% calculation assumes the Center plays (because he played in previous data). This assumption is now false."
+    *   *Decision*: "I am overriding the physics simulation with this semantic fact."
+    *   *Result*: "Adjusted Probability: **55%**."
+
+This structure allows the **World Model** to be the "Engine" (efficient, mathematical) and the **LLM** to be the "Driver" (aware of the road conditions).
 
 ## 3. The Role of the LLM (Reasoning Layer)
 The **World Model** provides the physics simulation ($P(win)$). The **LLM** provides the contextual understanding ($R$).
