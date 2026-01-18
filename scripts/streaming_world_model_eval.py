@@ -432,12 +432,19 @@ class StreamingWorldModelEvaluator:
         base_prob = np.clip(base_prob, 0.35, 0.75)
         
         # ============================================================
-        # COMPONENT 2: MOMENTUM TRANSFORMER
+        # COMPONENT 2: MOMENTUM TRANSFORMER (uses past games only)
         # ============================================================
-        momentum_delta, _ = self.momentum.get_matchup_momentum_delta(home, away)
+        momentum_delta, _ = self.momentum.get_matchup_momentum_delta(
+            home, away, current_date=date, games_df=self.games_df
+        )
+        
         
         # ============================================================
         # COMPONENT 3: CHEMISTRY GNN
+        # Note: Uses static pre-trained scores based on historical player
+        # interaction data. This represents "baseline" team chemistry and
+        # doesn't change game-to-game within the evaluation season.
+        # Future work: Track in-season lineups for progressive chemistry.
         # ============================================================
         chem_diff = self.chemistry.get_chemistry_differential(home, away)
         chem_delta = chem_diff * 0.1  # Max ±5% impact

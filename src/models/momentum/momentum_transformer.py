@@ -194,36 +194,115 @@ class MomentumAnalytics:
         else:
             logger.info("Momentum model not found, using simulated scores")
     
-    def get_team_momentum_score(self, team: str) -> float:
+    def get_team_momentum_score(self, team: str, current_date: str = None, games_df = None) -> float:
         """
-        Get the momentum score for a team.
+        Get the momentum score for a team based on their PAST games.
         
-        In production, this would:
-        1. Fetch the team's last N games
-        2. Tokenize them into a sequence
-        3. Run through the Transformer
+        Uses the trained Transformer model to analyze the team's recent game sequence.
+        Returns score in [0.4, 0.6] range centered at 0.5.
         
-        For now, we simulate based on team name hash for consistency.
+        Args:
+            team: Team name
+            current_date: Date string (YYYY-MM-DD) - only use games BEFORE this date
+            games_df: DataFrame with game history (optional, uses internal if not provided)
         """
-        if self.loaded and self.model is not None:
-            # TODO: Implement real sequence fetch and inference
-            pass
+        import torch
+        import pandas as pd
+        import numpy as np
         
-        # Simulated momentum (deterministic per team per day)
-        from datetime import datetime
-        seed = hash(team + datetime.now().strftime("%Y-%m-%d")) % 100
-        return 0.5 + (seed - 50) / 500  # Range: 0.4 - 0.6
+        # If no date context, fall back to simulated (for backward compatibility)
+        if current_date is None or games_df is None:
+            from datetime import datetime
+            seed = hash(team + datetime.now().strftime("%Y-%m-%d")) % 100
+            return 0.5 + (seed - 50) / 500
+        
+        try:
+            target_date = pd.to_datetime(current_date)
+            
+            # Get team's past games before this date
+            team_games = games_df[
+                ((games_df['home'] == team) | (games_df['away'] == team)) &
+                (games_df['date'] < target_date)
+            ].sort_values('date', ascending=False).head(15)  # Last 15 games
+            
+            if len(team_games) < 3:
+                # Not enough history - return neutral
+                return 0.5
+            
+            # Build feature sequence: [is_home, win, margin, rest_days, streak]
+            sequence = []
+            prev_date = None
+            streak = 0
+            
+            for _, game in team_games.iterrows():
+                is_home = 1.0 if game['home'] == team else 0.0
+                
+                if is_home:
+                    won = float(game['home_win'])
+                    margin = float(game['margin']) / 30.0  # Normalize
+                else:
+                    won = 1.0 - float(game['home_win'])
+                    margin = -float(game['margin']) / 30.0
+                
+                # Rest days
+                if prev_date is not None:
+                    rest = (prev_date - game['date']).days
+                    rest = min(rest, 7) / 7.0  # Normalize to [0, 1]
+                else:
+                    rest = 0.5
+                
+                # Update streak
+                if won > 0.5:
+                    streak = max(streak, 0) + 1
+                else:
+                    streak = min(streak, 0) - 1
+                streak_norm = np.clip(streak / 10.0, -1, 1)
+                
+                sequence.append([is_home, won, margin, rest, streak_norm])
+                prev_date = game['date']
+            
+            # Reverse to chronological order and take last 15
+            sequence = sequence[::-1][-15:]
+            
+            if self.loaded and self.model is not None:
+                # Run through trained Transformer
+                with torch.no_grad():
+                    x = torch.tensor([sequence], dtype=torch.float32)
+                    # Pad if needed
+                    if x.shape[1] < 15:
+                        pad = torch.zeros(1, 15 - x.shape[1], 5)
+                        x = torch.cat([pad, x], dim=1)
+                    
+                    output = self.model(x)
+                    prob = torch.sigmoid(output).item()
+                    # Map to [0.4, 0.6] range
+                    return 0.4 + prob * 0.2
+            else:
+                # Fallback: Simple win rate based score
+                win_rate = sum(1 for g in sequence if g[1] > 0.5) / len(sequence)
+                return 0.4 + win_rate * 0.2
+                
+        except Exception as e:
+            logger.warning(f"Momentum calculation error for {team}: {e}")
+            return 0.5
     
-    def get_matchup_momentum_delta(self, home_team: str, away_team: str) -> tuple:
+    def get_matchup_momentum_delta(self, home_team: str, away_team: str, 
+                                     current_date: str = None, games_df = None) -> tuple:
         """
         Calculate momentum-based adjustment to win probability.
+        
+        Args:
+            home_team: Home team name
+            away_team: Away team name  
+            current_date: Date string (YYYY-MM-DD) for pregame-only calculation
+            games_df: DataFrame with game history
         
         Returns:
             delta (float): Probability adjustment
             metadata (dict): Context for explainability
         """
-        home_momentum = self.get_team_momentum_score(home_team)
-        away_momentum = self.get_team_momentum_score(away_team)
+        home_momentum = self.get_team_momentum_score(home_team, current_date, games_df)
+        away_momentum = self.get_team_momentum_score(away_team, current_date, games_df)
         
         diff = home_momentum - away_momentum
         
