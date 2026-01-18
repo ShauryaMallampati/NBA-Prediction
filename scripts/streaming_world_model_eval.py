@@ -170,14 +170,75 @@ class StreamingWorldModelEvaluator:
         # Results storage
         self.results = []
         
-    def download_video(self, home: str, away: str, date: str) -> Optional[Path]:
-        """Download YouTube highlight for a game."""
-        home_full = TEAM_NAMES.get(home, home)
-        away_full = TEAM_NAMES.get(away, away)
+        # Build playlist index from NBA official playlist
+        self.playlist_index = {}
+        self._build_playlist_index()
+    
+    def _build_playlist_index(self):
+        """Build index of games from NBA official highlights playlist."""
+        playlist_url = "https://www.youtube.com/playlist?list=PLlVlyGVtvuVlek5UOvwJaRDtuAI1FgGZf"
         
+        try:
+            logger.info("📋 Building playlist index...")
+            cmd = [
+                "yt-dlp", "--flat-playlist", 
+                "--print", "%(title)s|||%(id)s",
+                playlist_url
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if '|||' in line:
+                        title, video_id = line.split('|||')
+                        # Parse: "BULLS at NETS | FULL GAME HIGHLIGHTS | January 16, 2026"
+                        parts = title.split('|')
+                        if len(parts) >= 3 and 'FULL GAME HIGHLIGHTS' in parts[1]:
+                            teams_part = parts[0].strip()  # "BULLS at NETS"
+                            date_part = parts[2].strip()   # "January 16, 2026"
+                            
+                            # Parse teams
+                            if ' at ' in teams_part:
+                                away, home = teams_part.split(' at ')
+                                away = away.strip().upper()
+                                home = home.strip().upper()
+                                
+                                # Create lookup key
+                                key = f"{home}_{away}_{date_part}"
+                                self.playlist_index[key] = video_id
+                
+                logger.info(f"✅ Playlist indexed: {len(self.playlist_index)} games found")
+            else:
+                logger.warning("⚠️ Failed to fetch playlist")
+        except Exception as e:
+            logger.warning(f"⚠️ Playlist indexing failed: {e}")
+    
+    def download_video(self, home: str, away: str, date: str) -> Optional[Path]:
+        """Download YouTube highlight for a game using playlist index."""
+        # Convert date to playlist format: "January 16, 2026"
         date_obj = datetime.strptime(date, "%Y-%m-%d")
-        date_str = date_obj.strftime("%B %d %Y")
-        query = f"{away_full} vs {home_full} Full Game Highlights {date_str}"
+        date_str = date_obj.strftime("%B %d, %Y")  # Note: comma included
+        date_str_no_comma = date_obj.strftime("%B %d %Y")
+        
+        # Normalize team names to uppercase short form
+        home_upper = home.upper().replace(" ", "")
+        away_upper = away.upper().replace(" ", "")
+        
+        # Try to find video in playlist index
+        possible_keys = [
+            f"{home_upper}_{away_upper}_{date_str}",
+            f"{home_upper}_{away_upper}_{date_str_no_comma}",
+        ]
+        
+        video_id = None
+        for key in possible_keys:
+            # Try partial matches
+            for idx_key, vid_id in self.playlist_index.items():
+                if home_upper in idx_key and away_upper in idx_key and date_obj.strftime("%B %d") in idx_key:
+                    video_id = vid_id
+                    break
+            if video_id:
+                break
         
         output_path = TEMP_VIDEO_DIR / f"temp_{date}_{home}_{away}.mp4"
         
@@ -189,13 +250,24 @@ class StreamingWorldModelEvaluator:
                 pass
         
         try:
+            if video_id:
+                # Direct download from video ID
+                url = f"https://www.youtube.com/watch?v={video_id}"
+                logger.info(f"📥 Downloading from playlist: {video_id}")
+            else:
+                # Fallback to search
+                home_full = TEAM_NAMES.get(home, home)
+                away_full = TEAM_NAMES.get(away, away)
+                query = f"{away_full} vs {home_full} Full Game Highlights {date_str_no_comma}"
+                url = f"ytsearch1:{query}"
+                logger.info(f"🔍 Searching: {query[:50]}...")
+            
             cmd = [
                 "yt-dlp",
-                f"ytsearch1:{query}",
+                url,
                 "-o", str(output_path),
                 "-f", "best[height<=480]",  # Lower quality for speed
                 "--max-filesize", "150M",
-                "--match-filter", "duration <= 600",
                 "--no-playlist",
                 "--quiet",
                 "--no-warnings",
