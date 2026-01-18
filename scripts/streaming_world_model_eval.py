@@ -34,6 +34,14 @@ from datetime import datetime
 from typing import Dict, Tuple, Optional
 import time
 
+# Selenium Fallback Imports
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    SELENIUM_AVAILABLE = True
+except ImportError:
+    SELENIUM_AVAILABLE = False
+
 # Add project root
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -379,11 +387,106 @@ class StreamingWorldModelEvaluator:
                 if result.stdout:
                     logger.info(f"yt-dlp output: {result.stdout[:200]}")
                 logger.warning(f"Return code: {result.returncode}, File exists: {output_path.exists()}")
+                
+                # Fallback to Selenium if standard yt-dlp fails
+                if SELENIUM_AVAILABLE:
+                    logger.warning(f"⚠️ Standard download failed. Attempting Selenium fallback for: {url}")
+                    if self._download_with_selenium(url, output_path):
+                        return output_path
+                        
                 return None
                 
         except Exception as e:
             logger.warning(f"Download failed: {e}")
+            if SELENIUM_AVAILABLE:
+                 logger.warning(f"⚠️ Exception. Attempting Selenium fallback for: {url}")
+                 if self._download_with_selenium(url, output_path):
+                     return output_path
             return None
+
+    def _download_with_selenium(self, url: str, output_path: Path) -> bool:
+        """Fallback method to download video using Selenium to bypass bot detection."""
+        try:
+            logger.info("   🚀 Starting Selenium Fallback...")
+            options = Options()
+            options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option("useAutomationExtension", False)
+            # Headless is safer for server environments, but visible is better for evasion.
+            # We use headless=new which is more undetectable.
+            options.add_argument("--headless=new") 
+            
+            driver = webdriver.Chrome(options=options)
+            
+            # Stealth hack
+            driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+                "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+            })
+            
+            try:
+                logger.info("   🌍 Navigating to YouTube...")
+                driver.get(url)
+                time.sleep(10) # Wait for page load and potential 'human' check
+                
+                logger.info("   🍪 Extracting fresh cookies...")
+                selenium_cookies = driver.get_cookies()
+                
+                # Create temp cookie file
+                cookie_file = Path("temp_selenium_cookies.txt")
+                with open(cookie_file, 'w') as f:
+                    f.write("# Netscape HTTP Cookie File\n")
+                    for cookie in selenium_cookies:
+                        domain = cookie.get('domain', '')
+                        path = cookie.get('path', '/')
+                        secure = 'TRUE' if cookie.get('secure') else 'FALSE'
+                        expires = str(int(cookie.get('expiry', time.time() + 3600)))
+                        name = cookie.get('name', '')
+                        value = cookie.get('value', '')
+                        flag = 'TRUE' if domain.startswith('.') else 'FALSE'
+                        f.write(f"{domain}\t{flag}\t{path}\t{secure}\t{expires}\t{name}\t{value}\n")
+                
+                # Construct fresh yt-dlp command with USER AGENT from driver
+                user_agent = driver.execute_script("return navigator.userAgent;")
+                
+                cmd = [
+                    "yt-dlp",
+                    "--cookies", str(cookie_file),
+                    "--user-agent", user_agent,
+                    url,
+                    "-o", str(output_path),
+                    "-f", "best[height<=480]",
+                    "--no-playlist"
+                ]
+                
+                logger.info("   📥 Downloading with fresh session...")
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+                
+                # Cleanup
+                if cookie_file.exists():
+                    try:
+                        cookie_file.unlink()
+                    except:
+                        pass
+                    
+                if result.returncode == 0:
+                    logger.info("   ✅ Selenium fallback successful!")
+                    return True
+                else:
+                    logger.error(f"   ❌ Selenium fallback failed: {result.stderr}")
+                    return False
+                    
+            except Exception as e:
+                logger.error(f"   ❌ Selenium logic error: {e}")
+                return False
+            finally:
+                try:
+                    driver.quit()
+                except:
+                    pass
+                    
+        except Exception as e:
+            logger.error(f"   ❌ Selenium driver error: {e}")
+            return False
     
     def analyze_video_with_cnn(self, video_path: Path) -> float:
         """
