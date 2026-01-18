@@ -41,7 +41,6 @@ from src.models.pregame.train_ensemble import EnsembleTrainer
 from src.models.chemistry_gnn import get_chemistry_model
 from src.models.momentum.momentum_transformer import MomentumAnalytics
 from src.common.features import RunningWorldState
-from src.models.llm_coach import llm_coach
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -472,16 +471,8 @@ class StreamingWorldModelEvaluator:
         vision_diff = home_vision_score - away_vision_score
         vision_delta = vision_diff * 0.15
         
-        # 7. COMPONENT 5: LLM COACH (Injury/News Analysis via Web Scraper)
-        try:
-            llm_result = llm_coach.analyze_matchup(home, away, base_prob, date)
-            llm_delta = llm_result.get('final_prob', base_prob) - base_prob
-        except Exception as e:
-            logger.debug(f"LLM Coach unavailable: {e}")
-            llm_delta = 0.0
-        
-        # LATE FUSION (5 COMPONENTS)
-        final_prob = base_prob + momentum_delta + chem_delta + vision_delta + llm_delta
+        # LATE FUSION (4 COMPONENTS)
+        final_prob = base_prob + momentum_delta + chem_delta + vision_delta
         final_prob = np.clip(final_prob, 0.05, 0.95)
         
         return final_prob
