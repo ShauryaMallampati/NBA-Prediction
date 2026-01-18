@@ -550,15 +550,33 @@ class StreamingWorldModelEvaluator:
         return weighted_score, len(scores)
     
     def _cleanup_old_cache(self):
-        """Remove old cached videos to save disk space."""
-        cache_files = sorted(self.video_cache_dir.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
-        max_total_cache = 30 * self.max_videos_per_team  # ~150 videos max
+        """Remove old cached videos - keep only last 5 games per team to save disk space."""
+        import re
+        from collections import defaultdict
         
-        while len(cache_files) > max_total_cache:
-            oldest = cache_files.pop(0)
+        team_videos = defaultdict(list)  # {team: [(path, mtime), ...]}
+        
+        for cache_file in self.video_cache_dir.glob("*.mp4"):
+            # Parse team from filename like "cache_2025-01-15_Celtics_Heat.mp4"
+            name = cache_file.stem
+            parts = name.split("_")
+            if len(parts) >= 4:
+                home, away = parts[2], parts[3]
+                mtime = cache_file.stat().st_mtime
+                team_videos[home].append((cache_file, mtime))
+                team_videos[away].append((cache_file, mtime))
+        
+        # For each team, keep only the 5 most recent videos
+        files_to_delete = set()
+        for team, videos in team_videos.items():
+            sorted_videos = sorted(videos, key=lambda x: x[1], reverse=True)  # newest first
+            for path, _ in sorted_videos[self.max_videos_per_team:]:
+                files_to_delete.add(path)
+        
+        for old_file in files_to_delete:
             try:
-                oldest.unlink()
-                logger.info(f"🗑️ Removed old cache: {oldest.name}")
+                old_file.unlink()
+                logger.info(f"🗑️ Cleaned old cache: {old_file.name}")
             except:
                 pass
     
@@ -729,7 +747,7 @@ def main():
     import argparse
     from pathlib import Path
     parser = argparse.ArgumentParser()
-    parser.add_argument("--season", default="2025-26", choices=["2024-25", "2025-26"])
+    parser.add_argument("--season", default="2025-26", choices=["2024-25", "2025-26", "all"])
     args = parser.parse_args()
     
     # DETERMINE MODEL DIRECTORY
@@ -743,8 +761,18 @@ def main():
         logger.warning("⚠️ Historical models not found. Using 'pregame' (WARNING: Potential Data Leakage if trained on 2026 data)")
         model_dir = "artifacts/models/pregame"
     
+    # Determine seasons to run
+    if args.season == "all":
+        seasons = ["2024-25", "2025-26"]
+    else:
+        seasons = [args.season]
+
+    # Initialize evaluator ONCE - state will persist across seasons when running "all"
     evaluator = StreamingWorldModelEvaluator(model_dir=model_dir)
-    evaluator.run_evaluation(args.season)
+    
+    for season in seasons:
+        logger.info(f"\n{'='*60}\n🏀 STARTING SIMULATION FOR SEASON: {season}\n{'='*60}")
+        evaluator.run_evaluation(season)
 
 
 if __name__ == "__main__":
