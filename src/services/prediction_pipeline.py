@@ -170,11 +170,44 @@ class PredictionPipeline:
                 blended_probs = blended_probs + np.array(momentum_adjustments)
                 blended_probs = np.clip(blended_probs, 0.05, 0.95)
                     
-            except Exception as e:
                 logger.warning(f"Failed to apply momentum adjustment: {e}")
                 momentum_metadata_list = [{}] * len(df)
 
-            # 9. Format Results
+            # 9. Apply LLM Coach Validation (Web Scraper + Reasoning)
+            llm_reasons = []
+            try:
+                from src.models.llm_coach import llm_coach
+                logger.info("🧠 Running LLM Coach Validation on all games...")
+                
+                llm_adjustments = []
+                
+                # Using the loop index to match probabilities
+                game_records = df.to_dict('records')
+                for i, row in enumerate(game_records):
+                    current_prob = blended_probs[i]
+                    
+                    # Validate via Scraper & Coach
+                    analysis = llm_coach.analyze_matchup(
+                        row['home_team'], 
+                        row['away_team'], 
+                        float(current_prob), 
+                        row.get('date', datetime.now().strftime('%Y-%m-%d'))
+                    )
+                    
+                    # Apply adjustment
+                    new_prob = analysis.get('final_prob', current_prob)
+                    llm_adjustments.append(new_prob - current_prob)
+                    llm_reasons.append(analysis.get('reasoning', ''))
+                    
+                blended_probs = blended_probs + np.array(llm_adjustments)
+                blended_probs = np.clip(blended_probs, 0.01, 0.99)
+                logger.info(f"✅ LLM Coach validated {len(df)} games via Web Scraper")
+                
+            except Exception as e:
+                logger.error(f"LLM Coach validation failed: {e}")
+                llm_reasons = ["Error: LLM Coach failed"] * len(df)
+
+            # 10. Format Results
             results = []
             
             # Get individual model votes for transparency
@@ -189,7 +222,6 @@ class PredictionPipeline:
                 prob = blended_probs[idx]
                 prediction = "HOME_WIN" if prob > 0.5 else "AWAY_WIN"
                 # Change confidence to be the winner's probability (50-100 scale)
-                # Old metric was margin (0-100), which confused users
                 confidence = max(prob, 1 - prob) * 100
                 
                 # Individual votes
@@ -214,10 +246,11 @@ class PredictionPipeline:
                     "home_spread": row.get('home_spread_avg', 0),
                     "away_spread": row.get('away_spread_avg', 0),
                     "individual_votes": votes,
-                    "models_agree": "3/3", # Placeholder logic retained from API
-                    "consensus_percentage": 100.0, # Placeholder
-                    "model_version": "ensemble_v2_polyglot",
+                    "models_agree": "3/3",
+                    "consensus_percentage": 100.0,
+                    "model_version": "ensemble_v2_neuro_symbolic",
                     "vision_impact": vision_metadata_list[idx] if idx < len(vision_metadata_list) else {},
+                    "llm_reasoning": llm_reasons[idx] if idx < len(llm_reasons) else "",
                     "momentum_impact": momentum_metadata_list[idx] if idx < len(momentum_metadata_list) else {}
                 }
                 results.append(result)

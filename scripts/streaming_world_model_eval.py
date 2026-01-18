@@ -174,7 +174,7 @@ class StreamingWorldModelEvaluator:
         self.video_cache_dir = Path("data/video_cache")
         self.video_cache_dir.mkdir(parents=True, exist_ok=True)
         self.max_videos_per_team = 5  # Keep last 5 videos per team
-        self.min_games_for_vision = 3  # Need at least 3 past games for vision analysis
+        self.min_games_for_vision = 1  # Use vision from game 1 (even with just 1 video)
         self.team_vision_cache = {}  # {team: [list of (date, score) tuples]}
         logger.info(f"📁 Video cache dir: {self.video_cache_dir}")
         
@@ -183,51 +183,56 @@ class StreamingWorldModelEvaluator:
         self._build_playlist_index()
     
     def _build_playlist_index(self):
-        """Build index of games from NBA official highlights playlist."""
-        playlist_url = "https://www.youtube.com/playlist?list=PLlVlyGVtvuVlek5UOvwJaRDtuAI1FgGZf"
+        """Build index of games from NBA official highlights playlists (2024-25 & 2025-26)."""
+        playlists = [
+            # 2025-26 Season
+            "https://www.youtube.com/playlist?list=PLlVlyGVtvuVlek5UOvwJaRDtuAI1FgGZf",
+            # 2024-25 Season (for historical context)
+            "https://www.youtube.com/playlist?list=PLlVlyGVtvuVnv4qfRHDDBXm2e757jt9I3"
+        ]
         
-        try:
-            logger.info("📋 Building playlist index...")
-            cmd = [
-                "yt-dlp", "--flat-playlist", 
-                "--print", "%(title)s|||%(id)s",
-                playlist_url
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-            
-            if result.returncode == 0:
-                for line in result.stdout.strip().split('\n'):
-                    if '|||' in line:
-                        title, video_id = line.split('|||')
-                        # Parse: "BULLS at NETS | FULL GAME HIGHLIGHTS | January 16, 2026"
-                        # or "EXTENDED: BULLS at NETS | FULL GAME HIGHLIGHTS | January 16, 2026"
-                        parts = title.split('|')
-                        if len(parts) >= 3 and 'FULL GAME HIGHLIGHTS' in parts[1]:
-                            teams_part = parts[0].strip()  # "BULLS at NETS" or "EXTENDED: BULLS at NETS"
-                            date_part = parts[2].strip()   # "January 16, 2026"
-                            
-                            # Strip "EXTENDED:" prefix if present
-                            if teams_part.startswith("EXTENDED:"):
-                                teams_part = teams_part[9:].strip()  # Remove "EXTENDED:" (9 chars)
-                            
-                            # Parse teams
-                            if ' at ' in teams_part:
-                                away, home = teams_part.split(' at ')
-                                away = away.strip().upper().replace(" ", "")
-                                home = home.strip().upper().replace(" ", "")
-                                
-                                # Create lookup key
-                                key = f"{home}_{away}_{date_part}"
-                                self.playlist_index[key] = video_id
+        logger.info("📋 Building playlist index (2024-26)...")
+        
+        for url in playlists:
+            try:
+                cmd = [
+                    "yt-dlp", "--flat-playlist", 
+                    "--print", "%(title)s|||%(id)s",
+                    url
+                ]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
                 
-                logger.info(f"✅ Playlist indexed: {len(self.playlist_index)} games found")
-                # Log a few keys for debugging
-                if len(self.playlist_index) > 0:
-                    logger.info(f"   Sample key: {list(self.playlist_index.keys())[0]}")
-            else:
-                logger.warning("⚠️ Failed to fetch playlist")
-        except Exception as e:
-            logger.warning(f"⚠️ Playlist indexing failed: {e}")
+                if result.returncode == 0:
+                    for line in result.stdout.strip().split('\n'):
+                        if '|||' in line:
+                            try:
+                                title, video_id = line.split('|||')
+                                # Parse: "BULLS at NETS | FULL GAME HIGHLIGHTS | January 16, 2026"
+                                parts = title.split('|')
+                                if len(parts) >= 3 and 'FULL GAME HIGHLIGHTS' in parts[1]:
+                                    teams_part = parts[0].strip()
+                                    date_part = parts[2].strip()
+                                    
+                                    # Strip "EXTENDED:" prefix
+                                    if teams_part.startswith("EXTENDED:"):
+                                        teams_part = teams_part[9:].strip()
+                                    
+                                    if ' at ' in teams_part:
+                                        away, home = teams_part.split(' at ')
+                                        away = away.strip().upper().replace(" ", "")
+                                        home = home.strip().upper().replace(" ", "")
+                                        
+                                        key = f"{home}_{away}_{date_part}"
+                                        self.playlist_index[key] = video_id
+                            except:
+                                continue
+                else:
+                    logger.warning(f"Failed to index playlist {url}")
+                    
+            except Exception as e:
+                logger.warning(f"Error indexing playlist {url}: {e}")
+                
+        logger.info(f"✅ Indexed {len(self.playlist_index)} videos from {len(playlists)} playlists")
     
     def download_video(self, home: str, away: str, date: str) -> Optional[Path]:
         """Download YouTube highlight for a game using playlist index."""

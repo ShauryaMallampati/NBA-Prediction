@@ -215,6 +215,30 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"Failed to get predictions: {e}")
             return []
+            
+    def insert_news(self, news_items: List[Dict[str, Any]]) -> int:
+        """Insert scraped news into 'news_archive' table (Memory)."""
+        if not self.initialize() or not news_items:
+            return 0
+        
+        success = 0
+        try:
+            for item in news_items:
+                data = {
+                    "headline": item.get("headline"),
+                    "link": item.get("link"),
+                    "source": item.get("source"),
+                    "team": item.get("team"),
+                    "scraped_at": datetime.now().isoformat()
+                }
+                # Assuming 'news_archive' table exists or will be created
+                self.client.table("news_archive").upsert(data, on_conflict="link").execute()
+                success += 1
+            logger.info(f"💾 Saved {success} news items to Supabase Memory")
+            return success
+        except Exception as e:
+            logger.warning(f"Failed to save news to Supabase (Table might be missing): {e}")
+            return 0
 
 
 # Singleton instance
