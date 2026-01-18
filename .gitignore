@@ -80,3 +80,5 @@ archive.zip
 cookies.json
 cookies.txt
 simulation_log.txt
+temp_auth_cookies.txt
+temp_selenium_cookies.txt
