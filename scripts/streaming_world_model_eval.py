@@ -50,7 +50,14 @@ from src.models.chemistry_gnn import get_chemistry_model
 from src.models.momentum.momentum_transformer import MomentumAnalytics
 from src.common.features import RunningWorldState
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("simulation_debug.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
 
 # Configuration
@@ -200,6 +207,9 @@ class StreamingWorldModelEvaluator:
         self.min_games_for_vision = 1  # Use vision from game 1 (even with just 1 video)
         self.team_vision_cache = {}  # {team: [list of (date, score) tuples]}
         logger.info(f"📁 Video cache dir: {self.video_cache_dir}")
+        
+        # Persistent Selenium Driver
+        self.driver = None
         
         # Build playlist index from NBA official playlist
         self.playlist_index = {}
@@ -404,88 +414,103 @@ class StreamingWorldModelEvaluator:
                      return output_path
             return None
 
-    def _download_with_selenium(self, url: str, output_path: Path) -> bool:
-        """Fallback method to download video using Selenium to bypass bot detection."""
+    def _init_selenium_driver(self):
+        """Initialize or re-initialize the persistent Selenium driver."""
+        if self.driver:
+            try:
+                self.driver.quit()
+            except:
+                pass
+        
         try:
-            logger.info("   🚀 Starting Selenium Fallback...")
+            logger.info("   🚀 Initializing Persistent Selenium Driver...")
             options = Options()
             options.add_argument("--disable-blink-features=AutomationControlled")
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option("useAutomationExtension", False)
-            # Headless is safer for server environments, but visible is better for evasion.
-            # We use headless=new which is more undetectable.
-            options.add_argument("--headless=new") 
+            # Headless disabled for now to allow manual CAPTCHA solving if needed
+            # options.add_argument("--headless=new") 
             
-            driver = webdriver.Chrome(options=options)
+            self.driver = webdriver.Chrome(options=options)
             
             # Stealth hack
-            driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
                 "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
             })
+            return True
+        except Exception as e:
+            logger.error(f"   ❌ Failed to init Selenium driver: {e}")
+            self.driver = None
+            return False
+
+    def _download_with_selenium(self, url: str, output_path: Path) -> bool:
+        """Fallback method using Persistent Selenium Driver."""
+        try:
+            if not self.driver:
+                if not self._init_selenium_driver():
+                    return False
             
             try:
-                logger.info("   🌍 Navigating to YouTube...")
-                driver.get(url)
-                time.sleep(10) # Wait for page load and potential 'human' check
-                
-                logger.info("   🍪 Extracting fresh cookies...")
-                selenium_cookies = driver.get_cookies()
-                
-                # Create temp cookie file
-                cookie_file = Path("temp_selenium_cookies.txt")
-                with open(cookie_file, 'w') as f:
-                    f.write("# Netscape HTTP Cookie File\n")
-                    for cookie in selenium_cookies:
-                        domain = cookie.get('domain', '')
-                        path = cookie.get('path', '/')
-                        secure = 'TRUE' if cookie.get('secure') else 'FALSE'
-                        expires = str(int(cookie.get('expiry', time.time() + 3600)))
-                        name = cookie.get('name', '')
-                        value = cookie.get('value', '')
-                        flag = 'TRUE' if domain.startswith('.') else 'FALSE'
-                        f.write(f"{domain}\t{flag}\t{path}\t{secure}\t{expires}\t{name}\t{value}\n")
-                
-                # Construct fresh yt-dlp command with USER AGENT from driver
-                user_agent = driver.execute_script("return navigator.userAgent;")
-                
-                cmd = [
-                    "yt-dlp",
-                    "--cookies", str(cookie_file),
-                    "--user-agent", user_agent,
-                    url,
-                    "-o", str(output_path),
-                    "-f", "best[height<=480]",
-                    "--no-playlist"
-                ]
-                
-                logger.info("   📥 Downloading with fresh session...")
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-                
-                # Cleanup
-                if cookie_file.exists():
-                    try:
-                        cookie_file.unlink()
-                    except:
-                        pass
-                    
-                if result.returncode == 0:
-                    logger.info("   ✅ Selenium fallback successful!")
-                    return True
-                else:
-                    logger.error(f"   ❌ Selenium fallback failed: {result.stderr}")
+                # Check driver health
+                self.driver.current_url
+            except Exception:
+                logger.warning("   ⚠️ Driver disconnected. Re-initializing...")
+                if not self._init_selenium_driver():
                     return False
-                    
-            except Exception as e:
-                logger.error(f"   ❌ Selenium logic error: {e}")
-                return False
-            finally:
-                try:
-                    driver.quit()
-                except:
+
+            logger.info("   🌍 Navigating to YouTube (Persistent Session)...")
+            self.driver.get(url)
+            time.sleep(5) # Wait for page load
+            
+            logger.info("   🍪 Extracting cookies from persistent session...")
+            selenium_cookies = self.driver.get_cookies()
+            
+            # Create temp cookie file
+            cookie_file = Path("temp_selenium_cookies.txt")
+            with open(cookie_file, 'w') as f:
+                f.write("# Netscape HTTP Cookie File\n")
+                for cookie in selenium_cookies:
+                    domain = cookie.get('domain', '')
+                    path = cookie.get('path', '/')
+                    secure = 'TRUE' if cookie.get('secure') else 'FALSE'
+                    expires = str(int(cookie.get('expiry', time.time() + 3600)))
+                    name = cookie.get('name', '')
+                    value = cookie.get('value', '')
+                    flag = 'TRUE' if domain.startswith('.') else 'FALSE'
+                    f.write(f"{domain}\t{flag}\t{path}\t{secure}\t{expires}\t{name}\t{value}\n")
+            
+            # Construct fresh yt-dlp command
+            user_agent = self.driver.execute_script("return navigator.userAgent;")
+            
+            cmd = [
+                "yt-dlp",
+                "--cookies", str(cookie_file),
+                "--user-agent", user_agent,
+                url,
+                "-o", str(output_path),
+                "-f", "best[height<=480]",
+                "--no-playlist"
+            ]
+            
+            logger.info("   📥 Downloading with persistent session cookies...")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            
+            # Cleanup cookie file but KEEP DRIVER OPEN
+            if cookie_file.exists():
+                try: 
+                    cookie_file.unlink()
+                except: 
                     pass
+                
+            if result.returncode == 0:
+                logger.info("   ✅ Selenium fallback successful!")
+                return True
+            else:
+                logger.error(f"   ❌ Selenium fallback failed: {result.stderr}")
+                return False
                     
         except Exception as e:
-            logger.error(f"   ❌ Selenium driver error: {e}")
+            logger.error(f"   ❌ Persistent Selenium error: {e}")
             return False
     
     def analyze_video_with_cnn(self, video_path: Path) -> float:
@@ -860,9 +885,41 @@ class StreamingWorldModelEvaluator:
         # WARM UP STATE
         self.warm_up_state(games['date'].min().strftime('%Y-%m-%d'))
         
+        # RESUME LOGIC
+        partial_file = RESULTS_DIR / f"real_video_eval_{season}_partial.json"
+        processed_keys = set()
+        
+        if partial_file.exists():
+            try:
+                with open(partial_file, 'r') as f:
+                    data = json.load(f)
+                    if 'games' in data:
+                        self.results = data['games']
+                        # Create key: "{date}_{home}_{away}"
+                        for g in self.results:
+                            processed_keys.add(f"{g['date']}_{g['home']}_{g['away']}")
+                        logger.info(f"🔄 Resuming from partial save: {len(self.results)} games already processed.")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to load resume data: {e}. Starting fresh.")
+        
+        
         start_time = time.time()
         
         for idx, row in games.iterrows():
+            # Check if game already processed
+            key = f"{row['date'].strftime('%Y-%m-%d')}_{row['home']}_{row['away']}"
+            if key in processed_keys:
+                # IMPORTANT: We must still update the World State (ELO, streaks) 
+                # even if we skip the prediction/video part.
+                # Find the result to get the actual outcome (though we have it in 'row' too)
+                actual_home_win = row['home_win']
+                processed_date = row['date'].strftime('%Y-%m-%d')
+                
+                # Update state silently
+                self.world_state.update(row['home'], row['away'], processed_date, actual_home_win)
+                # logger.debug(f"⏩ Replaying state for {row['home']} vs {row['away']}")
+                continue
+                
             self.evaluate_game(row)
             
             # Save intermediate results every 10 games for robustness
