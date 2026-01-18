@@ -211,7 +211,8 @@ class StreamingWorldModelEvaluator:
         for url in playlists:
             try:
                 cmd = [
-                    "yt-dlp", "--flat-playlist", 
+                    "yt-dlp", "--flat-playlist",
+                    "--cookies", "cookies.json",  # Bypass bot detection
                     "--print", "%(title)s|||%(id)s",
                     url
                 ]
@@ -340,6 +341,7 @@ class StreamingWorldModelEvaluator:
             
             cmd = [
                 "yt-dlp",
+                "--cookies", "cookies.json",  # Bypass bot detection
                 url,
                 "-o", str(output_path),
                 "-f", "best[height<=480]",  # Lower quality for speed
@@ -593,11 +595,12 @@ class StreamingWorldModelEvaluator:
         team_videos = defaultdict(list)  # {team: [(path, mtime), ...]}
         
         for cache_file in self.video_cache_dir.glob("*.mp4"):
-            # Parse team from filename like "cache_2025-01-15_Celtics_Heat.mp4"
+            # Parse team from filename like "2024-04-20_Nuggets_Lakers.mp4"
             name = cache_file.stem
             parts = name.split("_")
-            if len(parts) >= 4:
-                home, away = parts[2], parts[3]
+            if len(parts) >= 3:
+                # Format: DATE_HOME_AWAY (e.g., 2024-04-20_Nuggets_Lakers)
+                home, away = parts[1], parts[2]
                 mtime = cache_file.stat().st_mtime
                 team_videos[home].append((cache_file, mtime))
                 team_videos[away].append((cache_file, mtime))
