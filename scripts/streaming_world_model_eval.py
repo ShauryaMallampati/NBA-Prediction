@@ -363,28 +363,21 @@ class StreamingWorldModelEvaluator:
                 url = f"ytsearch1:{query}"
                 logger.info(f"🔍 Searching (not in playlist): {query}")
             
-            # Anti-bot User Agent (Mac Chrome to match cookies)
-            user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            
+            # Simple yt-dlp command (VPN handles IP rotation)
             cmd = [
                 "yt-dlp",
-                "--cookies", "cookies.txt",  # Bypass bot detection
-                "--user-agent", user_agent,  # Spoof browser
                 "--sleep-requests", "2",     # Sleep between internal requests
-                "--sleep-interval", "5",     # Sleep before download
-                "--max-sleep-interval", "15", # Randomize sleep
-                "--retries", "10",           # Retry more times
-                "--fragment-retries", "10",
+                "--sleep-interval", "3",     # Sleep before download
+                "--retries", "5",            # Retry on failure
                 url,
                 "-o", str(output_path),
-                "-f", "best[height<=480]",  # Lower quality for speed
+                "-f", "best[height<=480]",   # Lower quality for speed
                 "--max-filesize", "150M",
                 "--no-playlist",
-                # Removed --quiet and --no-warnings to see errors
             ]
             
             logger.info(f"📂 Output path: {output_path}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)  # 60s timeout
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             
             if result.returncode == 0 and output_path.exists():
                 file_size = output_path.stat().st_size / (1024 * 1024)
@@ -397,21 +390,10 @@ class StreamingWorldModelEvaluator:
                 if result.stdout:
                     logger.info(f"yt-dlp output: {result.stdout[:200]}")
                 logger.warning(f"Return code: {result.returncode}, File exists: {output_path.exists()}")
-                
-                # Fallback to Selenium if standard yt-dlp fails
-                if SELENIUM_AVAILABLE:
-                    logger.warning(f"⚠️ Standard download failed. Attempting Selenium fallback for: {url}")
-                    if self._download_with_selenium(url, output_path):
-                        return output_path
-                        
                 return None
                 
         except Exception as e:
             logger.warning(f"Download failed: {e}")
-            if SELENIUM_AVAILABLE:
-                 logger.warning(f"⚠️ Exception. Attempting Selenium fallback for: {url}")
-                 if self._download_with_selenium(url, output_path):
-                     return output_path
             return None
 
     def _init_selenium_driver(self):
