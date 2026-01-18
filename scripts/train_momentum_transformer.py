@@ -150,19 +150,24 @@ def main():
     # Create output directory
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     
-    # Hyperparameters (OPTIMIZED for higher accuracy)
+    # Hyperparameters (OPTIMIZED for stability - Matches V2)
     BATCH_SIZE = 64
     EPOCHS = 100
     LEARNING_RATE = 5e-4
-    SEQUENCE_LENGTH = 15  # Longer sequences capture more momentum patterns
+    SEQUENCE_LENGTH = 15
+    
+    # Model Architecture (V2 Specs)
+    D_MODEL = 64
+    N_HEADS = 4
+    N_LAYERS = 4
+    D_FF = 128
     
     print("\n📋 HYPERPARAMETERS:")
     print(f"   Batch Size: {BATCH_SIZE}")
     print(f"   Epochs: {EPOCHS}")
     print(f"   Learning Rate: {LEARNING_RATE}")
     print(f"   Sequence Length: {SEQUENCE_LENGTH} games")
-    print(f"   Optimizer: AdamW (weight_decay=0.01)")
-    print(f"   Scheduler: CosineAnnealingWarmRestarts (T_0=20)")
+    print(f"   Architecture: d_model={D_MODEL}, heads={N_HEADS}, layers={N_LAYERS}")
     
     # Load datasets
     print("\n📂 LOADING DATASETS...")
@@ -197,19 +202,19 @@ def main():
     # Initialize model (OPTIMIZED architecture)
     print("\n🧠 INITIALIZING MODEL...")
     print(f"   Architecture: Transformer Encoder")
-    print(f"   d_model: 128 (embedding dimension)")
-    print(f"   n_heads: 8 (attention heads)")
-    print(f"   n_layers: 6 (transformer layers)")
-    print(f"   d_feedforward: 256 (FFN hidden size)")
+    print(f"   d_model: {D_MODEL} (embedding dimension)")
+    print(f"   n_heads: {N_HEADS} (attention heads)")
+    print(f"   n_layers: {N_LAYERS} (transformer layers)")
+    print(f"   d_feedforward: {D_FF} (FFN hidden size)")
     print(f"   dropout: 0.15")
     
     model = MomentumTransformer(
         input_dim=train_ds.feature_dim,
-        d_model=128,      # Wider model (was 64)
-        n_heads=8,        # More attention heads (was 4)
-        n_layers=6,       # Deeper network (was 4)
-        d_feedforward=256,  # Larger FFN
-        dropout=0.15,     # Slightly more dropout
+        d_model=D_MODEL,
+        n_heads=N_HEADS,
+        n_layers=N_LAYERS,
+        d_feedforward=D_FF,
+        dropout=0.15,
     ).to(DEVICE)
     
     # Count parameters
