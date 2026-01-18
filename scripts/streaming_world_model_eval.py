@@ -541,9 +541,18 @@ class StreamingWorldModelEvaluator:
         cache_path = self.video_cache_dir / f"{cache_key}.mp4"
         
         if cache_path.exists():
+            logger.debug(f"   💾 Cache hit: {cache_path.name}")
             return cache_path
         
+        # Also check reverse order (away_home instead of home_away)
+        cache_key_alt = f"{date}_{away}_{home}"
+        cache_path_alt = self.video_cache_dir / f"{cache_key_alt}.mp4"
+        if cache_path_alt.exists():
+            logger.debug(f"   💾 Cache hit (alt): {cache_path_alt.name}")
+            return cache_path_alt
+        
         # Download using existing method
+        logger.info(f"   🔽 Downloading past game: {away} @ {home} ({date})")
         video_path = self.download_video(home, away, date)
         
         if video_path and video_path.exists():
@@ -551,9 +560,13 @@ class StreamingWorldModelEvaluator:
             try:
                 import shutil
                 shutil.move(str(video_path), str(cache_path))
+                logger.info(f"   💾 Cached: {cache_path.name}")
                 return cache_path
-            except:
+            except Exception as e:
+                logger.warning(f"   ⚠️ Cache move failed: {e}")
                 return video_path
+        else:
+            logger.warning(f"   ❌ Download failed: {away} @ {home} ({date})")
         
         return None
     
