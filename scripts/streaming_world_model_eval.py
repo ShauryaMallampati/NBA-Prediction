@@ -212,7 +212,7 @@ class StreamingWorldModelEvaluator:
             try:
                 cmd = [
                     "yt-dlp", "--flat-playlist",
-                    "--cookies", "cookies.json",  # Bypass bot detection
+                    "--cookies", "cookies.txt",  # Bypass bot detection
                     "--print", "%(title)s|||%(id)s",
                     url
                 ]
@@ -341,7 +341,7 @@ class StreamingWorldModelEvaluator:
             
             cmd = [
                 "yt-dlp",
-                "--cookies", "cookies.json",  # Bypass bot detection
+                "--cookies", "cookies.txt",  # Bypass bot detection
                 url,
                 "-o", str(output_path),
                 "-f", "best[height<=480]",  # Lower quality for speed

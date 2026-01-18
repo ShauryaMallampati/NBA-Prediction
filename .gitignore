@@ -78,3 +78,5 @@ htmlcov/
 .kaggle/
 archive.zip
 cookies.json
+cookies.txt
+simulation_log.txt
