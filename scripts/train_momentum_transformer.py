@@ -126,7 +126,16 @@ def evaluate(model, dataloader, criterion, device):
 def main():
     parser = argparse.ArgumentParser(description='Train Momentum Transformer')
     parser.add_argument('--resume', action='store_true', help='Resume from checkpoint')
+    parser.add_argument('--max_date', type=str, help='Cutoff date used for historical training (YYYY-MM-DD)')
+    parser.add_argument('--output_dir', type=str, help='Custom output directory')
     args = parser.parse_args()
+    
+    # Configure Output Directory
+    global OUTPUT_DIR, CHECKPOINT_PATH, BEST_MODEL_PATH
+    if args.output_dir:
+        OUTPUT_DIR = Path(args.output_dir)
+        CHECKPOINT_PATH = OUTPUT_DIR / "checkpoint_latest.pt"
+        BEST_MODEL_PATH = OUTPUT_DIR / "momentum_transformer.pt"
     
     print("\n" + "=" * 70)
     print("🏀 MOMENTUM TRANSFORMER TRAINING")
@@ -134,6 +143,8 @@ def main():
     print(f"   Device: {DEVICE}")
     print(f"   Resume: {args.resume}")
     print(f"   Output: {OUTPUT_DIR}")
+    if args.max_date:
+        print(f"   Max Date: {args.max_date} (Historical Mode)")
     print("=" * 70)
     
     # Create output directory
@@ -158,17 +169,17 @@ def main():
     print("   ⏳ Loading training data...")
     import time as time_module
     load_start = time_module.time()
-    train_ds = SeasonSequenceDataset(split="train", sequence_length=SEQUENCE_LENGTH)
+    train_ds = SeasonSequenceDataset(split="train", sequence_length=SEQUENCE_LENGTH, max_date=args.max_date)
     print(f"   ✅ Train loaded: {len(train_ds):,} sequences ({time_module.time()-load_start:.1f}s)")
     
     print("   ⏳ Loading validation data...")
     load_start = time_module.time()
-    val_ds = SeasonSequenceDataset(split="val", sequence_length=SEQUENCE_LENGTH)
+    val_ds = SeasonSequenceDataset(split="val", sequence_length=SEQUENCE_LENGTH, max_date=args.max_date)
     print(f"   ✅ Val loaded: {len(val_ds):,} sequences ({time_module.time()-load_start:.1f}s)")
     
     print("   ⏳ Loading test data...")
     load_start = time_module.time()
-    test_ds = SeasonSequenceDataset(split="test", sequence_length=SEQUENCE_LENGTH)
+    test_ds = SeasonSequenceDataset(split="test", sequence_length=SEQUENCE_LENGTH, max_date=args.max_date)
     print(f"   ✅ Test loaded: {len(test_ds):,} sequences ({time_module.time()-load_start:.1f}s)")
     
     train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)

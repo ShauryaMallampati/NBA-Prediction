@@ -225,8 +225,8 @@ class MomentumAnalytics:
                 (games_df['date'] < target_date)
             ].sort_values('date', ascending=False).head(15)  # Last 15 games
             
-            if len(team_games) < 3:
-                # Not enough history - return neutral
+            if len(team_games) < 1:
+                # No games yet - return neutral
                 return 0.5
             
             # Build feature sequence: [is_home, win, margin, rest_days, streak]

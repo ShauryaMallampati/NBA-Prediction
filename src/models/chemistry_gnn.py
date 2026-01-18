@@ -106,8 +106,8 @@ class PlayerChemistryModel:
                     (games_df['date'] < target_date)
                 ].sort_values('date', ascending=False).head(10)
                 
-                if len(team_games) < 3:
-                    # Not enough games - return neutral
+                if len(team_games) < 1:
+                    # No games yet - return neutral
                     return 0.5
                 
                 # Calculate chemistry proxy: consistency + recent form

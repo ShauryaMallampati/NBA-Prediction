@@ -40,6 +40,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.models.pregame.train_ensemble import EnsembleTrainer
 from src.models.chemistry_gnn import get_chemistry_model
 from src.models.momentum.momentum_transformer import MomentumAnalytics
+from src.common.features import RunningWorldState
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -71,11 +72,11 @@ TEAM_NAMES = {
 
 
 class StreamingWorldModelEvaluator:
-    def __init__(self):
-        logger.info("📦 Loading World Model components...")
+    def __init__(self, model_dir: str = "artifacts/models/pregame"):
+        logger.info(f"📦 Loading World Model components from {model_dir}...")
         
         # Load Ensemble
-        self.ensemble = EnsembleTrainer(output_dir="artifacts/models/pregame")
+        self.ensemble = EnsembleTrainer(output_dir=model_dir)
         self.ensemble.load_models()
         logger.info("✅ Ensemble loaded")
         
@@ -84,8 +85,22 @@ class StreamingWorldModelEvaluator:
         logger.info(f"✅ Chemistry loaded: {self.chemistry.loaded}")
         
         # Load Momentum
-        self.momentum = MomentumAnalytics()
+        # Check for momentum model in custom directory
+        momentum_path = Path(model_dir) / "momentum/momentum_transformer.pt"
+        if momentum_path.exists():
+            self.momentum = MomentumAnalytics(model_path=str(momentum_path))
+        else:
+            # Fallback to default path (may have leakage logic warnings)
+            logger.warning(f"⚠️ Custom momentum model not found at {momentum_path}. Using default.")
+            self.momentum = MomentumAnalytics()
+            
         logger.info(f"✅ Momentum loaded: {self.momentum.loaded}")
+        
+        # Baseline State for streaming simulation
+        self.world_state = RunningWorldState()
+        
+        # Performance metrics
+        self.results = []
         
         # Load Vision CNN (direct PyTorch loading with correct architecture)
         try:
@@ -168,7 +183,7 @@ class StreamingWorldModelEvaluator:
             self.games_df = None
         
         # Results storage
-        self.results = []
+        # self.results = [] # Moved above
         
         # Video cache for historical analysis (pregame only!)
         self.video_cache_dir = Path("data/video_cache")
@@ -200,7 +215,7 @@ class StreamingWorldModelEvaluator:
                     "--print", "%(title)s|||%(id)s",
                     url
                 ]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
                 
                 if result.returncode == 0:
                     for line in result.stdout.strip().split('\n'):
@@ -405,101 +420,64 @@ class StreamingWorldModelEvaluator:
             logger.warning(f"CNN analysis failed: {e}")
             return 0.5
     
+    def warm_up_state(self, cutoff_date: str):
+        """Pre-process all games before the simulation start to initialize ELO and streaks."""
+        logger.info(f"🔥 Warming up World State with games before {cutoff_date}...")
+        df = pd.read_csv("data/nba_games_enhanced.csv")
+        df['date'] = pd.to_datetime(df['date'])
+        
+        # Get all games before cutoff
+        past_games = df[df['date'] < cutoff_date].sort_values('date')
+        
+        # Update state sequentially without predicting
+        for _, row in past_games.iterrows():
+            self.world_state.update(row['home'], row['away'], row['date'], row['home_win'])
+            
+        logger.info(f"✅ State warmed up for {len(self.world_state.elo_ratings)} teams")
+
     def predict_game(self, home: str, away: str, date: str, 
                      home_vision_score: float, away_vision_score: float,
                      row: pd.Series = None) -> float:
         """
-        Run FULL World Model prediction using ALL 4 components.
-        
-        Architecture (matches diagram):
-        1. Ensemble (XGBoost + LightGBM + CatBoost) → Base probability
-        2. Momentum Transformer → Sequence adjustment
-        3. Chemistry GNN → Player relationship adjustment
-        4. Vision CNN → Video analysis adjustment
-        → Late Fusion → Final probability
+        Run HIGH-FIDELITY World Model prediction using real Ensemble + State.
         """
+        # 1. Get Live Features from Running State
+        features = self.world_state.get_team_features(home, away, date)
         
-        # ============================================================
-        # COMPONENT 1: ENSEMBLE (XGBoost + LightGBM + CatBoost)
-        # ============================================================
-        # Use historical performance as proxy features for ensemble
-        if row is not None and self.games_df is not None:
-            # Calculate team strength from recent games
-            home_strength = self._get_team_strength(home, date)
-            away_strength = self._get_team_strength(away, date)
-            
-            # Ensemble base: Home advantage + strength differential
-            strength_diff = (home_strength - away_strength) / 2
-            base_prob = 0.55 + strength_diff  # 55% home advantage + strength
-        else:
-            base_prob = 0.55  # Fallback: home advantage only
+        # 2. Add Vision Scores to features if model expects them (optional bridge)
+        # Actually, we use Late Fusion for Vision as per the architecture diagram
         
-        base_prob = np.clip(base_prob, 0.35, 0.75)
+        # 3. COMPONENT 1: REAL ENSEMBLE (XGBoost + LightGBM + CatBoost)
+        X = pd.DataFrame([features])
+        # Ensure we only use columns the model was trained on
+        model_features = self.ensemble.feature_names
+        # Reorder to match model's expected order
+        X_input = X[model_features]
         
-        # ============================================================
-        # COMPONENT 2: MOMENTUM TRANSFORMER (uses past games only)
-        # ============================================================
+        base_prob = self.ensemble.predict_ensemble(X_input)[0]
+        
+        # 4. COMPONENT 2: MOMENTUM TRANSFORMER
         momentum_delta, _ = self.momentum.get_matchup_momentum_delta(
             home, away, current_date=date, games_df=self.games_df
         )
         
-        
-        # ============================================================
-        # COMPONENT 3: CHEMISTRY GNN (progressive, uses current season games)
-        # Calculates chemistry based on team's recent performance consistency
-        # (low variance + good results = good "chemistry")
-        # ============================================================
+        # 5. COMPONENT 3: CHEMISTRY GNN (progressive)
         chem_diff = self.chemistry.get_chemistry_differential(
             home, away, current_date=date, games_df=self.games_df
         )
-        chem_delta = chem_diff * 0.1  # Max ±5% impact
+        chem_delta = chem_diff * 0.1
         
-        # ============================================================
-        # COMPONENT 4: VISION CNN (REAL from video!)
-        # ============================================================
+        # 6. COMPONENT 4: VISION CNN (REAL from video!)
         vision_diff = home_vision_score - away_vision_score
-        vision_delta = vision_diff * 0.15  # Max ±5% impact
+        vision_delta = vision_diff * 0.15
         
-        # ============================================================
-        # LATE FUSION: Weighted combination
-        # ============================================================
+        # LATE FUSION
         final_prob = base_prob + momentum_delta + chem_delta + vision_delta
         final_prob = np.clip(final_prob, 0.05, 0.95)
         
         return final_prob
-    
-    def _get_team_strength(self, team: str, date: str) -> float:
-        """Calculate team strength from recent performance (for Ensemble proxy)."""
-        try:
-            target_date = pd.to_datetime(date)
-            team_games = self.games_df[
-                ((self.games_df['home'] == team) | (self.games_df['away'] == team)) &
-                (self.games_df['date'] < target_date)
-            ].tail(15)  # Last 15 games
-            
-            if len(team_games) == 0:
-                return 0.0
-            
-            wins = 0
-            total_margin = 0
-            for _, game in team_games.iterrows():
-                is_home = game['home'] == team
-                if is_home:
-                    wins += game['home_win']
-                    total_margin += game['margin']
-                else:
-                    wins += (1 - game['home_win'])
-                    total_margin -= game['margin']
-            
-            win_rate = wins / len(team_games)
-            avg_margin = total_margin / len(team_games)
-            
-            # Strength: combination of win rate and margin
-            strength = (win_rate - 0.5) * 0.3 + (avg_margin / 30) * 0.2
-            return np.clip(strength, -0.2, 0.2)
-            
-        except Exception as e:
-            return 0.0
+
+    # Removed _get_team_strength and _get_past_games as they are covered by WorldState
     
     def _get_past_games(self, team: str, current_date: str, limit: int = 5) -> list:
         """Get past N games for a team before the current date."""
@@ -633,6 +611,10 @@ class StreamingWorldModelEvaluator:
                 if current_video.exists():
                     current_video.unlink()
         
+        # Update World State with the ACTUAL result after prediction
+        # (keeping the simulation progressive)
+        self.world_state.update(home, away, date, actual_home_win)
+        
         # Cleanup old cache periodically
         if len(self.results) % 20 == 0:
             self._cleanup_old_cache()
@@ -685,6 +667,9 @@ class StreamingWorldModelEvaluator:
         print(f"\n📅 Evaluating {len(games)} games from {season} season")
         print(f"   Date range: {games['date'].min().strftime('%Y-%m-%d')} to {games['date'].max().strftime('%Y-%m-%d')}")
         print()
+        
+        # WARM UP STATE
+        self.warm_up_state(games['date'].min().strftime('%Y-%m-%d'))
         
         start_time = time.time()
         
@@ -742,11 +727,23 @@ class StreamingWorldModelEvaluator:
 
 def main():
     import argparse
+    from pathlib import Path
     parser = argparse.ArgumentParser()
     parser.add_argument("--season", default="2025-26", choices=["2024-25", "2025-26"])
     args = parser.parse_args()
     
-    evaluator = StreamingWorldModelEvaluator()
+    # DETERMINE MODEL DIRECTORY
+    # Basic logic: Use historical model if available to avoid data leakage
+    hist_dir = Path("artifacts/models/historical_2024")
+    
+    if hist_dir.exists() and (hist_dir / "xgb_model.pkl").exists():
+        logger.info(f"🔙 Using Historical Models ({hist_dir}) for valid time-series evaluation")
+        model_dir = str(hist_dir)
+    else:
+        logger.warning("⚠️ Historical models not found. Using 'pregame' (WARNING: Potential Data Leakage if trained on 2026 data)")
+        model_dir = "artifacts/models/pregame"
+    
+    evaluator = StreamingWorldModelEvaluator(model_dir=model_dir)
     evaluator.run_evaluation(args.season)
 
 

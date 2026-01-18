@@ -35,15 +35,11 @@ class SeasonSequenceDataset(Dataset):
         split: str = "train",  # train, val, test
         train_ratio: float = 0.7,
         val_ratio: float = 0.15,
+        max_date: Optional[str] = None
     ):
         """
         Args:
-            data_path: Path to CSV with game-level data
-            sequence_length: Number of past games per sequence
-            min_games: Minimum games a team needs to be included
-            split: Which split to return
-            train_ratio: Fraction for training
-            val_ratio: Fraction for validation (rest is test)
+            max_date: Optional cutoff date 'YYYY-MM-DD'. Games after this are discarded.
         """
         self.sequence_length = sequence_length
         self.split = split
@@ -55,6 +51,13 @@ class SeasonSequenceDataset(Dataset):
             raise FileNotFoundError(f"Missing data file: {data_path}")
         
         self.df = pd.read_csv(data_path)
+        
+        # Filter by max_date if provided
+        if max_date:
+            self.df['date'] = pd.to_datetime(self.df['date'])
+            self.df = self.df[self.df['date'] < max_date]
+            logger.info(f"📅 Filtered dataset to games before {max_date}")
+            
         logger.info(f"Loaded {len(self.df)} games from {data_path}")
         
         # Prepare sequences
