@@ -440,13 +440,13 @@ class StreamingWorldModelEvaluator:
         
         
         # ============================================================
-        # COMPONENT 3: CHEMISTRY GNN
-        # Note: Uses static pre-trained scores based on historical player
-        # interaction data. This represents "baseline" team chemistry and
-        # doesn't change game-to-game within the evaluation season.
-        # Future work: Track in-season lineups for progressive chemistry.
+        # COMPONENT 3: CHEMISTRY GNN (progressive, uses current season games)
+        # Calculates chemistry based on team's recent performance consistency
+        # (low variance + good results = good "chemistry")
         # ============================================================
-        chem_diff = self.chemistry.get_chemistry_differential(home, away)
+        chem_diff = self.chemistry.get_chemistry_differential(
+            home, away, current_date=date, games_df=self.games_df
+        )
         chem_delta = chem_diff * 0.1  # Max ±5% impact
         
         # ============================================================

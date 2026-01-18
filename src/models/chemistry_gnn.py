@@ -78,8 +78,67 @@ class PlayerChemistryModel:
         logger.info(f"✅ Loaded chemistry model: {len(self.team_chemistry)} teams, {len(self.player_pairs)} pairs")
         return True
     
-    def get_team_chemistry_score(self, team_abbr: str) -> float:
-        """Get chemistry score for a team (0-1 scale)."""
+    def get_team_chemistry_score(self, team_abbr: str, current_date: str = None, games_df = None) -> float:
+        """
+        Get chemistry score for a team (0-1 scale).
+        
+        If current_date and games_df are provided, calculates a PROGRESSIVE chemistry
+        score based on team's recent performance consistency (proxy for chemistry).
+        
+        Args:
+            team_abbr: Team name/abbreviation
+            current_date: Date string for pregame-only calculation
+            games_df: DataFrame with game history
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # If we have date context, calculate progressive chemistry
+        if current_date is not None and games_df is not None:
+            try:
+                target_date = pd.to_datetime(current_date)
+                
+                # Get team's past games in this season (after Oct 1 of that year)
+                season_start = f"{target_date.year if target_date.month >= 10 else target_date.year - 1}-10-01"
+                team_games = games_df[
+                    ((games_df['home'] == team_abbr) | (games_df['away'] == team_abbr)) &
+                    (games_df['date'] >= season_start) &
+                    (games_df['date'] < target_date)
+                ].sort_values('date', ascending=False).head(10)
+                
+                if len(team_games) < 3:
+                    # Not enough games - return neutral
+                    return 0.5
+                
+                # Calculate chemistry proxy: consistency + recent form
+                margins = []
+                for _, game in team_games.iterrows():
+                    if game['home'] == team_abbr:
+                        margins.append(game['margin'])
+                    else:
+                        margins.append(-game['margin'])
+                
+                # Chemistry = combination of:
+                # 1. Consistency (low variance = good chemistry)
+                # 2. Recent form (positive margins = good)
+                variance = np.std(margins)
+                mean_margin = np.mean(margins)
+                
+                # Normalize: lower variance = higher chemistry (0.3-0.7 range)
+                consistency_score = 1 - min(variance / 20, 1)  # 20 point variance = 0
+                form_score = np.clip((mean_margin + 10) / 20, 0, 1)  # -10 to +10 margin
+                
+                # Combine: 60% consistency, 40% form
+                chemistry = 0.3 + (0.6 * consistency_score + 0.4 * form_score) * 0.4
+                
+                logger.debug(f"Chemistry for {team_abbr}: var={variance:.1f}, margin={mean_margin:.1f} -> {chemistry:.3f}")
+                return chemistry
+                
+            except Exception as e:
+                logger.warning(f"Progressive chemistry error for {team_abbr}: {e}")
+                # Fall through to static lookup
+        
+        # Fallback to static pre-loaded data
         if not self.loaded:
             self.load()
         
@@ -99,10 +158,19 @@ class PlayerChemistryModel:
         # Default neutral chemistry
         return 0.5
     
-    def get_chemistry_differential(self, home_team: str, away_team: str) -> float:
-        """Get chemistry advantage for home team over away team."""
-        home_chem = self.get_team_chemistry_score(home_team)
-        away_chem = self.get_team_chemistry_score(away_team)
+    def get_chemistry_differential(self, home_team: str, away_team: str,
+                                    current_date: str = None, games_df = None) -> float:
+        """
+        Get chemistry advantage for home team over away team.
+        
+        Args:
+            home_team: Home team name
+            away_team: Away team name
+            current_date: Date string for pregame-only calculation
+            games_df: DataFrame with game history
+        """
+        home_chem = self.get_team_chemistry_score(home_team, current_date, games_df)
+        away_chem = self.get_team_chemistry_score(away_team, current_date, games_df)
         return home_chem - away_chem
     
     def get_top_team_duos(self, team_abbr: str, n: int = 5) -> List[Dict]:
