@@ -223,13 +223,17 @@ class StreamingWorldModelEvaluator:
                 
                 cmd = [
                     "yt-dlp", "--flat-playlist",
-                    "--cookies", "cookies.txt",  # Bypass bot detection
-                    "--user-agent", user_agent,  # Spoof browser
-                    "--sleep-requests", "2",     # Sleep between requests
-                    "--retries", "10",           # Retry failed requests
+                    "--user-agent", user_agent,
+                    "--sleep-requests", "2",
+                    "--retries", "10",
                     "--print", "%(title)s|||%(id)s",
                     url
                 ]
+                
+                # Only add cookies if file exists
+                if Path("cookies.txt").exists():
+                    cmd.insert(2, "--cookies")
+                    cmd.insert(3, "cookies.txt")
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
                 
                 if result.returncode == 0:

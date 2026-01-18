@@ -1,152 +1,202 @@
-# PPO-LLM Strategy Shaping
+# NBA Prediction System
 
-**LLM-Guided Reward Shaping for Multi-Agent Coordination in Overcooked**
+**Multi-Modal Deep Learning for NBA Game Prediction**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
 
-This repository contains the code for training PPO agents with LLM-based reward shaping in the Overcooked cooperative cooking environment. Our method uses a language model to evaluate joint actions and provide reward bonuses for cooperative behavior.
+Advanced NBA prediction system combining multiple deep learning modalities through a learnable fusion architecture. The system processes pregame stats, player chemistry graphs, momentum sequences, video highlights, and audio commentary to generate accurate game predictions.
 
 ## Key Features
 
-- **LLM-guided reward shaping**: Uses GPT-Neo to evaluate action cooperativeness
-- **Multiple baselines**: Baseline PPO, CC_PPO, SP_PPO, HARL, PBT_PPO, PPO+LLM
-- **Robustness evaluation**: Four perturbation regimes (No Noise, Noise, Delay, Combo)
-- **Comprehensive analysis**: Nash gap, latency, robustness deltas, task completion
+- **Multi-Modal World Model**: Combines 6+ data sources for comprehensive game analysis
+- **Learnable Fusion**: Gated attention mechanism dynamically weights each modality
+- **Real-Time Predictions**: Live game predictions with uncertainty quantification
+- **Chemistry Analysis**: GNN-based team chemistry and lineup synergy modeling
+- **Momentum Tracking**: Transformer-based temporal momentum analysis
+- **Vision Processing**: CNN analysis of game highlights and player movements
+- **Interactive Dashboard**: Next.js web app with real-time updates
+
+## Architecture
+
+The system uses a hierarchical World Model architecture:
+
+1. **Base Ensemble**: XGBoost + LightGBM on pregame features
+2. **Modality Modules**:
+   - Vision CNN: Video highlight analysis
+   - Audio Transformer: Commentary sentiment
+   - Optical Flow: Player movement patterns
+   - Chemistry GNN: Team synergy graphs
+   - Momentum Transformer: Temporal sequences
+3. **Learnable Fusion**: Gated attention combines all modalities
+4. **Uncertainty Quantification**: Bayesian MC Dropout
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed system design.
 
 ## Project Structure
 
 ```
-PPO-LLM-Strategy-Shaping/
-├── notebooks/
-│   └── sim.ipynb              # Main experiment notebook
+NBA-Prediction/
 ├── src/
-│   └── ppo_llm_strategy_shaping/
-│       ├── __init__.py        # Package exports
-│       ├── config.py          # Configuration and hyperparameters
-│       ├── env_wrappers.py    # Overcooked environment wrappers
-│       ├── llm_shaping.py     # LLM reward shaping logic
-│       ├── train.py           # Training loops and callbacks
-│       ├── evaluation.py      # Nash gap, latency, robustness analysis
-│       └── utils.py           # Utility functions
-├── requirements.txt           # Dependencies
-└── README.md                  # This file
+│   ├── models/          # Deep learning models
+│   │   ├── fusion/      # Learnable fusion module
+│   │   ├── chemistry/   # GNN models
+│   │   ├── momentum/    # Transformer models
+│   │   ├── vision/      # CNN models
+│   │   └── pregame/     # Ensemble models
+│   ├── data/            # Data ingestion & preprocessing
+│   ├── services/        # API services
+│   └── api/             # FastAPI endpoints
+├── app/                 # Next.js frontend
+├── scripts/             # Training & evaluation scripts
+├── tests/               # Unit tests
+└── docs/                # Documentation
 ```
 
 ## Installation
 
-### 1. Clone the repository
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- Poetry (Python package manager)
+- CUDA-capable GPU (recommended)
+
+### Setup
 
 ```bash
-git clone https://github.com/ShauryaMallampati/PPO-LLM-Strategy-Shaping.git
-cd PPO-LLM-Strategy-Shaping
+# Clone repository
+git clone https://github.com/ShauryaMallampati/NBA-Prediction.git
+cd NBA-Prediction
+
+# Install Python dependencies
+poetry install
+
+# Install Node.js dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your API keys
 ```
 
-### 2. Create a virtual environment
+### Environment Variables
+
+Create a `.env` file with:
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+# API Keys
+RAPID_API_KEY=your_key_here
+SUPABASE_URL=your_url_here
+SUPABASE_KEY=your_key_here
 
-### 3. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Install the Overcooked environment
-
-```bash
-git clone https://github.com/HumanCompatibleAI/overcooked_ai.git
-pip install -e overcooked_ai
+# Model Paths
+MODEL_DIR=artifacts/models
+DATA_DIR=data
 ```
 
 ## Quick Start
 
-### Using the Python API
+### Train Models
+
+```bash
+# Train base ensemble
+poetry run python scripts/train/train_ensemble.py
+
+# Train chemistry GNN
+poetry run python scripts/train/train_chemistry.py
+
+# Train momentum transformer
+poetry run python scripts/train/train_momentum.py
+
+# Train fusion module
+poetry run python scripts/train/train_fusion.py
+```
+
+### Run Predictions
+
+```bash
+# Get today's predictions
+poetry run python scripts/predict/daily_predictions.py
+
+# Run web dashboard
+npm run dev
+```
+
+### Run Tests
+
+```bash
+# Python tests
+poetry run pytest tests/ -v
+
+# Check code quality
+poetry run black src/
+poetry run isort src/
+```
+
+## Usage
+
+### Python API
 
 ```python
-from ppo_llm_strategy_shaping import Config, train_all, run_nash_analysis
+from src.models.fusion.learnable_fusion import FusionModule
+from src.services.prediction_service import PredictionService
 
-# Configure experiment
-config = Config(
-    layout="asymmetric_advantages",
-    seeds=[1001, 2002, 3003],
-    llm_model_name="EleutherAI/gpt-neo-1.3B",
-)
+# Initialize prediction service
+service = PredictionService()
 
-# Train all baselines
-results = train_all(config=config, n_jobs=10)
+# Get predictions for today's games
+predictions = service.get_daily_predictions()
 
-# Run Nash analysis
-nash_df = run_nash_analysis(config=config)
+for pred in predictions:
+    print(f"{pred.away_team} @ {pred.home_team}")
+    print(f"Winner: {pred.predicted_winner} ({pred.probability:.1%})")
+    print(f"Confidence: {pred.confidence}")
 ```
 
-### Using the Notebook
+### Web Dashboard
 
-1. Open `notebooks/sim.ipynb` in Jupyter or Google Colab
-2. Run the setup cells to install dependencies
-3. Configure your experiment parameters
-4. Execute training and evaluation cells
+```bash
+# Start development server
+npm run dev
 
-## Baselines
-
-| Baseline | Description | Training Steps |
-|----------|-------------|----------------|
-| Baseline | Standard PPO | 1M |
-| PPO+LLM | PPO with LLM reward shaping | 600K |
-| CC_PPO | Centralized Critic PPO | 1M |
-| SP_PPO | Self-Play PPO | 1M |
-| HARL | Hierarchical Agent RL | 1M |
-| PBT_PPO | Population-Based Training | 1M |
-
-## Environment Perturbation Regimes
-
-- **No Noise**: Clean environment (baseline)
-- **Noise**: Gaussian noise (σ=0.01) added to observations
-- **Delay**: 20% chance of reward penalty (-0.5) per step
-- **Combo**: Combined noise and delay perturbations
-
-## Configuration
-
-Key parameters in `Config`:
-
-```python
-Config(
-    layout="asymmetric_advantages",  # Overcooked layout
-    horizon=400,                     # Episode length
-    seeds=[1001, 2002, 3003, 4004, 5005],
-    llm_model_name="EleutherAI/gpt-neo-1.3B",
-    llm_bonus=0.2,                   # Reward bonus for "good" actions
-    learning_rate=3e-4,
-    n_steps=2048,
-    batch_size=2048,
-)
+# Open browser to http://localhost:3000
 ```
 
-## Results
+Features:
+- Live game predictions
+- Team chemistry analysis
+- Historical accuracy metrics
+- Momentum tracking
 
-Our experiments show that PPO+LLM:
+## Model Performance
 
-- Achieves comparable performance to baselines with **40% fewer training steps**
-- Demonstrates **improved robustness** under perturbations
-- Has **lower Nash gap**, indicating better equilibrium approximation
-- Maintains **real-time inference latency** suitable for deployment
+- **Game Winner Accuracy**: ~68% (2024-25 season)
+- **Against Spread**: ~55% (2024-25 season)
+- **Calibration Error**: < 3% (well-calibrated probabilities)
 
-## Citation
+## Data Sources
 
-If you use this code, please cite:
+- NBA Stats API (official stats)
+- Basketball Reference (historical data)
+- RapidAPI Sports (live odds)
+- YouTube (highlight videos)
+- Custom scrapers (commentary, social media)
 
-```bibtex
-@article{mallampati2025ppo_llm,
-  title={LLM-Guided Reward Shaping for Multi-Agent Coordination},
-  author={Mallampati, Shaurya},
-  year={2025}
-}
-```
+See [DATASET_ACKNOWLEDGMENTS.md](DATASET_ACKNOWLEDGMENTS.md) for full attribution.
+
+## Contributing
+
+Contributions welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
 
 ## License
 
@@ -154,7 +204,24 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- [HumanCompatibleAI/overcooked_ai](https://github.com/HumanCompatibleAI/overcooked_ai) for the Overcooked environment
-- [Stable-Baselines3](https://stable-baselines3.readthedocs.io/) for PPO implementation
-- [EleutherAI](https://www.eleuther.ai/) for GPT-Neo models
+- NBA Stats API for official game data
+- Basketball Reference for historical statistics
+- PyTorch and scikit-learn communities
+- Next.js and React ecosystems
 
+## Citation
+
+If you use this code in your research, please cite:
+
+```bibtex
+@software{mallampati2025nba,
+  title={Multi-Modal Deep Learning for NBA Game Prediction},
+  author={Mallampati, Shaurya},
+  year={2025},
+  url={https://github.com/ShauryaMallampati/NBA-Prediction}
+}
+```
+
+## Contact
+
+For questions or collaboration: [GitHub Issues](https://github.com/ShauryaMallampati/NBA-Prediction/issues)

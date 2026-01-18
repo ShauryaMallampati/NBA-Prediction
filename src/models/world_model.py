@@ -1,7 +1,4 @@
-"""
-The World Model: A unified system integrating Pregame Ensemble, Live RNN, and Vision CNN.
-This is the core "World Class" prediction engine.
-"""
+"""World Model: unified system integrating ensemble, vision, and momentum models."""
 import logging
 import torch
 import numpy as np
@@ -30,7 +27,6 @@ class NBAWorldModel:
         self.load_models()
         
     def load_models(self):
-        """Load all sub-models"""
         logger.info("🌍 Loading World Model components...")
         
         # Load Ensemble
@@ -60,7 +56,6 @@ class NBAWorldModel:
             logger.warning(f"⚠️ Vision CNN loading error: {e}")
             
     def predict_pregame(self, features: pd.DataFrame) -> pd.DataFrame:
-        """Get pregame predictions from the ensemble"""
         if not self.ensemble.loaded:
             return pd.DataFrame()
         return self.ensemble.predict(features)
@@ -68,11 +63,7 @@ class NBAWorldModel:
     # predict_live_win_prob removed (GRU deprecated)
             
     def analyze_video_clip(self, clip_tensor: torch.Tensor) -> Dict[str, float]:
-        """
-        Analyze video clip with CNN
-        Args:
-            clip_tensor: Tensor of shape (C, H, W)
-        """
+        """Analyze video clip with CNN. Returns class probabilities."""
         if not self.vision_cnn_loaded:
             return {}
             

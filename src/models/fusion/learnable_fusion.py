@@ -1,19 +1,8 @@
 """
-Learnable Fusion Module for Multi-Modal NBA Prediction.
+Learnable fusion module for multi-modal NBA prediction.
 
-This module implements a Gated Attention Fusion mechanism that learns
-to weight each modality based on context, replacing the fixed-sum fusion.
-
-Research Rationale:
-- Fixed-weight fusion ignores modality reliability per game
-- Learnable gates can down-weight missing or noisy modalities
-- Attention-based fusion is proven in multi-modal NLP (2020+)
-
-Architecture (Residual Fusion):
-- Input: [base_prob, vis_Δ, aud_Δ, flow_Δ, chem_Δ, mom_Δ]
-- Anchor: base_prob (Preserved via Skip-Connection)
-- Gate: Learns weights for Deltas [vis_Δ...mom_Δ]
-- Output: base_prob + (Weighted Deltas) -> Sigmoid Output
+Gated attention mechanism that dynamically weights each modality based on context.
+Replaces fixed-weight fusion with learned attention over deltas.
 """
 
 import torch
@@ -28,12 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class GatedFusion(nn.Module):
-    """
-    Gated Mixture-of-Experts style fusion.
-    
-    Learns to weight each modality based on its input values.
-    Missing modalities (set to 0) are automatically down-weighted.
-    """
+    """Gated fusion that learns to weight each modality based on input values."""
     
     def __init__(
         self,
@@ -45,29 +29,17 @@ class GatedFusion(nn.Module):
         
         self.n_modalities = n_modalities
         
-        # Gate network: learns weights for the 5 DELTAS (not base)
+        # gate learns weights for the 5 deltas (not base)
         self.gate = nn.Sequential(
-            nn.Linear(n_modalities - 1, hidden_dim), # Input: 5 deltas
+            nn.Linear(n_modalities - 1, hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim, n_modalities - 1), # Output: 5 weights
+            nn.Linear(hidden_dim, n_modalities - 1),
             nn.Softmax(dim=-1)
         )
-        
-        # Output projection (Optional, or just perform residual sum)
-        # In Residual architecture, we often just do Base + Correction.
-        # But to keep non-linearity, we can pass the correction through a small MLP 
-        # BEFORE adding to base, or just use the weighted sum directly.
-        # Let's use weighted sum directly to preserve "Anchor" philosophy.
-        # Correction = Sum(Weight_i * Delta_i)
-        
-        # We assume Deltas are in Probability Space (approx), so we add them directly.
-        
-        # Initialize weights
         self._init_weights()
     
     def _init_weights(self):
-        """Initialize weights with small values."""
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
@@ -75,89 +47,50 @@ class GatedFusion(nn.Module):
                     nn.init.zeros_(m.bias)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass with Residual Skip-Connection.
-        """
-        # Split Check:
-        # x[:, 0] = Base Probability (The Anchor)
-        # x[:, 1:] = Deltas (The Correction Signals)
-        
-        base_prob = x[:, 0:1] # (batch, 1)
-        deltas = x[:, 1:]     # (batch, 5)
-        
-        # 1. Compute weights using the LEARNABLE gate
-        # We concatenate delta magnitudes with the ensemble confidence
-        confidence = torch.abs(base_prob - 0.5) * 2.0
-        gate_input = torch.cat([deltas, confidence], dim=1)
-        
-        # Adjust gate to accept (deltas + confidence) = 6 inputs
-        # Wait, self.gate was defined with n_modalities - 1 = 5 inputs.
-        # Let's just use deltas (5 inputs) for now to match the __init__
-        weights = self.gate(deltas)
-        
-        # 2. Compute Weighted Correction
-        correction = torch.sum(deltas * weights, dim=1, keepdim=True)
-        
-        # 3. Apply Residual Anchor
-        return base_prob + correction
-    
-    def forward_with_floor(self, x: torch.Tensor, min_weight_base: float = 0.01) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Dynamic Attention Scaling with Residual Anchor.
-        """
+        """Forward pass with residual skip-connection."""
         base_prob = x[:, 0:1]
         deltas = x[:, 1:]
         
-        # 1. Gate Weights (Adaptive Resonance)
-        # FIX: Use the learned gate (with Dropout) instead of deterministic heuristic
-        # This enables MC Dropout to work for uncertainty estimation
-        weights = self.gate(deltas) # (batch, 5)
+        weights = self.gate(deltas)
+        correction = torch.sum(deltas * weights, dim=1, keepdim=True)
         
-        # 2. Dynamic Floor (on Deltas)
+        return base_prob + correction
+    
+    def forward_with_floor(self, x: torch.Tensor, min_weight_base: float = 0.01) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Dynamic attention scaling with floor to prevent zero weights."""
+        base_prob = x[:, 0:1]
+        deltas = x[:, 1:]
+        
+        weights = self.gate(deltas)
+        
+        # apply dynamic floor based on delta magnitudes
         delta_magnitudes = torch.abs(deltas)
         boost_factors = torch.ones_like(deltas) * 2.0
         dynamic_floors = min_weight_base + (delta_magnitudes * boost_factors)
-        
-        # Apply Floor
         weights = torch.max(weights, dynamic_floors)
         
-        # Normalize weights to protect from exploding corrections?
-        # Unlike "Mixture" (sum=1), these are independent attention scores.
-        # But to keep "Correction" bounded, let's normalize them to sum to 1?
-        # If we optimize weights, we want to pick the BEST delta.
-        # So yes, softmax was applied in Gate. We should re-normalize.
+        # re-normalize after floor
         weights = weights / (weights.sum(dim=-1, keepdim=True) + 1e-6)
         
-        # 3. Calculate Correction
-        # We trust the weighted combination of sensors.
         correction = torch.sum(deltas * weights, dim=1, keepdim=True)
-        
-        # 4. Apply Residual
         final_prob = base_prob + correction
         
-        # Pad weights with a "1.0" for base so logging works
-        # [1.0, w_vis, w_aud...]
+        # pad weights with 1.0 for base for logging
         full_weights = torch.cat([torch.ones_like(base_prob), weights], dim=1)
         
         return final_prob, full_weights
     
     def predict_proba(self, x: torch.Tensor, use_dynamic_floor: bool = False) -> torch.Tensor:
-        """Return probability."""
         if use_dynamic_floor:
             prob, _ = self.forward_with_floor(x)
         else:
             prob = self.forward(x)
-        
-        # Since forward now returns PROBABILITY (Residual Linear Sum),
-        # we do NOT apply sigmoid. Just clip.
         return torch.clamp(prob, 0.0, 1.0)
     
     def get_weights(self, x: torch.Tensor) -> torch.Tensor:
-        """Return gate weights for interpretability."""
         return self.gate(x)
 
     def get_weights_with_floor(self, x: torch.Tensor, min_weight_base: float = 0.01) -> torch.Tensor:
-        """Return actual weights used in dynamic fusion."""
         _, weights = self.forward_with_floor(x, min_weight_base)
         return weights
 

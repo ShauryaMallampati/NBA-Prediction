@@ -1,18 +1,4 @@
-"""
-Momentum Transformer: A Novel Architecture for NBA Prediction.
-
-Research Contribution:
-Traditional NBA prediction treats each game independently. This Transformer
-treats a team's season as a "sentence" where each game is a "word", allowing
-it to learn complex momentum patterns like:
-- "After 2 losses, this team usually bounces back"
-- "This team performs poorly in back-to-back road games"
-
-Architecture:
-- Positional Encoding to capture game recency
-- Multi-head Self-Attention to find important past games
-- Linear output for next-game win probability
-"""
+"""Momentum Transformer for NBA prediction - treats a team's season as a sequence."""
 
 import math
 import torch
@@ -25,10 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class PositionalEncoding(nn.Module):
-    """
-    Sinusoidal positional encoding (same as original Transformer).
-    Encodes the "position" of each game in the sequence.
-    """
+    """Sinusoidal positional encoding for game sequence position."""
     
     def __init__(self, d_model: int, max_len: int = 100, dropout: float = 0.1):
         super().__init__()
@@ -53,14 +36,7 @@ class PositionalEncoding(nn.Module):
 
 
 class MomentumTransformer(nn.Module):
-    """
-    A small-scale Transformer for modeling team momentum.
-    
-    Research Design Choices:
-    - 4 attention layers (enough to capture complex patterns, not overfit)
-    - 64-dim embeddings (efficient for small sequences)
-    - Single output: P(win next game)
-    """
+    """Transformer for modeling team momentum from game sequences."""
     
     def __init__(
         self,
@@ -106,7 +82,6 @@ class MomentumTransformer(nn.Module):
         logger.info(f"MomentumTransformer initialized: d_model={d_model}, layers={n_layers}")
     
     def _init_weights(self):
-        """Initialize weights for better convergence."""
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
@@ -153,10 +128,7 @@ class MomentumTransformer(nn.Module):
 
 
 class MomentumAnalytics:
-    """
-    High-level interface for using the Momentum Transformer in the prediction pipeline.
-    Similar to VisionAnalytics but for sequential momentum.
-    """
+    """High-level interface for using the Momentum Transformer in predictions."""
     
     def __init__(self, model_path: str = "artifacts/models/momentum/momentum_transformer_v2.pt"):
         self.model_path = model_path
