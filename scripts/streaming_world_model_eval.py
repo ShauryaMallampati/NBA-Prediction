@@ -485,6 +485,7 @@ class StreamingWorldModelEvaluator:
             
             cmd = [
                 "yt-dlp",
+                "--proxy", "socks5://127.0.0.1:9050",  # Tor proxy for IP rotation
                 "--cookies", str(cookie_file),
                 "--user-agent", user_agent,
                 url,
