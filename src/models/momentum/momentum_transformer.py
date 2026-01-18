@@ -166,26 +166,44 @@ class MomentumAnalytics:
         self._try_load()
     
     def _try_load(self):
-        """Attempt to load a trained model."""
+        """Attempt to load a trained model, dynamically inferring architecture."""
         import os
         if os.path.exists(self.model_path):
             try:
-                checkpoint = torch.load(self.model_path, map_location='cpu')
-                # Initialize with V2 architecture params (max_seq_len=15 to match training)
-                self.model = MomentumTransformer(
-                    input_dim=5,
-                    d_model=64,
-                    n_heads=4,
-                    n_layers=4,
-                    d_feedforward=128,
-                    max_seq_len=15  # Must match training
-                )
+                checkpoint = torch.load(self.model_path, map_location='cpu', weights_only=False)
+                
                 # Handle both wrapped and raw state dict formats
                 if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-                    self.model.load_state_dict(checkpoint['model_state_dict'])
+                    state_dict = checkpoint['model_state_dict']
                 else:
-                    # Raw state dict without wrapper
-                    self.model.load_state_dict(checkpoint)
+                    state_dict = checkpoint
+                
+                # DYNAMICALLY INFER ARCHITECTURE FROM WEIGHTS
+                ip_shape = state_dict['input_projection.weight'].shape
+                d_model = ip_shape[0]
+                input_dim = ip_shape[1]
+                
+                # Count layers
+                n_layers = len(set(int(k.split('.')[2]) for k in state_dict.keys() if 'transformer_encoder.layers' in k))
+                
+                # Get FFN dim
+                d_feedforward = state_dict['transformer_encoder.layers.0.linear1.weight'].shape[0]
+                
+                logger.info(f"MomentumTransformer initialized: d_model={d_model}, layers={n_layers}")
+                
+                # Infer max_seq_len from positional encoding
+                max_seq_len = state_dict['pos_encoder.pe'].shape[1]
+                
+                self.model = MomentumTransformer(
+                    input_dim=input_dim,
+                    d_model=d_model,
+                    n_heads=8 if d_model >= 128 else 4,  # More heads for larger d_model
+                    n_layers=n_layers,
+                    d_feedforward=d_feedforward,
+                    max_seq_len=max_seq_len
+                )
+
+                self.model.load_state_dict(state_dict)
                 self.model.eval()
                 self.loaded = True
                 logger.info("✅ MomentumTransformer loaded")
@@ -193,6 +211,7 @@ class MomentumAnalytics:
                 logger.warning(f"Failed to load Momentum model: {e}")
         else:
             logger.info("Momentum model not found, using simulated scores")
+
     
     def get_team_momentum_score(self, team: str, current_date: str = None, games_df = None) -> float:
         """
