@@ -1,120 +1,160 @@
-# NBA Prediction Platform 🏀
+# PPO-LLM Strategy Shaping
 
-An **ML-powered prediction system** for NBA games with multi-modal AI, explainable predictions, and automated accuracy tracking.
+**LLM-Guided Reward Shaping for Multi-Agent Coordination in Overcooked**
 
-## Features
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- **Ensemble Model**: XGBoost + LightGBM + CatBoost (67.7% accuracy)
-- **Vision CNN**: VideoMAE-based video analysis for game footage understanding
-- **Player Chemistry**: Graph-based player synergy analysis
-- **Explainable AI**: SHAP-based feature importance for every prediction
-- **Daily Automation**: GitHub Actions auto-fetches results and tracks accuracy
-- **Modern Frontend**: Next.js dark-mode dashboard with real-time predictions
-- **Betting Strategy**: Kelly Criterion for optimal bet sizing
+## Overview
 
-## Quick Start
+This repository contains the code for training PPO agents with LLM-based reward shaping in the Overcooked cooperative cooking environment. Our method uses a language model to evaluate joint actions and provide reward bonuses for cooperative behavior.
 
-```bash
-# Install dependencies
-poetry install
-npm install
+## Key Features
 
-# Set up environment
-cp .env.example .env
-# Edit .env with your API keys
-
-# Start API server
-poetry run python src/api/ensemble_predictions.py
-
-# Start frontend (separate terminal)
-npm run dev
-```
-
-Visit: http://localhost:3000
-
-## AI Agent Workflow
-
-### 1. Vision CNN Training
-Train the 3D CNN on your local dataset:
-```bash
-poetry run python scripts/train_vision_cnn.py
-```
-
-### 2. Daily Vision Agent
-Find yesterday's highlights and "watch" them for self-supervised learning:
-```bash
-poetry run python scripts/daily_vision_agent.py
-```
-
-### 3. Post-Game Analysis
-Generate AI reasoning for why predictions were wrong using Qwen2.5-3B + Web Scraping:
-```bash
-poetry run python scripts/analyze_wrong_predictions.py
-```
-*Note: These insights are automatically displayed on the `/analysis` page.*
-
-## Architecture
-
-![Multi-Modal NBA Prediction Architecture](docs/architecture_diagram.png)
-
-Our **Multi-Modal World Model** fuses four data modalities through Late Fusion:
-
-| Module | Input | Model | Output |
-|--------|-------|-------|--------|
-| **Statistical** | Box scores, Elo ratings | XGBoost + LightGBM + CatBoost | Base win probability |
-| **Vision** | Game highlights | 3D CNN (ResNet) | Visual execution score |
-| **Chemistry** | Player relationships | Graph Neural Network | Team synergy adjustment |
-| **Momentum** | Season history (15 games) | Transformer Encoder | Momentum adjustment |
-
-### Late Fusion Formula:
-```
-P(win) = σ(P_ensemble + Δ_chemistry + Δ_vision + Δ_momentum)
-```
-
-## Datasets Used
-
-| Dataset | Description | Source |
-|---------|-------------|--------|
-| **BASKET** (CVPR 2025) | 4,477 hours of basketball video, 32K players | [HuggingFace](https://huggingface.co/datasets/yulupan/BASKET) |
-| **Basketball-51** | 51 basketball activity classes | [Kaggle](https://www.kaggle.com/datasets/sarbagyashakya/basketball-51-dataset) |
-| **NBA Stats API** | Live game statistics | [nba_api](https://github.com/swar/nba_api) |
-| **The Odds API** | Real-time betting odds | [The Odds API](https://the-odds-api.com/) |
+- **LLM-guided reward shaping**: Uses GPT-Neo to evaluate action cooperativeness
+- **Multiple baselines**: Baseline PPO, CC_PPO, SP_PPO, HARL, PBT_PPO, PPO+LLM
+- **Robustness evaluation**: Four perturbation regimes (No Noise, Noise, Delay, Combo)
+- **Comprehensive analysis**: Nash gap, latency, robustness deltas, task completion
 
 ## Project Structure
 
 ```
-├── app/                 # Next.js frontend
+PPO-LLM-Strategy-Shaping/
+├── notebooks/
+│   └── sim.ipynb              # Main experiment notebook
 ├── src/
-│   ├── api/             # FastAPI endpoints
-│   ├── models/          # ML models
-│   │   ├── vision/      # Vision CNN (VideoMAE)
-│   │   └── chemistry_gnn.py  # Player chemistry
-│   └── common/          # Shared utilities
-├── scripts/             # Automation scripts
-├── colab/               # Cloud training notebooks
-│   └── train_vision_cnn.ipynb
-└── .github/workflows/   # GitHub Actions
+│   └── ppo_llm_strategy_shaping/
+│       ├── __init__.py        # Package exports
+│       ├── config.py          # Configuration and hyperparameters
+│       ├── env_wrappers.py    # Overcooked environment wrappers
+│       ├── llm_shaping.py     # LLM reward shaping logic
+│       ├── train.py           # Training loops and callbacks
+│       ├── evaluation.py      # Nash gap, latency, robustness analysis
+│       └── utils.py           # Utility functions
+├── requirements.txt           # Dependencies
+└── README.md                  # This file
 ```
 
-## API Endpoints
+## Installation
 
-| Endpoint | Description |
-|----------|-------------|
-| `/predictions` | Today's game predictions |
-| `/accuracy` | Dynamic accuracy stats |
-| `/live_schedule` | 14-day game schedule |
-| `/explain/{game_id}` | SHAP explanation |
-| `/chemistry/league` | Team chemistry rankings |
+### 1. Clone the repository
 
-## Tech Stack
+```bash
+git clone https://github.com/ShauryaMallampati/PPO-LLM-Strategy-Shaping.git
+cd PPO-LLM-Strategy-Shaping
+```
 
-- **Backend**: Python, FastAPI, XGBoost, LightGBM, CatBoost
-- **Vision**: VideoMAE, TimeSformer (HuggingFace Transformers)
-- **Frontend**: Next.js, TypeScript
-- **Data**: NBA API, Odds API, Supabase
-- **ML**: Ensemble learning, SHAP, Platt scaling
+### 2. Create a virtual environment
+
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Install the Overcooked environment
+
+```bash
+git clone https://github.com/HumanCompatibleAI/overcooked_ai.git
+pip install -e overcooked_ai
+```
+
+## Quick Start
+
+### Using the Python API
+
+```python
+from ppo_llm_strategy_shaping import Config, train_all, run_nash_analysis
+
+# Configure experiment
+config = Config(
+    layout="asymmetric_advantages",
+    seeds=[1001, 2002, 3003],
+    llm_model_name="EleutherAI/gpt-neo-1.3B",
+)
+
+# Train all baselines
+results = train_all(config=config, n_jobs=10)
+
+# Run Nash analysis
+nash_df = run_nash_analysis(config=config)
+```
+
+### Using the Notebook
+
+1. Open `notebooks/sim.ipynb` in Jupyter or Google Colab
+2. Run the setup cells to install dependencies
+3. Configure your experiment parameters
+4. Execute training and evaluation cells
+
+## Baselines
+
+| Baseline | Description | Training Steps |
+|----------|-------------|----------------|
+| Baseline | Standard PPO | 1M |
+| PPO+LLM | PPO with LLM reward shaping | 600K |
+| CC_PPO | Centralized Critic PPO | 1M |
+| SP_PPO | Self-Play PPO | 1M |
+| HARL | Hierarchical Agent RL | 1M |
+| PBT_PPO | Population-Based Training | 1M |
+
+## Environment Perturbation Regimes
+
+- **No Noise**: Clean environment (baseline)
+- **Noise**: Gaussian noise (σ=0.01) added to observations
+- **Delay**: 20% chance of reward penalty (-0.5) per step
+- **Combo**: Combined noise and delay perturbations
+
+## Configuration
+
+Key parameters in `Config`:
+
+```python
+Config(
+    layout="asymmetric_advantages",  # Overcooked layout
+    horizon=400,                     # Episode length
+    seeds=[1001, 2002, 3003, 4004, 5005],
+    llm_model_name="EleutherAI/gpt-neo-1.3B",
+    llm_bonus=0.2,                   # Reward bonus for "good" actions
+    learning_rate=3e-4,
+    n_steps=2048,
+    batch_size=2048,
+)
+```
+
+## Results
+
+Our experiments show that PPO+LLM:
+
+- Achieves comparable performance to baselines with **40% fewer training steps**
+- Demonstrates **improved robustness** under perturbations
+- Has **lower Nash gap**, indicating better equilibrium approximation
+- Maintains **real-time inference latency** suitable for deployment
+
+## Citation
+
+If you use this code, please cite:
+
+```bibtex
+@article{mallampati2025ppo_llm,
+  title={LLM-Guided Reward Shaping for Multi-Agent Coordination},
+  author={Mallampati, Shaurya},
+  year={2025}
+}
+```
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [HumanCompatibleAI/overcooked_ai](https://github.com/HumanCompatibleAI/overcooked_ai) for the Overcooked environment
+- [Stable-Baselines3](https://stable-baselines3.readthedocs.io/) for PPO implementation
+- [EleutherAI](https://www.eleuther.ai/) for GPT-Neo models
 
