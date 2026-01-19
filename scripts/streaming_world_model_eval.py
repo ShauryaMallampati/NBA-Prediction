@@ -46,7 +46,7 @@ except ImportError:
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.models.pregame.train_ensemble import EnsembleTrainer
-from src.models.chemistry.gnn_model import ChemistryGNN
+from src.models.chemistry_gnn import get_chemistry_model
 from src.models.vision.audio_analytics import audio_analytics
 from src.models.momentum.momentum_transformer import MomentumAnalytics
 from src.common.features import RunningWorldState
@@ -118,66 +118,28 @@ class StreamingWorldModelEvaluator:
         # Performance metrics
         self.results = []
         
-        # Load Vision CNN (direct PyTorch loading with correct architecture)
+        # Load Vision CNN (MobileNetV3 from train_vision_real.py)
         try:
             import torch
             import torch.nn as nn
-            
-            # Define the Simple3DCNN architecture (matches train_vision_cnn.py)
-            class Simple3DCNN(nn.Module):
-                """Simple 3D CNN for video classification."""
-                def __init__(self, num_classes: int = 8, num_frames: int = 16):
-                    super().__init__()
-                    self.features = nn.Sequential(
-                        nn.Conv3d(3, 32, kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=(1, 3, 3)),
-                        nn.BatchNorm3d(32),
-                        nn.ReLU(inplace=True),
-                        nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)),
-                        nn.Conv3d(32, 64, kernel_size=(3, 3, 3), padding=1),
-                        nn.BatchNorm3d(64),
-                        nn.ReLU(inplace=True),
-                        nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2)),
-                        nn.Conv3d(64, 128, kernel_size=(3, 3, 3), padding=1),
-                        nn.BatchNorm3d(128),
-                        nn.ReLU(inplace=True),
-                        nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2)),
-                        nn.Conv3d(128, 256, kernel_size=(3, 3, 3), padding=1),
-                        nn.BatchNorm3d(256),
-                        nn.ReLU(inplace=True),
-                        nn.AdaptiveAvgPool3d((1, 1, 1)),
-                    )
-                    self.classifier = nn.Sequential(
-                        nn.Flatten(),
-                        nn.Dropout(0.5),
-                        nn.Linear(256, 128),
-                        nn.ReLU(inplace=True),
-                        nn.Dropout(0.3),
-                        nn.Linear(128, num_classes)
-                    )
-                def forward(self, x):
-                    x = x.permute(0, 2, 1, 3, 4)  # (B, T, C, H, W) -> (B, C, T, H, W)
-                    x = self.features(x)
-                    x = self.classifier(x)
-                    return x
+            from torchvision.models import mobilenet_v3_large
             
             vision_path = Path("artifacts/models/vision/basketball_shot_classifier.pt")
             if vision_path.exists():
-                ckpt = torch.load(vision_path, map_location='cpu')
-                num_classes = ckpt.get('num_classes', 8)
-                num_frames = ckpt.get('num_frames', 16)
+                # Load MobileNetV3 architecture matching train_vision_real.py
+                model = mobilenet_v3_large(weights=None)
+                in_features = model.classifier[3].in_features
+                model.classifier[3] = nn.Linear(in_features, 1)  # Binary output
                 
-                self.vision_model = Simple3DCNN(num_classes=num_classes, num_frames=num_frames)
-                self.vision_model.load_state_dict(ckpt['model_state_dict'])
-                self.vision_model.eval()
+                state_dict = torch.load(vision_path, map_location='cpu', weights_only=True)
+                model.load_state_dict(state_dict)
+                model.eval()
                 
-                self.vision_labels = ckpt.get('labels', {})
-                best_acc = ckpt.get('best_val_acc', 0)
-                if best_acc > 100:
-                    best_acc = best_acc / 100
-                
-                logger.info(f"✅ Vision CNN loaded: {num_classes} classes, {best_acc:.2f}% accuracy")
+                self.vision_model = model
                 self.vision_loaded = True
-                self.vision_num_frames = num_frames
+                self.vision_num_frames = 16  # Consistent with training
+                
+                logger.info("✅ Vision CNN loaded (MobileNetV3, trained on real NBA videos)")
             else:
                 logger.warning("⚠️ Vision CNN checkpoint not found")
                 self.vision_model = None
@@ -576,19 +538,18 @@ class StreamingWorldModelEvaluator:
                 if len(frames) < num_frames:
                     continue
                 
-                # Stack frames: (num_frames, 3, H, W) -> (1, num_frames, 3, H, W)
-                clip_tensor = torch.stack(frames).unsqueeze(0)
+                # For MobileNetV3 (2D CNN): process each frame individually
+                # Stack frames: (num_frames, 3, H, W)
+                clip_tensor = torch.stack(frames)
                 
-                # Run 3D CNN
+                # Run 2D CNN on each frame
                 with torch.no_grad():
+                    # MobileNetV3 expects (B, C, H, W), output is (B, 1)
                     logits = self.vision_model(clip_tensor)
-                    probs = torch.softmax(logits, dim=1)
-                    
-                    # Score: probability of "make" classes
-                    # Labels: 2p0=miss, 2p1=make, 3p0=miss, 3p1=make, etc.
-                    # Make classes: indices 1, 3, 5, 7
-                    make_prob = probs[0, [1, 3, 5, 7]].sum().item()
-                    all_scores.append(make_prob)
+                    # Sigmoid to get probability, then average across frames
+                    probs = torch.sigmoid(logits).squeeze()
+                    avg_prob = probs.mean().item()
+                    all_scores.append(avg_prob)
             
             cap.release()
             
