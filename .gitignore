@@ -82,3 +82,8 @@ cookies.txt
 simulation_log.txt
 temp_auth_cookies.txt
 temp_selenium_cookies.txt
+download_log.txt
+simulation_debug.log
+
+# Training logs (saved as JSON in artifacts, but don't need in git)
+**/training_log.json
