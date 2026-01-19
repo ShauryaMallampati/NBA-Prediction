@@ -66,7 +66,7 @@ Real-time feature generation from historical states when live data isn't availab
                  │    78.4% ± 3.2%     │
                  └─────────────────────┘
 
-![Technical Architecture](/Users/shauryamallampati/.gemini/antigravity/brain/a2dc4a9d-8530-464e-ba12-103fb5ed17db/nba_world_model_v4_system_architecture_diagram_1768841525000_1768837965414.png)
+![Technical Architecture](docs/assets/architecture_v4.png)
 ```
 
 ---
