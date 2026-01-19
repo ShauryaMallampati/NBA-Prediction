@@ -347,11 +347,14 @@ class StreamingWorldModelEvaluator:
                 logger.info(f"✅ Downloaded: {file_size:.1f} MB")
                 return output_path
             else:
-                # Log the error
+                # Log the error with FLASHY RED X
+                print("\n" + "!"*60)
+                print("❌❌❌ DOWNLOAD FAILED ❌❌❌")
+                print("!"*60)
                 if result.stderr:
-                    logger.warning(f"yt-dlp error: {result.stderr[:200]}")
-                if result.stdout:
-                    logger.info(f"yt-dlp output: {result.stdout[:200]}")
+                    print(f"ERROR: {result.stderr[:300]}")
+                print("!"*60 + "\n")
+                
                 logger.warning(f"Return code: {result.returncode}, File exists: {output_path.exists()}")
                 return None
                 
@@ -596,9 +599,9 @@ class StreamingWorldModelEvaluator:
     def predict_game(self, home: str, away: str, date: str, 
                      home_vision_score: float, away_vision_score: float,
                      flow_delta: float = 0.0, audio_delta: float = 0.0,
-                     row: pd.Series = None) -> float:
+                     row: pd.Series = None) -> tuple:
         """
-        Run HIGH-FIDELITY World Model prediction using real Ensemble + State (7-Way Fusion).
+        Run HIGH-FIDELITY World Model prediction using real Ensemble + State (6-Way Fusion).
         """
         # 1. Get Live Features from Running State
         features = self.world_state.get_team_features(home, away, date)
@@ -614,38 +617,39 @@ class StreamingWorldModelEvaluator:
         X_input = X[model_features]
         
         base_prob = self.ensemble.predict_ensemble(X_input)[0]
-        print(f"      🎯 [ENSEMBLE] Base Prob: {base_prob:.3f}")
         
         # 4. COMPONENT 2: MOMENTUM TRANSFORMER
         momentum_delta, _ = self.momentum.get_matchup_momentum_delta(
             home, away, current_date=date, games_df=self.games_df
         )
-        print(f"      🔥 [MOMENTUM] Delta: {momentum_delta:+.4f}")
         
         # 5. COMPONENT 3: CHEMISTRY GNN (progressive)
         chem_diff = self.chemistry.get_chemistry_differential(
             home, away, current_date=date, games_df=self.games_df
         )
         chem_delta = chem_diff * 0.1
-        print(f"      🔗 [CHEMISTRY] Delta: {chem_delta:+.4f}")
         
         # 6. COMPONENT 4: VISION CNN (REAL from video!)
         vision_diff = home_vision_score - away_vision_score
         vision_delta = vision_diff * 0.15
-        print(f"      👁️ [VISION] Delta: {vision_delta:+.4f} (Home={home_vision_score:.3f}, Away={away_vision_score:.3f})")
         
-        # 7. COMPONENT 5: OPTICAL FLOW
-        print(f"      🌊 [FLOW] Delta: {flow_delta:+.4f}")
-
-        # 8. COMPONENT 6: AUDIO MOMENTUM
-        print(f"      🎵 [AUDIO] Delta: {audio_delta:+.4f}")
-        
-        # LATE FUSION (7 COMPONENTS incl PBP which is implicit/future or handled separately)
+        # LATE FUSION (6 COMPONENTS - PBP REMOVED)
         final_prob = base_prob + momentum_delta + chem_delta + vision_delta + flow_delta + audio_delta
-        final_prob = np.clip(final_prob, 0.05, 0.95)
-        print(f"      ✨ [FINAL] {base_prob:.3f} + {momentum_delta:+.4f} + {chem_delta:+.4f} + {vision_delta:+.4f} + {flow_delta:+.4f} + {audio_delta:+.4f} = {final_prob:.3f}")
+        # Clip
+        final_prob = max(0.05, min(0.95, final_prob))
         
-        return final_prob
+        logger.info(f"      🔮 [PREDICTION] {home} vs {away}")
+        logger.info(f"      📊 [1. BASE]      Ensemble: {base_prob:.3f}")
+        logger.info(f"      📈 [2. MOMENTUM]  Delta:    {momentum_delta:+.4f}")
+        logger.info(f"      🔗 [3. CHEMISTRY] Delta:    {chem_delta:+.4f}")
+        logger.info(f"      👁️ [4. VISION]    Delta:    {vision_delta:+.4f} (Home={home_vision_score:.3f}, Away={away_vision_score:.3f})")
+        logger.info(f"      🌊 [5. FLOW]      Delta:    {flow_delta:+.4f}")
+        logger.info(f"      🎵 [6. AUDIO]     Delta:    {audio_delta:+.4f}")
+        logger.info(f"      ✨ [FINAL] {final_prob:.3f} = {base_prob:.3f} + (Sum of Deltas)")
+        
+        return final_prob, base_prob
+        
+
 
     # Removed _get_team_strength and _get_past_games as they are covered by WorldState
     
@@ -824,7 +828,7 @@ class StreamingWorldModelEvaluator:
         # ============================================================
         # STEP 2: Run World Model prediction (all pregame data)
         # ============================================================
-        predicted_prob = self.predict_game(home, away, date, home_vision, away_vision, flow_delta, audio_delta, row=row)
+        predicted_prob, _ = self.predict_game(home, away, date, home_vision, away_vision, flow_delta, audio_delta, row=row)
         predicted_home_win = 1 if predicted_prob > 0.5 else 0
         correct = predicted_home_win == actual_home_win
         

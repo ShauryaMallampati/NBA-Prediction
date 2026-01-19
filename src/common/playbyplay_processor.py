@@ -19,6 +19,7 @@ Pipeline:
 import json
 import time
 import logging
+import requests
 from pathlib import Path
 from typing import Dict, Optional, List, Tuple
 from datetime import datetime
@@ -28,6 +29,16 @@ logger = logging.getLogger(__name__)
 # Cache directory
 PBP_CACHE_DIR = Path("data/pbp_cache")
 PBP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+# Standard headers for NBA Stats API
+NBA_HEADERS = {
+    'Host': 'stats.nba.com',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0',
+    'Accept': 'application/json, text/plain, */*',
+    'Referer': 'https://stats.nba.com/',
+    'x-nba-stats-origin': 'stats',
+    'x-nba-stats-token': 'true',
+}
 
 # Optional imports
 try:
@@ -115,9 +126,6 @@ class PlayByPlayProcessor:
         Returns:
             Dict with play-by-play data or None if failed
         """
-        if not NBA_API_AVAILABLE:
-            return None
-        
         # Check cache
         cache_file = self.cache_dir / f"{game_id}_pbp.json"
         if cache_file.exists():
@@ -128,23 +136,40 @@ class PlayByPlayProcessor:
             except Exception:
                 pass
         
-        # Fetch from API
-        try:
-            self._rate_limit()
-            logger.info(f"   📋 Fetching PBP for game {game_id}...")
-            
-            pbp = PlayByPlayV2(game_id=game_id)
-            data = pbp.get_dict()
-            
+        self._rate_limit()
+        logger.info(f"   📋 Fetching PBP for game {game_id}...")
+        
+        data = None
+        
+        # Method 1: Try nba_api library
+        if NBA_API_AVAILABLE:
+            try:
+                pbp = PlayByPlayV2(game_id=game_id)
+                data = pbp.get_dict()
+            except (KeyError, IndexError, Exception) as e:
+                logger.info(f"   ℹ️ nba_api fetch failed for {game_id} ({e}), trying fallback...")
+        
+        # Method 2: Fallback to manual request if library failed or unavailable
+        if data is None:
+            try:
+                url = "https://stats.nba.com/stats/playbyplayv2"
+                params = {'GameID': game_id, 'StartPeriod': 0, 'EndPeriod': 10}
+                resp = requests.get(url, headers=NBA_HEADERS, params=params, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    logger.info(f"   ✅ Fallback PBP fetch successful for {game_id}")
+                else:
+                    logger.warning(f"   ⚠️ Fallback PBP fetch failed: {resp.status_code}")
+            except Exception as e:
+                logger.warning(f"   ⚠️ Manual PBP fetch failed: {e}")
+        
+        if data:
             # Cache the result
             with open(cache_file, 'w') as f:
                 json.dump(data, f)
-            
             return data
             
-        except Exception as e:
-            logger.warning(f"   ⚠️ PBP fetch failed for {game_id}: {e}")
-            return None
+        return None
     
     def extract_events(self, pbp_data: Dict) -> List[Dict]:
         """
@@ -156,7 +181,14 @@ class PlayByPlayProcessor:
         events = []
         
         try:
+            # Handle both resultSets (standard) and resultSet (occasionally seen)
             result_sets = pbp_data.get('resultSets', [])
+            if not result_sets:
+                # Try singular 'resultSet' which sometimes appears in errors or alt formats
+                rs = pbp_data.get('resultSet')
+                if rs:
+                    result_sets = [rs]
+            
             if len(result_sets) == 0:
                 return events
             
