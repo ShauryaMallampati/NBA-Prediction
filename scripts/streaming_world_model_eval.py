@@ -725,7 +725,7 @@ class StreamingWorldModelEvaluator:
 
         logger.info(f"      🧠 [THINKING] I favor {favored} with {conf_level} confidence. Rationale: {reasoning}. (Bayesian Uncertainty: ±{uncertainty:.3f})")
         
-        return final_prob, base_prob
+        return final_prob, base_prob, uncertainty
         
 
 
@@ -906,7 +906,7 @@ class StreamingWorldModelEvaluator:
         # ============================================================
         # STEP 2: Run World Model prediction (all pregame data)
         # ============================================================
-        predicted_prob, _ = self.predict_game(home, away, date, home_vision, away_vision, flow_delta, audio_delta, row=row)
+        predicted_prob, base_prob, uncertainty = self.predict_game(home, away, date, home_vision, away_vision, flow_delta, audio_delta, row=row)
         predicted_home_win = 1 if predicted_prob > 0.5 else 0
         correct = predicted_home_win == actual_home_win
         
@@ -942,6 +942,8 @@ class StreamingWorldModelEvaluator:
             "away_pts": row['away_pts'],
             "actual_home_win": int(actual_home_win),
             "predicted_prob": round(predicted_prob, 4),
+            "base_prob": round(base_prob, 4),
+            "uncertainty": round(uncertainty, 4),
             "predicted_home_win": predicted_home_win,
             "correct": correct,
             "video_used": video_used,
