@@ -33,6 +33,25 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Tuple, Optional
 import time
+import torch.nn as nn
+
+# Define AudioClassifier for pickling compatibility
+class AudioClassifier(nn.Module):
+    def __init__(self, input_dim=4):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 32),
+            nn.ReLU(),
+            nn.BatchNorm1d(32),
+            nn.Dropout(0.3),
+            nn.Linear(32, 16),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(16, 1)
+        )
+        
+    def forward(self, x):
+        return self.net(x)
 
 # Selenium Fallback Imports
 try:
@@ -50,6 +69,7 @@ from src.models.chemistry_gnn import get_chemistry_model
 from src.models.vision.audio_analytics import audio_analytics
 from src.models.momentum.momentum_transformer import MomentumAnalytics
 from src.common.features import RunningWorldState
+from src.models.fusion.learnable_fusion import fusion_module
 
 logging.basicConfig(
     level=logging.INFO, 
@@ -111,6 +131,9 @@ class StreamingWorldModelEvaluator:
             self.momentum = MomentumAnalytics()
             
         logger.info(f"✅ Momentum loaded: {self.momentum.loaded}")
+        
+        # Load Audio Model (Fix: Ensure not using heuristic)
+        audio_analytics.load_model()
         
         # Baseline State for streaming simulation
         self.world_state = RunningWorldState()
@@ -633,19 +656,74 @@ class StreamingWorldModelEvaluator:
         vision_diff = home_vision_score - away_vision_score
         vision_delta = vision_diff * 0.15
         
-        # LATE FUSION (6 COMPONENTS - PBP REMOVED)
-        final_prob = base_prob + momentum_delta + chem_delta + vision_delta + flow_delta + audio_delta
-        # Clip
-        final_prob = max(0.05, min(0.95, final_prob))
+        # 🚀 UPGRADE: Use Learnable Fusion with Uncertainty (MC Dropout)
+        fusion_results = fusion_module.fuse_with_uncertainty(
+            base_prob, vision_delta, audio_delta, flow_delta, 
+            chem_delta, momentum_delta, pbp_delta=0.0
+        )
+        final_prob = fusion_results["probability"]
+        uncertainty = fusion_results["uncertainty"]
+        
+        # Get learned weights for interpretability
+        weights = fusion_module.get_modality_weights(
+            base_prob, vision_delta, audio_delta, flow_delta, 
+            chem_delta, momentum_delta, pbp_delta=0.0
+        )
         
         logger.info(f"      🔮 [PREDICTION] {home} vs {away}")
-        logger.info(f"      📊 [1. BASE]      Ensemble: {base_prob:.3f}")
+        logger.info(f"      📊 [1. BASE]      Statistical Ensemble: {base_prob:.3f}")
         logger.info(f"      📈 [2. MOMENTUM]  Delta:    {momentum_delta:+.4f}")
         logger.info(f"      🔗 [3. CHEMISTRY] Delta:    {chem_delta:+.4f}")
         logger.info(f"      👁️ [4. VISION]    Delta:    {vision_delta:+.4f} (Home={home_vision_score:.3f}, Away={away_vision_score:.3f})")
         logger.info(f"      🌊 [5. FLOW]      Delta:    {flow_delta:+.4f}")
         logger.info(f"      🎵 [6. AUDIO]     Delta:    {audio_delta:+.4f}")
-        logger.info(f"      ✨ [FINAL] {final_prob:.3f} = {base_prob:.3f} + (Sum of Deltas)")
+        logger.info(f"      🧠 [GATE WEIGHTS] Ens: {weights['ensemble']:.2f}, Vis: {weights['vision']:.2f}, Aud: {weights['audio']:.2f}, Chem: {weights['chemistry']:.2f}, Mom: {weights['momentum']:.2f}")
+        logger.info(f"      ✨ [FINAL] {final_prob:.3f} (±{uncertainty:.3f}) | 95% CI: [{fusion_results['ci_lower']:.3f}, {fusion_results['ci_upper']:.3f}]")
+        
+        # 🧠 [THINKING] Scouting Report Logic (Enhanced with learned weights)
+        favored = home if final_prob > 0.5 else away
+        conf_level = "HIGH" if uncertainty < 0.04 else "MODERATE" if uncertainty < 0.08 else "LOW"
+        
+        # Identify strongest modality driver using learned attention weights
+        drivers = {
+            "Statistical Core": weights['ensemble'],
+            "Visual Momentum": weights['vision'],
+            "Crowd Response": weights['audio'],
+            "Team Chemistry": weights['chemistry'],
+            "Season Trajectory": weights['momentum'],
+            "Game Intensity": weights['optical_flow']
+        }
+        
+        # Only favor a modality if its weight is high AND it actually has a non-zero signal
+        deltas = {
+            "Visual Momentum": abs(vision_delta),
+            "Crowd Response": abs(audio_delta),
+            "Team Chemistry": abs(chem_delta),
+            "Season Trajectory": abs(momentum_delta),
+            "Game Intensity": abs(flow_delta)
+        }
+        
+        # Find the max weight among drivers that actually have a signal > 0.001
+        valid_drivers = {k: v for k, v in drivers.items() if k == "Statistical Core" or deltas.get(k, 0) > 0.001}
+        main_driver = max(valid_drivers, key=valid_drivers.get) if valid_drivers else "Statistical Core"
+        
+        # Explain the influence direction
+        if main_driver == "Statistical Core":
+            reasoning = "the team is significantly stronger in historical matchup stats" if base_prob > 0.6 else "the baseline metrics are extremely close, favoring stability"
+        else:
+            # Map driver names to actual delta variables for direction checking
+            delta_map = {
+                "Visual Momentum": vision_delta,
+                "Crowd Response": audio_delta,
+                "Team Chemistry": chem_delta,
+                "Season Trajectory": momentum_delta,
+                "Game Intensity": flow_delta
+            }
+            actual_delta = delta_map.get(main_driver, 0)
+            direction = "positive" if actual_delta > 0 else "negative"
+            reasoning = f"the {main_driver} encoder is detecting a {direction} performance shift from recent footage/trends"
+
+        logger.info(f"      🧠 [THINKING] I favor {favored} with {conf_level} confidence. Rationale: {reasoning}. (Bayesian Uncertainty: ±{uncertainty:.3f})")
         
         return final_prob, base_prob
         

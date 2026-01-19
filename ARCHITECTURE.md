@@ -4,13 +4,13 @@
 
 A **multi-modal, explainable AI system** for NBA game prediction that combines classical machine learning, deep learning, and real-time data processing.
 
-**Current Accuracy**: 67.7% (Ensemble of XGBoost, LightGBM, CatBoost)
+**Current Accuracy**: 67.25% (Trained Gated Fusion Ensemble)
 
 ---
 
 ## What Makes This Novel
 
-### 1. Multi-Model Ensemble with Calibration
+### 1. Multi-Model Statistical Ensemble with Calibration
 Unlike single-model approaches, we combine 3 gradient boosting algorithms with isotonic calibration for reliable probability estimates.
 
 ### 2. Explainable AI (XAI)
@@ -36,37 +36,36 @@ Real-time feature generation from historical states when live data isn't availab
         │            │            │            │            │
         ▼            ▼            ▼            ▼            ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      API LAYER (FastAPI)                                │
+│                      API LAYER (FastAPI / Supabase)                     │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
     ┌────────────┬────────────┬──────┴──────┬────────────┬────────────┐
     ▼            ▼            ▼             ▼            ▼            ▼
 ┌───────┐    ┌───────┐    ┌───────┐     ┌───────┐    ┌───────┐    ┌───────┐
-│Ensem- │    │3D Vis-│    │Audio  │     │Optical│    │Chemis-│    │Momen- │
-│ble    │    │ion    │    │MelSpec│     │Flow   │    │try    │    │tum    │
-│(XGB)  │    │(CNN)  │    │(CNN)  │     │(CV2)  │    │(GNN)  │    │(Trans)│
+│Statist│    │3D Vis-│    │Audio  │     │Optical│    │Chemis-│    │Momen- │
+│ical   │    │ion    │    │MLP    │     │Flow   │    │try    │    │tum    │
+│Ensemb.│    │(CNN)  │    │(Model)│     │(CV2)  │    │(GNN)  │    │(Trans)│
 └─┬─────┘    └─┬─────┘    └─┬─────┘     └─┬─────┘    └─┬─────┘    └─┬─────┘
   │            │            │             │            │            │
-  │            │            │             │            │            │
-  └────────────┼────────────┼───┬─────────┼────────────┼────────────┘
-               │                │         │
-               ▼                ▼         ▼
-    ┌─────────────────────────────────────────────────────┐
-    │           GATED ATTENTION FUSION (Learnable)        │
-    │      [ w1, w2, w3, w4, w5, w6, w7 ] -> Softmax      │
-    └───────────────────────────┬─────────────────────────┘
-                                │
-                                ▼
-                      ┌───────────────────┐
-                      │    MC DROPOUT     │
-                      │   (50 Samples)    │
-                      └─────────┬─────────┘
-                                │
-                                ▼
-                     ┌─────────────────────┐
-                     │   WIN PROBABILITY   │
-                     │    78.4% ± 3.2%     │
-                     └─────────────────────┘
+  ▼            ▼            ▼             ▼            ▼            ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│           GATED ATTENTION FUSION (Learnable Neural Gate)                │
+│      [ σ(W·x + b) ] -> Dynamic Modality Weighting                       │
+└───────────────────────────┬─────────────────────────────────────────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ 50x MONTE CARLO   │
+                  │ DROPOUT SAMPLING  │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │   WIN PROBABILITY   │
+                 │    78.4% ± 3.2%     │
+                 └─────────────────────┘
+
+![Technical Architecture](/Users/shauryamallampati/.gemini/antigravity/brain/a2dc4a9d-8530-464e-ba12-103fb5ed17db/nba_world_model_v3_monte_carlo_diagram_1768829356938.png)
 ```
 
 ---

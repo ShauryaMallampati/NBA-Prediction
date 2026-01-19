@@ -74,14 +74,14 @@ class GatedFusion(nn.Module):
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Forward pass.
+        Forward pass - Simple weighted combination.
         
         Args:
             x: Tensor of shape (batch, n_modalities)
                Expected order: [base_prob, vis_Δ, aud_Δ, flow_Δ, chem_Δ, mom_Δ, pbp_Δ]
                
         Returns:
-            Tensor of shape (batch, 1) with probability in [0, 1]
+            Tensor of shape (batch, 1) with logits
         """
         # Compute attention weights
         weights = self.gate(x)  # (batch, n_modalities)
@@ -137,7 +137,8 @@ class FusionModule:
             checkpoint = torch.load(model_path, map_location='cpu')
             
             n_modalities = checkpoint.get('n_modalities', 7)
-            self.model = GatedFusion(n_modalities=n_modalities)
+            hidden_dim = checkpoint.get('hidden_dim', 32)
+            self.model = GatedFusion(n_modalities=n_modalities, hidden_dim=hidden_dim)
             self.model.load_state_dict(checkpoint['model_state_dict'])
             self.model.eval()
             self.model_loaded = True
