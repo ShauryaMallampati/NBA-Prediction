@@ -72,15 +72,18 @@ def get_recent_games(season: str = "2025-26", num_games: int = 100) -> pd.DataFr
     df['date'] = pd.to_datetime(df['date'])
     
     # Filter to requested season
-    if season == "2025-26":
-        start_date = "2025-10-01"
-        end_date = "2026-06-30"
-    elif season == "2024-25":
-        start_date = "2024-10-01"
-        end_date = "2025-06-30"
-    else:
-        raise ValueError(f"Unknown season: {season}")
+    season_ranges = {
+        "2025-26": ("2025-10-01", "2026-06-30"),
+        "2024-25": ("2024-10-01", "2025-06-30"),
+        "2023-24": ("2023-10-01", "2024-06-30"),  # For training (pre-cutoff)
+        "2022-23": ("2022-10-01", "2023-06-30"),  # For training (pre-cutoff)
+        "2021-22": ("2021-10-01", "2022-06-30"),  # For training (pre-cutoff)
+    }
     
+    if season not in season_ranges:
+        raise ValueError(f"Unknown season: {season}. Available: {list(season_ranges.keys())}")
+    
+    start_date, end_date = season_ranges[season]
     filtered = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
     
     # Sort by date descending and take num_games
@@ -151,7 +154,9 @@ def download_video(query: str, output_path: Path, max_duration: int = 600) -> bo
 
 def main():
     parser = argparse.ArgumentParser(description="Download NBA highlights for Vision CNN")
-    parser.add_argument("--season", default="2025-26", choices=["2024-25", "2025-26"])
+    parser.add_argument("--season", default="2023-24", 
+                        choices=["2021-22", "2022-23", "2023-24", "2024-25", "2025-26"],
+                        help="Season to download (use 2023-24 or earlier for training)")
     parser.add_argument("--num-games", type=int, default=100)
     parser.add_argument("--dry-run", action="store_true", help="Just list games, don't download")
     args = parser.parse_args()

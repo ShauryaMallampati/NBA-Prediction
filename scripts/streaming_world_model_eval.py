@@ -46,7 +46,8 @@ except ImportError:
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.models.pregame.train_ensemble import EnsembleTrainer
-from src.models.chemistry_gnn import get_chemistry_model
+from src.models.chemistry.gnn_model import ChemistryGNN
+from src.models.vision.audio_analytics import audio_analytics
 from src.models.momentum.momentum_transformer import MomentumAnalytics
 from src.common.features import RunningWorldState
 
@@ -495,34 +496,46 @@ class StreamingWorldModelEvaluator:
             logger.error(f"   ❌ Persistent Selenium error: {e}")
             return False
     
-    def analyze_video_with_cnn(self, video_path: Path) -> float:
+    def analyze_video_with_cnn(self, video_path: Path) -> tuple:
         """
-        Run Vision CNN (3D) on video and return visual form score.
+        Run Vision CNN (3D) on video and return visual form score + optical flow stats.
         
         The 3D CNN expects input of shape: (batch, num_frames, 3, H, W)
         We sample multiple 16-frame clips and average the predictions.
+        
+        Returns:
+            Tuple of (vision_score, flow_stats)
+            - vision_score: float in [0.3, 0.7]
+            - flow_stats: dict with mean_flow, max_flow, flow_std, burstiness
         """
+        default_flow_stats = {
+            "mean_flow": 0.0, "max_flow": 0.0, 
+            "flow_std": 0.0, "burstiness": 1.0
+        }
+        
         if not self.vision_loaded or self.vision_model is None:
-            return 0.5  # Neutral if no CNN
+            return 0.5, default_flow_stats
         
         try:
             cap = cv2.VideoCapture(str(video_path))
             
             if not cap.isOpened():
-                return 0.5
+                return 0.5, default_flow_stats
             
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             num_frames = getattr(self, 'vision_num_frames', 16)
             
             if total_frames < num_frames:
                 cap.release()
-                return 0.5
+                return 0.5, default_flow_stats
             
             # Sample 5 non-overlapping clips of 16 frames each
             num_clips = min(5, total_frames // num_frames)
             clip_starts = np.linspace(0, total_frames - num_frames, num_clips, dtype=int)
             
             all_scores = []
+            all_flow_magnitudes = []
+            prev_gray = None
             
             for clip_start in clip_starts:
                 frames = []
@@ -533,7 +546,7 @@ class StreamingWorldModelEvaluator:
                     if not ret:
                         break
                     
-                    # Preprocess frame
+                    # Preprocess frame for CNN
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     frame_resized = cv2.resize(frame_rgb, (224, 224))
                     
@@ -542,6 +555,23 @@ class StreamingWorldModelEvaluator:
                     frame_tensor = (frame_tensor - torch.tensor([0.485, 0.456, 0.406])) / torch.tensor([0.229, 0.224, 0.225])
                     frame_tensor = frame_tensor.permute(2, 0, 1)  # HWC -> CHW
                     frames.append(frame_tensor)
+                    
+                    # Optical flow computation
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    gray = cv2.resize(gray, (224, 224))
+                    
+                    if prev_gray is not None:
+                        try:
+                            flow = cv2.calcOpticalFlowFarneback(
+                                prev_gray, gray, None,
+                                pyr_scale=0.5, levels=3, winsize=15,
+                                iterations=3, poly_n=5, poly_sigma=1.2, flags=0
+                            )
+                            magnitude = np.sqrt(flow[..., 0]**2 + flow[..., 1]**2)
+                            all_flow_magnitudes.append(magnitude.mean())
+                        except Exception:
+                            pass
+                    prev_gray = gray
                 
                 if len(frames) < num_frames:
                     continue
@@ -563,17 +593,29 @@ class StreamingWorldModelEvaluator:
             cap.release()
             
             if len(all_scores) == 0:
-                return 0.5
+                return 0.5, default_flow_stats
             
             # Average score across clips, normalized to 0.3-0.7 range
             avg_score = np.mean(all_scores)
             vision_score = 0.3 + (avg_score * 0.4)  # Map to [0.3, 0.7]
             
-            return vision_score
+            # Compute optical flow statistics
+            if len(all_flow_magnitudes) > 0:
+                flow_stats = {
+                    "mean_flow": float(np.mean(all_flow_magnitudes)),
+                    "max_flow": float(np.max(all_flow_magnitudes)),
+                    "flow_std": float(np.std(all_flow_magnitudes)),
+                    "burstiness": float(np.max(all_flow_magnitudes) / (np.mean(all_flow_magnitudes) + 1e-6)),
+                }
+            else:
+                flow_stats = default_flow_stats
+            
+            return vision_score, flow_stats
             
         except Exception as e:
             logger.warning(f"CNN analysis failed: {e}")
-            return 0.5
+            return 0.5, default_flow_stats
+
     
     def warm_up_state(self, cutoff_date: str):
         """Pre-process all games before the simulation start to initialize ELO and streaks."""
@@ -592,9 +634,10 @@ class StreamingWorldModelEvaluator:
 
     def predict_game(self, home: str, away: str, date: str, 
                      home_vision_score: float, away_vision_score: float,
+                     flow_delta: float = 0.0, audio_delta: float = 0.0,
                      row: pd.Series = None) -> float:
         """
-        Run HIGH-FIDELITY World Model prediction using real Ensemble + State.
+        Run HIGH-FIDELITY World Model prediction using real Ensemble + State (7-Way Fusion).
         """
         # 1. Get Live Features from Running State
         features = self.world_state.get_team_features(home, away, date)
@@ -630,10 +673,16 @@ class StreamingWorldModelEvaluator:
         vision_delta = vision_diff * 0.15
         print(f"      👁️ [VISION] Delta: {vision_delta:+.4f} (Home={home_vision_score:.3f}, Away={away_vision_score:.3f})")
         
-        # LATE FUSION (4 COMPONENTS)
-        final_prob = base_prob + momentum_delta + chem_delta + vision_delta
+        # 7. COMPONENT 5: OPTICAL FLOW
+        print(f"      🌊 [FLOW] Delta: {flow_delta:+.4f}")
+
+        # 8. COMPONENT 6: AUDIO MOMENTUM
+        print(f"      🎵 [AUDIO] Delta: {audio_delta:+.4f}")
+        
+        # LATE FUSION (7 COMPONENTS incl PBP which is implicit/future or handled separately)
+        final_prob = base_prob + momentum_delta + chem_delta + vision_delta + flow_delta + audio_delta
         final_prob = np.clip(final_prob, 0.05, 0.95)
-        print(f"      ✨ [FINAL] {base_prob:.3f} + {momentum_delta:+.4f} + {chem_delta:+.4f} + {vision_delta:+.4f} = {final_prob:.3f}")
+        print(f"      ✨ [FINAL] {base_prob:.3f} + {momentum_delta:+.4f} + {chem_delta:+.4f} + {vision_delta:+.4f} + {flow_delta:+.4f} + {audio_delta:+.4f} = {final_prob:.3f}")
         
         return final_prob
 
@@ -697,33 +746,50 @@ class StreamingWorldModelEvaluator:
     
     def get_team_vision_score(self, team: str, current_date: str) -> tuple:
         """
-        Get vision score for a team based on their PAST games (pregame only!).
-        Returns (score, num_games_analyzed).
+        Get vision and audio scores for a team based on their PAST games (pregame only!).
+        Returns (vision_score, num_games, flow_stats, audio_score).
         """
         # Get past games for this team
         past_games = self._get_past_games(team, current_date, limit=self.max_videos_per_team)
         
         if len(past_games) < self.min_games_for_vision:
             logger.info(f"   📊 {team}: Only {len(past_games)} past games (need {self.min_games_for_vision}) → neutral")
-            return 0.5, len(past_games)  # Not enough history = neutral
+            return 0.5, len(past_games), {}, 0.5  # Not enough history = neutral
         
         # Analyze each past game's video
         scores = []
+        audio_scores = []
+        all_flow_stats = []
         for game in past_games[:self.max_videos_per_team]:
             video_path = self._download_past_game_video(game)
             if video_path:
-                score = self.analyze_video_with_cnn(video_path)
+                score, flow_stats = self.analyze_video_with_cnn(video_path)
+                audio_score, _ = audio_analytics.get_crowd_momentum_score(video_path)
                 scores.append(score)
+                audio_scores.append(audio_score)
+                all_flow_stats.append(flow_stats)
         
         if len(scores) == 0:
-            return 0.5, 0
+            return 0.5, 0, {}, 0.5
         
         # Weight recent games higher (exponential decay)
         weights = [0.35, 0.25, 0.20, 0.12, 0.08][:len(scores)]
         weights = [w / sum(weights) for w in weights]  # Normalize
         
         weighted_score = sum(s * w for s, w in zip(scores, weights))
-        return weighted_score, len(scores)
+        weighted_audio = sum(s * w for s, w in zip(audio_scores, weights))
+        
+        # Aggregate flow stats
+        avg_flow_stats = {}
+        if all_flow_stats:
+            avg_flow_stats = {
+                "mean_flow": float(np.mean([f.get("mean_flow", 0) for f in all_flow_stats])),
+                "max_flow": float(np.max([f.get("max_flow", 0) for f in all_flow_stats])),
+                "flow_std": float(np.mean([f.get("flow_std", 0) for f in all_flow_stats])),
+                "burstiness": float(np.mean([f.get("burstiness", 1) for f in all_flow_stats])),
+            }
+        
+        return weighted_score, len(scores), avg_flow_stats, weighted_audio
     
     def _cleanup_old_cache(self):
         """Remove old cached videos - keep only last 5 games per team to save disk space."""
@@ -773,20 +839,31 @@ class StreamingWorldModelEvaluator:
         # STEP 1: Get HISTORICAL vision scores (pregame only!)
         # ============================================================
         logger.info(f"   📹 Analyzing {home}'s past games...")
-        home_vision, home_games_analyzed = self.get_team_vision_score(home, date)
+        home_vision, home_games_analyzed, home_flow_stats, home_audio = self.get_team_vision_score(home, date)
         
         logger.info(f"   📹 Analyzing {away}'s past games...")
-        away_vision, away_games_analyzed = self.get_team_vision_score(away, date)
+        away_vision, away_games_analyzed, away_flow_stats, away_audio = self.get_team_vision_score(away, date)
         
         video_used = (home_games_analyzed >= self.min_games_for_vision or 
                       away_games_analyzed >= self.min_games_for_vision)
         
-        logger.info(f"   📊 Vision: {home}={home_vision:.3f} ({home_games_analyzed} games), {away}={away_vision:.3f} ({away_games_analyzed} games)")
+        # Compute optical flow delta
+        home_flow = home_flow_stats.get("mean_flow", 0.0)
+        away_flow = away_flow_stats.get("mean_flow", 0.0)
+        home_flow = home_flow_stats.get("mean_flow", 0.0)
+        away_flow = away_flow_stats.get("mean_flow", 0.0)
+        flow_delta = min(0.03, max(-0.03, (home_flow - away_flow) * 0.02))
+        
+        # Compute audio delta
+        audio_delta = min(0.05, max(-0.05, (home_audio - away_audio) * 0.2))  # Scale factor 0.2
+        
+        logger.info(f"   📊 Vision: {home}={home_vision:.3f}, Audio={home_audio:.3f} ({home_games_analyzed} games)")
+        logger.info(f"   🌊 Flow: Δ={flow_delta:+.4f} | 🎵 Audio: Δ={audio_delta:+.4f}")
         
         # ============================================================
         # STEP 2: Run World Model prediction (all pregame data)
         # ============================================================
-        predicted_prob = self.predict_game(home, away, date, home_vision, away_vision, row=row)
+        predicted_prob = self.predict_game(home, away, date, home_vision, away_vision, flow_delta, audio_delta, row=row)
         predicted_home_win = 1 if predicted_prob > 0.5 else 0
         correct = predicted_home_win == actual_home_win
         
