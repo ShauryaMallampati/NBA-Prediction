@@ -1113,7 +1113,11 @@ def main():
     
     for season in seasons:
         logger.info(f"\n{'='*60}\n🏀 STARTING SIMULATION FOR SEASON: {season}\n{'='*60}")
-        evaluator.run_evaluation(season)
+        try:
+            evaluator.run_evaluation(season)
+        except CriticalDownloadError as e:
+            logger.error(f"🛑 FATAL: {e}. Exiting simulation completely.")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
