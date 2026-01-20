@@ -1,129 +1,79 @@
-# NBA Intelligence Platform - Architecture
+# NBA World Model v4 - Technical Architecture
 
-## Project Overview
+## Overview
 
-A **multi-modal, explainable AI system** for NBA game prediction that combines classical machine learning, deep learning, and real-time data processing.
+The **NBA World Model v4** is a multi-modal, explainable AI system for NBA game prediction. It combines classical machine learning, deep learning, and real-time video analysis into a unified prediction framework.
 
-**Current Accuracy**: 67.25% (Trained Gated Fusion Ensemble)
-
----
-
-## What Makes This Novel
-
-### 1. Multi-Model Statistical Ensemble with Calibration
-Unlike single-model approaches, we combine 3 gradient boosting algorithms with isotonic calibration for reliable probability estimates.
-
-### 2. Explainable AI (XAI)
-Every prediction comes with SHAP-based explanations showing *why* the model made its choice.
-
-### 3. Agentic Scouting Reports
-AI-generated game previews in natural language, not just numbers.
-
-### 4. Live Feature Engineering
-Real-time feature generation from historical states when live data isn't available.
+![NBA World Model v4: Technical Architecture Diagram](docs/assets/architecture_v4.png)
 
 ---
 
-## System Architecture
+## Architecture Components
+
+### Raw Data Streams (3 Inputs)
+
+| Data Stream | Description | Source |
+|-------------|-------------|--------|
+| **Box Scores** | Historical game statistics, ELO ratings, win/loss records, rest days | `nba_games_enhanced.csv` |
+| **Video Highlights** | YouTube game highlight videos for visual and audio analysis | NBA Official Playlists (via yt-dlp) |
+| **Player Rosters** | Team composition and synergy data (progressive) | Chemistry scores calculated from past 10 games |
+
+---
+
+### 5-Way Encoders
+
+| Encoder | Input | Output | Implementation |
+|---------|-------|--------|----------------|
+| **Statistical Ensemble** | Box Scores | Base Win Probability (0-1) | XGBoost + LightGBM + CatBoost with Isotonic Calibration |
+| **Vision CNN** | Video Frames | Vision Delta (±0.05) | MobileNetV3, trained on real NBA highlight videos |
+| **Chemistry GNN** | Player Rosters | Chemistry Delta (±0.05) | Progressive synergy score from last 10 games (consistency + form) |
+| **Optical Flow Analysis** | Video Frames | Flow Delta (±0.05) | OpenCV Farneback optical flow (game intensity) |
+| **Crowd Audio Analytics** | Video Audio | Audio Delta (±0.05) | MLP classifier on Mel-frequency spectrograms |
+
+---
+
+### Master Architecture: Neural Referee
+
+The **Neural Referee** is a Gated Attention Fusion module that learns to weight each modality dynamically.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           FRONTEND (Next.js)                            │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│  │Dashboard │ │Predictions│ │Analytics │ │ Reports  │ │ Settings │   │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘   │
-└───────┼────────────┼────────────┼────────────┼────────────┼─────────┘
-        │            │            │            │            │
-        ▼            ▼            ▼            ▼            ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      API LAYER (FastAPI / Supabase)                     │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-    ┌────────────┬────────────┬──────┴──────┬────────────┬────────────┐
-    ▼            ▼            ▼             ▼            ▼            ▼
-┌───────┐    ┌───────┐    ┌───────┐     ┌───────┐    ┌───────┐    ┌───────┐
-│Statist│    │3D Vis-│    │Audio  │     │Optical│    │Chemis-│    │Momen- │
-│ical   │    │ion    │    │MLP    │     │Flow   │    │try    │    │tum    │
-│Ensemb.│    │(CNN)  │    │(Model)│     │(CV2)  │    │(GNN)  │    │(Trans)│
-└─┬─────┘    └─┬─────┘    └─┬─────┘     └─┬─────┘    └─┬─────┘    └─┬─────┘
-  │            │            │             │            │            │
-  ▼            ▼            ▼             ▼            ▼            ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│           GATED ATTENTION FUSION (Neural Referee)                        │
-│      [ σ(W·x + b) ] -> Dynamic Modality Weighting                       │
-│      [ RESIDUAL SKIP ] -> Conservative Ensemble Anchor                  │
-└───────────────────────────┬─────────────────────────────────────────────┘
-                            │
-                            ▼
-                  ┌───────────────────┐
-                  │ 50x MONTE CARLO   │
-                  │ DROPOUT SAMPLING  │
-                  └─────────┬─────────┘
-                            │
-                            ▼
-                 ┌─────────────────────┐
-                 │   WIN PROBABILITY   │
-                 │    78.4% ± 3.2%     │
-                 └─────────────────────┘
-
-![Technical Architecture](docs/assets/architecture_v4.png)
+Final Probability = Base Probability + Σ(Weight_i × Delta_i)
 ```
 
----
+**Key Components:**
 
-## Key Features Used
-
-| Category | Features |
-|----------|----------|
-| **Elo** | elo_home, elo_away, elo_diff |
-| **Streaks** | home_win_streak, away_win_streak |
-| **Form** | recent_form_5, recent_form_10 |
-| **Context** | is_b2b, home_rest_days, away_rest_days |
-| **Advanced** | off_rating, def_rating, pace |
+1.  **Gated Fusion**: A learned neural network (MLP with Dropout) that produces attention weights for each modality.
+2.  **Residual Skip-Connection**: The Statistical Ensemble output serves as a "Conservative Anchor," ensuring predictions never deviate too far from the strong baseline.
+3.  **50x Monte Carlo Dropout Simulation**: The fusion module is run 50 times with dropout enabled to sample from the posterior distribution.
+4.  **Bayesian Uncertainty Estimator**: The standard deviation of the 50 samples provides a confidence interval (e.g., `78.4% ± 1.2%`).
 
 ---
 
-## Comparison to Other NBA Prediction Projects
+## Data Flow (Progressive Evaluation)
 
-| Project | Accuracy | Models | XAI | Live |
-|---------|----------|--------|-----|------|
-| **This Project** | 67.7% | Ensemble (3) | ✅ SHAP | ✅ |
-| NBA-Prediction-Modeling | 65.3% | Elo + ML | ❌ | ❌ |
-| NBA-ML-Betting | ~69% | Neural Net | ❌ | ❌ |
-| cmunch1/nba-prediction | 61.5% | Various | ❌ | ✅ |
+To ensure **no data leakage**, the model operates in a strict time-series manner:
 
----
-
-## Future Improvements
-
-1. **SVM Integration** - Research shows SVM can reach 77%+ accuracy
-2. **Rolling Window Features** - 10/20/30 game rolling averages
-3. **Player-Level Data** - Individual player Elo and injuries
-4. **Graph Neural Networks** - Model player chemistry
-5. **AutoML (AutoGluon)** - Automated hyperparameter tuning
+1.  **Warm-Up**: All games before the evaluation period are processed to initialize ELO and team states.
+2.  **Prediction**: For each game `G` on date `D`:
+    *   Only data from dates `< D` is used.
+    *   Vision CNN analyzes videos from the team's *past* games (not the current game).
+    *   Chemistry is calculated from the team's *past* 10 games (not full season).
+3.  **Update**: After prediction, the actual result of game `G` is added to the world state for future games.
 
 ---
 
 ## File Structure
 
-```
-src/
-├── api/                    # FastAPI endpoints
-│   ├── ensemble_predictions.py
-│   ├── live_features.py
-│   └── live_odds.py
-├── models/
-│   ├── pregame/           # Training scripts
-│   │   └── train_ensemble.py
-│   ├── shap_explainer.py  # XAI
-│   ├── scouting_reports.py # Agentic reports
-│   └── kelly_criterion.py # Betting strategy
-├── data/
-│   └── preprocess/        # Feature engineering
-└── common/
-    ├── config.py          # Environment settings
-    └── validators.py      # API key validation
-```
+| Component | File Path |
+|-----------|-----------|
+| Statistical Ensemble | `src/models/pregame/train_ensemble.py` |
+| Vision CNN | `scripts/train_vision_real.py` |
+| Chemistry GNN | `src/models/chemistry_gnn.py` |
+| Optical Flow | `scripts/streaming_world_model_eval.py` (integrated) |
+| Audio Analytics | `src/models/vision/audio_analytics.py` |
+| Gated Fusion | `src/models/fusion/learnable_fusion.py` |
+| Momentum Transformer | `src/models/momentum/momentum_transformer.py` |
+| Full Evaluation | `scripts/streaming_world_model_eval.py` |
 
 ---
 
@@ -133,16 +83,6 @@ src/
 # Install dependencies
 poetry install
 
-# Set up environment
-cp .env.example .env
-# Edit .env with your API keys
-
-# Validate setup
-poetry run python scripts/validate_keys.py
-
-# Start API
-poetry run python src/api/ensemble_predictions.py
-
-# Start frontend
-npm run dev
+# Run full evaluation (2024-25 & 2025-26 seasons)
+poetry run python scripts/streaming_world_model_eval.py --season all
 ```

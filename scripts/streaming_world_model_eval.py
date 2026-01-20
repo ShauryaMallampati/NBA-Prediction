@@ -1095,8 +1095,11 @@ class StreamingWorldModelEvaluator:
         
         print(f"   Total Games: {total}")
         print(f"   Correct Predictions: {correct}")
-        print(f"   ACCURACY: {correct/total*100:.2f}%")
-        print(f"   Videos Successfully Analyzed: {videos_used}/{total} ({videos_used/total*100:.1f}%)")
+        if total > 0:
+            print(f"   ACCURACY: {correct/total*100:.2f}%")
+            print(f"   Videos Successfully Analyzed: {videos_used}/{total} ({videos_used/total*100:.1f}%)")
+        else:
+            print("   ACCURACY: N/A (no games completed)")
         print(f"   Time Elapsed: {elapsed/3600:.1f} hours")
         print("=" * 70)
     

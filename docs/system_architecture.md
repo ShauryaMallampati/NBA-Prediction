@@ -1,43 +1,42 @@
-# specialized_system_architecture.md
+# NBA World Model v4 - System Architecture
 
-# specialized_system_architecture.md
+![NBA World Model v4: Technical Architecture](assets/architecture_v4.png)
 
-# specialized_system_architecture.md
+## Component Summary
 
-![NBA World Model Interactive Architecture](nba_world_model_interactive.png)
+### Raw Data Streams
+1. **Box Scores**: Historical game statistics, ELO ratings, win/loss records
+2. **Video Highlights**: YouTube game highlights for visual/audio analysis
+3. **Player Rosters**: Team synergy data (calculated progressively from past 10 games)
 
-## 1. Temporal Progression: 2024-25 $\to$ 2025-26
-The system is continuous. It does not simply "start" in 2025.
-*   **Season 2024-25 (Left)**: Used for calibration and establishing latent states (Momentum, Chemistry).
-*   **State Persistence (Arrow)**: These states are carried over (not reset) into the current season.
-*   **Season 2025-26 (Right)**: Live, game-by-game predictions where the model continues to learn.
+### 5-Way Encoders
+| Encoder | Output |
+|---------|--------|
+| **Statistical Ensemble** | Base Win Probability |
+| **Vision CNN** | Visual Form Delta |
+| **Chemistry GNN** | Team Synergy Delta |
+| **Optical Flow Analysis** | Game Intensity Delta |
+| **Crowd Audio Analytics** | Crowd Momentum Delta |
 
-## 2. The Neuro-Symbolic Dialogue (Center Loop)
-You asked: *"How does the LLM talk to the World Model?"*
+### Master Architecture: Neural Referee
+- **Gated Fusion**: Learns to weight each modality dynamically
+- **Residual Skip-Connection**: Preserves Statistical Ensemble as anchor
+- **50x Monte Carlo Dropout**: Samples posterior for uncertainty
+- **Bayesian Estimator**: Outputs confidence interval (e.g., `78.4% ± 1.2%`)
 
-The interaction is not a one-way street; it's a **Validation Loop**:
+## Data Flow (No Leakage)
 
-1.  **WM $\to$ LLM ("The Proposal")**:
-    *   *World Model*: "I calculate a **72%** chance of victory. My confidence is high based on recent shooting variance."
+```
+For each game G on date D:
+1. ONLY use data from dates < D
+2. Vision CNN analyzes PAST game videos (not current game)
+3. Chemistry uses PAST 10 games (not full season)
+4. AFTER prediction, update world state with actual result
+```
 
-2.  **LLM $\to$ Context ("The Verification")**:
-    *   *LLM*: "Let me check the news." (Queries Web Scraper)
-    *   *Result*: "Breaking: Starting Center ruled out 10 minutes ago."
-
-3.  **LLM $\to$ WM ("The Override")**:
-    *   *LLM Logic*: "Your 72% calculation assumes the Center plays (because he played in previous data). This assumption is now false."
-    *   *Decision*: "I am overriding the physics simulation with this semantic fact."
-    *   *Result*: "Adjusted Probability: **55%**."
-
-This structure allows the **World Model** to be the "Engine" (efficient, mathematical) and the **LLM** to be the "Driver" (aware of the road conditions).
-
-## 3. The Role of the LLM (Reasoning Layer)
-The **World Model** provides the physics simulation ($P(win)$). The **LLM** provides the contextual understanding ($R$).
-
-*   **Quantitative Input**: "Model predicts 82% win probability based on stats and video."
-*   **Qualitative Input**: "Breaking News: Star Player suspended indefinitely."
-*   **LLM Action**:
-    1.  **Parse**: Identify "Suspension" as a high-impact negative event.
-    2.  **Reason**: "This event invalidates the statistical prior (82%)."
-    3.  **Adjust**: "Penalty applied: -25%. New Probability: 57%."
-    4.  **Explain**: Output text reasoning for the user/bettor.
+## Key Files
+- `src/models/pregame/train_ensemble.py` - Statistical Ensemble
+- `src/models/fusion/learnable_fusion.py` - Gated Fusion
+- `src/models/chemistry_gnn.py` - Chemistry GNN
+- `src/models/vision/audio_analytics.py` - Audio Analytics
+- `scripts/streaming_world_model_eval.py` - Full Evaluation
