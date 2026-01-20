@@ -109,12 +109,9 @@ class GatedFusion(nn.Module):
         deltas = x[:, 1:]
         
         # 1. Gate Weights (Adaptive Resonance)
-        confidence = torch.abs(base_prob - 0.5) * 2.0
-        adaptive_temp = 5.0 + (1.0 - confidence) * 20.0 
-        delta_magnitudes = torch.abs(deltas)
-        
-        # We use magnitudes as the logits for softmax
-        weights = F.softmax(delta_magnitudes * adaptive_temp, dim=-1) # (batch, 5)
+        # FIX: Use the learned gate (with Dropout) instead of deterministic heuristic
+        # This enables MC Dropout to work for uncertainty estimation
+        weights = self.gate(deltas) # (batch, 5)
         
         # 2. Dynamic Floor (on Deltas)
         delta_magnitudes = torch.abs(deltas)
