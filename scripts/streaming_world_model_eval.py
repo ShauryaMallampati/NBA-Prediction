@@ -35,6 +35,10 @@ from typing import Dict, Tuple, Optional
 import time
 import torch.nn as nn
 
+class CriticalDownloadError(Exception):
+    """Raised when a video download fails and we want to stop the simulation."""
+    pass
+
 # Define AudioClassifier for pickling compatibility
 class AudioClassifier(nn.Module):
     def __init__(self, input_dim=4):
@@ -677,7 +681,7 @@ class StreamingWorldModelEvaluator:
         logger.info(f"      👁️ [4. VISION]    Delta:    {vision_delta:+.4f} (Home={home_vision_score:.3f}, Away={away_vision_score:.3f})")
         logger.info(f"      🌊 [5. FLOW]      Delta:    {flow_delta:+.4f}")
         logger.info(f"      🎵 [6. AUDIO]     Delta:    {audio_delta:+.4f}")
-        logger.info(f"      🧠 [GATE WEIGHTS] Ens: {weights['ensemble']:.2f}, Vis: {weights['vision']:.2f}, Aud: {weights['audio']:.2f}, Chem: {weights['chemistry']:.2f}, Mom: {weights['momentum']:.2f}")
+        logger.info(f"      🧠 [GATE WEIGHTS] Ens: {weights['ensemble']:.2f}, Vis: {weights['vision']:.2f}, Aud: {weights['audio']:.2f}, Flow: {weights['optical_flow']:.2f}, Chem: {weights['chemistry']:.2f}, Mom: {weights['momentum']:.2f}")
         logger.info(f"      ✨ [FINAL] {final_prob:.3f} (±{uncertainty:.3f}) | 95% CI: [{fusion_results['ci_lower']:.3f}, {fusion_results['ci_upper']:.3f}]")
         
         # 🧠 [THINKING] Scouting Report Logic (Enhanced with learned weights)
@@ -891,6 +895,8 @@ class StreamingWorldModelEvaluator:
                       away_games_analyzed >= self.min_games_for_vision)
         
         # Compute optical flow delta (Sharpened scaling: 0.10)
+        home_flow = home_flow_stats.get('mean_flow', 0)
+        away_flow = away_flow_stats.get('mean_flow', 0)
         flow_delta = min(0.05, max(-0.05, (home_flow - away_flow) * 0.10))
         
         # Compute audio delta
@@ -911,16 +917,19 @@ class StreamingWorldModelEvaluator:
         # ============================================================
         # This game's video will be used for FUTURE predictions
         current_video = self.download_video(home, away, date)
-        if current_video:
-            try:
-                cache_key = f"{date}_{home}_{away}"
-                cache_path = self.video_cache_dir / f"{cache_key}.mp4"
-                import shutil
-                shutil.move(str(current_video), str(cache_path))
-                logger.info(f"   💾 Cached video for future predictions")
-            except Exception as e:
-                if current_video.exists():
-                    current_video.unlink()
+        if not current_video:
+            logger.error(f"❌ CRITICAL DOWNLOAD FAILURE: {away} @ {home} ({date})")
+            raise CriticalDownloadError(f"Video download failed for {home} vs {away}")
+            
+        try:
+            cache_key = f"{date}_{home}_{away}"
+            cache_path = self.video_cache_dir / f"{cache_key}.mp4"
+            import shutil
+            shutil.move(str(current_video), str(cache_path))
+            logger.info(f"   💾 Cached video for future predictions")
+        except Exception as e:
+            if current_video.exists():
+                current_video.unlink()
         
         # Update World State with the ACTUAL result after prediction
         # (keeping the simulation progressive)
@@ -1020,7 +1029,11 @@ class StreamingWorldModelEvaluator:
                 # logger.debug(f"⏩ Replaying state for {row['home']} vs {row['away']}")
                 continue
                 
-            self.evaluate_game(row)
+            try:
+                self.evaluate_game(row)
+            except CriticalDownloadError as e:
+                logger.error(f"⚠️ {e} - Stopping simulation and saving current progress.")
+                break
             
             # Save intermediate results every 10 games for robustness
             if len(self.results) % 10 == 0 and len(self.results) > 0:

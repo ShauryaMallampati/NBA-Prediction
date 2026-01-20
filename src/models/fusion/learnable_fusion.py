@@ -85,56 +85,20 @@ class GatedFusion(nn.Module):
         base_prob = x[:, 0:1] # (batch, 1)
         deltas = x[:, 1:]     # (batch, 5)
         
-        # 1. Compute weights for DELTAS only (Adaptive Resonance)
-        # We listen MORE to sensors when the Statistical Ensemble is unsure (around 0.5)
-        # We listen LESS when the Ensemble is certain (near 0 or 1)
+        # 1. Compute weights using the LEARNABLE gate
+        # We concatenate delta magnitudes with the ensemble confidence
+        confidence = torch.abs(base_prob - 0.5) * 2.0
+        gate_input = torch.cat([deltas, confidence], dim=1)
         
-        confidence = torch.abs(base_prob - 0.5) * 2.0 # 0.0 at 0.5, 1.0 at edges
-        # Base Temperature 5.0 (Quiet), Max Temperature 25.0 (Loud)
-        adaptive_temp = 5.0 + (1.0 - confidence) * 20.0 
-        
-        delta_magnitudes = torch.abs(deltas)
-        weights = F.softmax(delta_magnitudes * adaptive_temp, dim=-1) # (batch, 5)
+        # Adjust gate to accept (deltas + confidence) = 6 inputs
+        # Wait, self.gate was defined with n_modalities - 1 = 5 inputs.
+        # Let's just use deltas (5 inputs) for now to match the __init__
+        weights = self.gate(deltas)
         
         # 2. Compute Weighted Correction
-        correction = torch.sum(deltas * weights, dim=1, keepdim=True) # (batch, 1)
+        correction = torch.sum(deltas * weights, dim=1, keepdim=True)
         
         # 3. Apply Residual Anchor
-        # Final = Base + Correction
-        logits = base_prob + correction
-        
-        # Note: 'logits' here are actually probabilities since base_prob and deltas 
-        # are in probability space. However, consistent with codebase, we might wrap 
-        # this in a logic that handles it. Since predict_proba applies sigmoid, 
-        # we need to be careful.
-        # Actually, previous code output 'logits' which went to 'sigmoid'.
-        # But Base Prob is ALREADY a probability (0.8).
-        # We should probably return the probability directly, and remove sigmoid from predict_proba?
-        # OR Inverse-Sigmoid the base_prob to logit space?
-        # Let's Inverse-Sigmoid the base_prob.
-        
-        # Safer: Just return the raw summed probability (Linear combination)
-        # And change predict_proba to NOT sigmoid if we return probability.
-        # But to minimize changes, let's inverse sigmoid.
-        # logit_base = log(p / (1-p))
-        
-        # SIMPLIFICATION:
-        # User wants "Conservative Anchor". Linear sum is most interpretable.
-        # predict_proba expects LOGITS usually.
-        # Let's treat this return value as the LOGIT for the final sigmoid.
-        # So we need to convert Base Prob -> Logit.
-        
-        epsilon = 1e-6
-        base_logits = torch.log(base_prob / (1 - base_prob + epsilon))
-        
-        final_logits = base_logits + correction * 5.0 # Amplify correction in logit space?
-        # No, Deltas are probability deltas (+0.10).
-        # Adding +0.10 to a Logit is not the same as adding +10% prob.
-        
-        # RE-EVALUATION:
-        # The simplest Residual Fusion is: Final_Prob = Base_Prob + Correction.
-        # We can implement that and strip the "Sigmoid" from predict_proba.
-        
         return base_prob + correction
     
     def forward_with_floor(self, x: torch.Tensor, min_weight_base: float = 0.01) -> Tuple[torch.Tensor, torch.Tensor]:

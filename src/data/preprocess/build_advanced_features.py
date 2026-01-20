@@ -171,89 +171,68 @@ def add_home_away_splits(df: pd.DataFrame) -> pd.DataFrame:
 def add_recent_form_features(df: pd.DataFrame, decay_factor: float = 0.95) -> pd.DataFrame:
     """
     Add recent form features with exponential decay weighting.
-    
-    Features:
-    - home_recent_form: Home team's recent form (exponentially weighted)
-    - away_recent_form: Away team's recent form (exponentially weighted)
-    - home_recent_form_3: Home team's form in last 3 games
-    - away_recent_form_3: Away team's form in last 3 games
-    - home_recent_form_5: Home team's form in last 5 games
-    - away_recent_form_5: Away team's form in last 5 games
+    Optimized O(N) implementation.
     """
-    logger.info("📈 Adding recent form features...")
+    logger.info("📈 Adding recent form features (Optimized)...")
     
     df = df.copy()
     df = df.sort_values('date').reset_index(drop=True)
     
-    # Calculate recent form (win = 1, loss = 0)
+    # Calculate win indicators
     df['home_win'] = (df['home_pts'] > df['away_pts']).astype(int)
     df['away_win'] = (df['away_pts'] > df['home_pts']).astype(int)
     
-    # Exponential decay weighting for home team
-    home_form = []
-    for team in df['home'].unique():
-        team_games = df[df['home'] == team].copy()
-        team_games = team_games.sort_values('date')
+    # Track game history for each team
+    # Dict mapping team -> List of last 10 outcomes (1 for win, 0 for loss)
+    team_history = {}
+    
+    home_recent_form = []
+    away_recent_form = []
+    
+    for _, row in df.iterrows():
+        h, a = row['home'], row['away']
         
-        form_values = []
-        for i, row in team_games.iterrows():
-            # Get all previous games for this team
-            prev_games = team_games[team_games['date'] < row['date']].tail(10)
-            
-            if len(prev_games) == 0:
-                form_values.append(0.5)  # League average
-            else:
-                # Exponential decay: more recent games weighted more
-                weights = [decay_factor ** (len(prev_games) - j - 1) for j in range(len(prev_games))]
-                wins = prev_games['home_win'].values
-                weighted_form = np.average(wins, weights=weights)
-                form_values.append(weighted_form)
+        # Get form BEFORE this game
+        h_hist = team_history.get(h, [])
+        a_hist = team_history.get(a, [])
         
-        home_form.extend(form_values)
-    
-    # Map back to dataframe
-    df['home_recent_form'] = 0.5
-    for i, team in enumerate(df['home'].unique()):
-        team_indices = df[df['home'] == team].index
-        team_form = [home_form[j] for j in range(len(team_indices))]
-        df.loc[team_indices, 'home_recent_form'] = team_form
-    
-    # Similar for away team
-    away_form = []
-    for team in df['away'].unique():
-        team_games = df[df['away'] == team].copy()
-        team_games = team_games.sort_values('date')
+        # Calculate exponentially weighted form
+        def get_form(hist):
+            if not hist: return 0.5
+            weights = [decay_factor ** (len(hist) - j - 1) for j in range(len(hist))]
+            return float(np.average(hist, weights=weights))
         
-        form_values = []
-        for i, row in team_games.iterrows():
-            prev_games = team_games[team_games['date'] < row['date']].tail(10)
-            
-            if len(prev_games) == 0:
-                form_values.append(0.5)
-            else:
-                weights = [decay_factor ** (len(prev_games) - j - 1) for j in range(len(prev_games))]
-                wins = prev_games['away_win'].values
-                weighted_form = np.average(wins, weights=weights)
-                form_values.append(weighted_form)
+        home_recent_form.append(get_form(h_hist))
+        away_recent_form.append(get_form(a_hist))
         
-        away_form.extend(form_values)
+        # Update history with outcome of THIS game
+        h_win = 1 if row['home_pts'] > row['away_pts'] else 0
+        a_win = 1 - h_win
+        
+        if h not in team_history: team_history[h] = []
+        if a not in team_history: team_history[a] = []
+        
+        team_history[h].append(h_win)
+        team_history[a].append(a_win)
+        
+        # Keep only last 10
+        if len(team_history[h]) > 10: team_history[h].pop(0)
+        if len(team_history[a]) > 10: team_history[a].pop(0)
     
-    df['away_recent_form'] = 0.5
-    for i, team in enumerate(df['away'].unique()):
-        team_indices = df[df['away'] == team].index
-        team_form = [away_form[j] for j in range(len(team_indices))]
-        df.loc[team_indices, 'away_recent_form'] = team_form
+    df['home_recent_form'] = home_recent_form
+    df['away_recent_form'] = away_recent_form
     
-    # Last 3 and 5 games form
-    df['home_recent_form_3'] = df.groupby('home')['home_win'].rolling(3, min_periods=1).mean().reset_index(0, drop=True)
-    df['away_recent_form_3'] = df.groupby('away')['away_win'].rolling(3, min_periods=1).mean().reset_index(0, drop=True)
-    df['home_recent_form_5'] = df.groupby('home')['home_win'].rolling(5, min_periods=1).mean().reset_index(0, drop=True)
-    df['away_recent_form_5'] = df.groupby('away')['away_win'].rolling(5, min_periods=1).mean().reset_index(0, drop=True)
-    
-    # Fill NaN
-    for col in ['home_recent_form', 'away_recent_form', 'home_recent_form_3', 
-                'away_recent_form_3', 'home_recent_form_5', 'away_recent_form_5']:
-        df[col] = df[col].fillna(0.5)
+    # Last 3 and 5 games form using rolling (more efficient than manual loops)
+    # We need to shift(1) because form should be PRE-GAME
+    def get_rolling_form(team_col, win_col, window):
+        return df.groupby(team_col, group_keys=False)[win_col].apply(
+            lambda x: x.shift(1).rolling(window, min_periods=1).mean()
+        ).fillna(0.5)
+
+    df['home_recent_form_3'] = get_rolling_form('home', 'home_win', 3)
+    df['away_recent_form_3'] = get_rolling_form('away', 'away_win', 3)
+    df['home_recent_form_5'] = get_rolling_form('home', 'home_win', 5)
+    df['away_recent_form_5'] = get_rolling_form('away', 'away_win', 5)
     
     logger.info("  ✓ Added 6 recent form features")
     return df
@@ -262,67 +241,56 @@ def add_recent_form_features(df: pd.DataFrame, decay_factor: float = 0.95) -> pd
 def add_head_to_head_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add head-to-head matchup history features.
-    
-    Features:
-    - h2h_home_wins: Home team's wins vs away team (last 10 meetings)
-    - h2h_away_wins: Away team's wins vs home team (last 10 meetings)
-    - h2h_home_win_pct: Home team's win percentage vs away team
-    - h2h_avg_score_diff: Average score difference in H2H matchups
+    Optimized O(N) implementation.
     """
-    logger.info("⚔️ Adding head-to-head features...")
+    logger.info("⚔️ Adding head-to-head features (Optimized)...")
     
     df = df.copy()
     df = df.sort_values('date').reset_index(drop=True)
     
-    # Initialize H2H features
-    df['h2h_home_wins'] = 0
-    df['h2h_away_wins'] = 0
-    df['h2h_home_win_pct'] = 0.5
-    df['h2h_avg_score_diff'] = 0
+    # Dict mapping frozenset({team1, team2}) -> List of past outcomes
+    # Each outcome is: (winner_name, home_pts - away_pts if home_team else away_pts - home_pts)
+    matchup_history = {}
     
-    # Calculate H2H for each matchup
-    for idx, row in df.iterrows():
-        home_team = row['home']
-        away_team = row['away']
-        game_date = row['date']
+    h2h_home_wins = []
+    h2h_away_wins = []
+    h2h_home_win_pct = []
+    h2h_avg_score_diff = []
+    
+    for _, row in df.iterrows():
+        h, a = row['home'], row['away']
+        matchup_key = frozenset([h, a])
         
-        # Get previous matchups between these teams
-        prev_matchups = df[
-            ((df['home'] == home_team) & (df['away'] == away_team)) |
-            ((df['home'] == away_team) & (df['away'] == home_team))
-        ]
-        prev_matchups = prev_matchups[prev_matchups['date'] < game_date].tail(10)
+        # Get history BEFORE this game
+        history = matchup_history.get(matchup_key, [])
         
-        if len(prev_matchups) > 0:
-            # Count wins for home team (in this matchup context)
-            home_wins = 0
-            away_wins = 0
-            score_diffs = []
-            
-            for _, matchup in prev_matchups.iterrows():
-                if matchup['home'] == home_team:
-                    # Home team was home in this matchup
-                    if matchup['home_pts'] > matchup['away_pts']:
-                        home_wins += 1
-                    else:
-                        away_wins += 1
-                    score_diffs.append(matchup['home_pts'] - matchup['away_pts'])
-                else:
-                    # Home team was away in this matchup
-                    if matchup['away_pts'] > matchup['home_pts']:
-                        home_wins += 1
-                    else:
-                        away_wins += 1
-                    score_diffs.append(matchup['away_pts'] - matchup['home_pts'])
-            
-            df.loc[idx, 'h2h_home_wins'] = home_wins
-            df.loc[idx, 'h2h_away_wins'] = away_wins
-            df.loc[idx, 'h2h_home_win_pct'] = home_wins / len(prev_matchups) if len(prev_matchups) > 0 else 0.5
-            df.loc[idx, 'h2h_avg_score_diff'] = np.mean(score_diffs) if score_diffs else 0
+        if not history:
+            h2h_home_wins.append(0)
+            h2h_away_wins.append(0)
+            h2h_home_win_pct.append(0.5)
+            h2h_avg_score_diff.append(0.0)
         else:
-            # No previous matchups
-            df.loc[idx, 'h2h_home_win_pct'] = 0.5
-            df.loc[idx, 'h2h_avg_score_diff'] = 0
+            hw = sum(1 for winner, diff in history if winner == h)
+            aw = len(history) - hw
+            h2h_home_wins.append(hw)
+            h2h_away_wins.append(aw)
+            h2h_home_win_pct.append(hw / len(history))
+            h2h_avg_score_diff.append(float(np.mean([diff if winner == h else -diff for winner, diff in history])))
+        
+        # Update history with outcome of THIS game
+        winner = h if row['home_pts'] > row['away_pts'] else a
+        diff = abs(row['home_pts'] - row['away_pts'])
+        
+        if matchup_key not in matchup_history: matchup_history[matchup_key] = []
+        matchup_history[matchup_key].append((winner, diff))
+        
+        # Keep only last 10
+        if len(matchup_history[matchup_key]) > 10: matchup_history[matchup_key].pop(0)
+        
+    df['h2h_home_wins'] = h2h_home_wins
+    df['h2h_away_wins'] = h2h_away_wins
+    df['h2h_home_win_pct'] = h2h_home_win_pct
+    df['h2h_avg_score_diff'] = h2h_avg_score_diff
     
     logger.info("  ✓ Added 4 head-to-head features")
     return df
@@ -427,61 +395,47 @@ def add_playoff_indicator(df: pd.DataFrame) -> pd.DataFrame:
 def add_streak_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add win/loss streak features.
-    
-    Features:
-    - home_win_streak: Home team's current win streak
-    - away_win_streak: Away team's current win streak
-    - home_loss_streak: Home team's current loss streak
-    - away_loss_streak: Away team's current loss streak
+    Optimized O(N) implementation.
     """
-    logger.info("🔥 Adding streak features...")
+    logger.info("🔥 Adding streak features (Optimized)...")
     
     df = df.copy()
     df = df.sort_values('date').reset_index(drop=True)
     
-    # Initialize streak columns
-    df['home_win_streak'] = 0
-    df['away_win_streak'] = 0
-    df['home_loss_streak'] = 0
-    df['away_loss_streak'] = 0
+    # Dict mapping team -> Current streak (positive for wins, negative for losses)
+    team_streaks = {}
     
-    # Calculate streaks for each team
-    for team in df['home'].unique():
-        # Home games
-        team_home_games = df[df['home'] == team].copy()
-        team_home_games = team_home_games.sort_values('date')
+    home_win_streak = []
+    away_win_streak = []
+    home_loss_streak = []
+    away_loss_streak = []
+    
+    for _, row in df.iterrows():
+        h, a = row['home'], row['away']
         
-        win_streak = 0
-        loss_streak = 0
+        # Get streaks BEFORE this game
+        h_streak = team_streaks.get(h, 0)
+        a_streak = team_streaks.get(a, 0)
         
-        for idx, row in team_home_games.iterrows():
-            if row['home_win'] == 1:
-                win_streak += 1
-                loss_streak = 0
-            else:
-                loss_streak += 1
-                win_streak = 0
+        home_win_streak.append(max(0, h_streak))
+        home_loss_streak.append(max(0, -h_streak))
+        away_win_streak.append(max(0, a_streak))
+        away_loss_streak.append(max(0, -a_streak))
+        
+        # Update streaks with outcome of THIS game
+        h_win = row['home_pts'] > row['away_pts']
+        
+        if h_win:
+            team_streaks[h] = max(0, h_streak) + 1
+            team_streaks[a] = min(0, a_streak) - 1
+        else:
+            team_streaks[h] = min(0, h_streak) - 1
+            team_streaks[a] = max(0, a_streak) + 1
             
-            df.loc[idx, 'home_win_streak'] = win_streak
-            df.loc[idx, 'home_loss_streak'] = loss_streak
-        
-        # Away games
-        team_away_games = df[df['away'] == team].copy()
-        team_away_games = team_away_games.sort_values('date')
-        
-        win_streak = 0
-        loss_streak = 0
-        
-        for idx, row in team_away_games.iterrows():
-            if row['away_win'] == 1:
-                win_streak += 1
-                loss_streak = 0
-            else:
-                loss_streak += 1
-                win_streak = 0
-            
-            df.loc[idx, 'away_win_streak'] = win_streak
-            df.loc[idx, 'away_loss_streak'] = loss_streak
+    df['home_win_streak'] = home_win_streak
+    df['away_win_streak'] = away_win_streak
+    df['home_loss_streak'] = home_loss_streak
+    df['away_loss_streak'] = away_loss_streak
     
     logger.info("  ✓ Added 4 streak features")
     return df
@@ -547,49 +501,43 @@ def add_team_strength_rankings(df: pd.DataFrame) -> pd.DataFrame:
 def add_fatigue_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add fatigue indicators.
-    
-    Features:
-    - home_games_last_7_days: Home team's games in last 7 days
-    - away_games_last_7_days: Away team's games in last 7 days
-    - home_fatigue_score: Home team's fatigue score (0-100)
-    - away_fatigue_score: Away team's fatigue score (0-100)
+    Optimized O(N) implementation.
     """
-    logger.info("😓 Adding fatigue indicators...")
+    logger.info("😓 Adding fatigue indicators (Optimized)...")
     
     df = df.copy()
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date').reset_index(drop=True)
     
-    # Initialize fatigue features
-    df['home_games_last_7_days'] = 0
-    df['away_games_last_7_days'] = 0
-    df['home_fatigue_score'] = 0
-    df['away_fatigue_score'] = 0
+    # Dict mapping team -> List of game dates in last 7 days
+    team_game_dates = {}
     
-    # Calculate games in last 7 days for each team
-    for idx, row in df.iterrows():
-        game_date = row['date']
-        seven_days_ago = game_date - timedelta(days=7)
+    home_games_7d = []
+    away_games_7d = []
+    
+    for _, row in df.iterrows():
+        h, a = row['home'], row['away']
+        d = row['date']
         
-        # Home team
-        home_team = row['home']
-        home_prev_games = df[
-            ((df['home'] == home_team) | (df['away'] == home_team)) &
-            (df['date'] >= seven_days_ago) &
-            (df['date'] < game_date)
-        ]
-        df.loc[idx, 'home_games_last_7_days'] = len(home_prev_games)
-        df.loc[idx, 'home_fatigue_score'] = min(len(home_prev_games) * 20, 100)  # 0-100 scale
+        # Get history BEFORE this game
+        def get_7d_count(team, game_date):
+            history = team_game_dates.get(team, [])
+            # Purge dates older than 7 days
+            history = [prev_date for prev_date in history if (game_date - prev_date).days <= 7]
+            team_game_dates[team] = history
+            return len(history)
+            
+        home_games_7d.append(get_7d_count(h, d))
+        away_games_7d.append(get_7d_count(a, d))
         
-        # Away team
-        away_team = row['away']
-        away_prev_games = df[
-            ((df['home'] == away_team) | (df['away'] == away_team)) &
-            (df['date'] >= seven_days_ago) &
-            (df['date'] < game_date)
-        ]
-        df.loc[idx, 'away_games_last_7_days'] = len(away_prev_games)
-        df.loc[idx, 'away_fatigue_score'] = min(len(away_prev_games) * 20, 100)  # 0-100 scale
+        # Update history with THIS game date
+        team_game_dates[h].append(d)
+        team_game_dates[a].append(d)
+        
+    df['home_games_last_7_days'] = home_games_7d
+    df['away_games_last_7_days'] = away_games_7d
+    df['home_fatigue_score'] = (df['home_games_last_7_days'] * 20).clip(0, 100)
+    df['away_fatigue_score'] = (df['away_games_last_7_days'] * 20).clip(0, 100)
     
     logger.info("  ✓ Added 4 fatigue indicator features")
     return df

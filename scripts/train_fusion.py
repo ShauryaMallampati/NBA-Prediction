@@ -220,7 +220,7 @@ def main():
     
     # Model
     model = GatedFusion(
-        n_modalities=7,
+        n_modalities=6,
         hidden_dim=args.hidden_dim,
         dropout=args.dropout,
     ).to(device)
@@ -275,7 +275,7 @@ def main():
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'best_acc': best_acc,
-                'n_modalities': 7,
+                'n_modalities': 6,
                 'hidden_dim': args.hidden_dim,
                 'training_cutoff': TRAINING_CUTOFF,
             }
