@@ -362,14 +362,39 @@ class StreamingWorldModelEvaluator:
                 url,
                 "-o", str(output_path),
                 "-f", "best[height<=480]",   # Lower quality for speed
-                "--max-filesize", "150M",
-                "--no-playlist",
             ]
             
             logger.info(f"📂 Output path: {output_path}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-            
-            if result.returncode == 0 and output_path.exists():
+            # Retry loop for transient network failures (DNS, etc.)
+            max_retries = 3
+            retry_count = 0
+            result = None # Initialize result outside the loop
+            while retry_count < max_retries:
+                try:
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+                    if result.returncode == 0:
+                        break
+                    
+                    # Check for network/DNS specific errors in stderr
+                    stderr_content = result.stderr.lower()
+                    if "failed to resolve" in stderr_content or "connection" in stderr_content:
+                        retry_count += 1
+                        logger.warning(f"   ⚠️ Network blip detected (Retry {retry_count}/{max_retries}). Waiting 30s...")
+                        import time
+                        time.sleep(30)
+                        continue
+                    else:
+                        break # Other error, no point retrying DNS loop
+                except subprocess.TimeoutExpired:
+                    retry_count += 1
+                    logger.warning(f"   ⚠️ Download timed out (Retry {retry_count}/{max_retries}). Waiting 30s...")
+                    import time
+                    time.sleep(30)
+                except Exception as e:
+                    logger.error(f"   ❌ Unexpected error in download subprocess: {e}")
+                    break
+
+            if result and result.returncode == 0 and output_path.exists():
                 file_size = output_path.stat().st_size / (1024 * 1024)
                 logger.info(f"✅ Downloaded: {file_size:.1f} MB")
                 return output_path
@@ -378,11 +403,11 @@ class StreamingWorldModelEvaluator:
                 print("\n" + "!"*60)
                 print("❌❌❌ DOWNLOAD FAILED ❌❌❌")
                 print("!"*60)
-                if result.stderr:
+                if result and result.stderr:
                     print(f"ERROR: {result.stderr[:300]}")
                 print("!"*60 + "\n")
                 
-                logger.warning(f"Return code: {result.returncode}, File exists: {output_path.exists()}")
+                logger.warning(f"Return code: {result.returncode if result else 'N/A'}, File exists: {output_path.exists()}")
                 return None
                 
         except Exception as e:
@@ -994,22 +1019,36 @@ class StreamingWorldModelEvaluator:
         # WARM UP STATE
         self.warm_up_state(games['date'].min().strftime('%Y-%m-%d'))
         
-        # RESUME LOGIC
+        # RESUME LOGIC: Check both _partial and _final in case a previous run was stopped
         partial_file = RESULTS_DIR / f"real_video_eval_{season}_partial.json"
+        final_file = RESULTS_DIR / f"real_video_eval_{season}_final.json"
         processed_keys = set()
         
+        # Load existing results to avoid duplicates and resume
+        target_file = None
         if partial_file.exists():
+            target_file = partial_file
+        elif final_file.exists():
+            target_file = final_file
+            
+        if target_file and target_file.exists():
             try:
-                with open(partial_file, 'r') as f:
+                with open(target_file, "r") as f:
                     data = json.load(f)
-                    if 'games' in data:
-                        self.results = data['games']
-                        # Create key: "{date}_{home}_{away}"
-                        for g in self.results:
-                            processed_keys.add(f"{g['date']}_{g['home']}_{g['away']}")
-                        logger.info(f"🔄 Resuming from partial save: {len(self.results)} games already processed.")
+                    
+                # Scrubbing Logic: If the user wants to redo failed ones, 
+                # we could filter out games where video_used was false.
+                # For now, we trust the "stopped on failure" logic.
+                
+                self.results = data.get("games", [])
+                for r in self.results:
+                    # Key is date + home + away
+                    processed_keys.add(f"{r['date']}_{r['home']}_{r['away']}")
+                
+                logger.info(f"🔄 Resuming from {target_file.name}: {len(self.results)} games already processed.")
             except Exception as e:
-                logger.warning(f"⚠️ Failed to load resume data: {e}. Starting fresh.")
+                logger.error(f"⚠️ Failed to load resume file: {e}")
+                self.results = []
         
         
         start_time = time.time()
