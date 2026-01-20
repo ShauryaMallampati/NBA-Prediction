@@ -105,12 +105,12 @@ def prepare_fusion_data():
         
         # D. Chemistry Delta (Stability Proxy)
         # Assume chemistry ~ consistent winning (using Elo)
-        chem_delta = np.clip((engine.get_elo(home) - engine.get_elo(away)) * 0.0001, -0.03, 0.03)
+        chem_delta = np.clip((engine.get_elo(home) - engine.get_elo(away)) * 0.00015, -0.05, 0.05)
         
         # E. Missing Modalities
         aud_delta = 0.0
+        # Flow delta should also match 0.05 range if we had it
         flow_delta = 0.0
-        pbp_delta = 0.0
         
         # Save if within training window
         if date < cutoff_date:
@@ -121,7 +121,6 @@ def prepare_fusion_data():
                 "flow_delta": float(flow_delta),
                 "chem_delta": float(chem_delta),
                 "mom_delta": float(mom_delta),
-                "pbp_delta": float(pbp_delta),
                 "home_win": int(home_win)
             })
             

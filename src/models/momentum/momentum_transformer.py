@@ -335,8 +335,8 @@ class MomentumAnalytics:
         
         diff = home_momentum - away_momentum
         
-        # Weight factor (tunable hyperparameter)
-        MOMENTUM_WEIGHT = 0.10
+        # Weight factor (Sharpened for v4.1: 0.25)
+        MOMENTUM_WEIGHT = 0.25
         delta = diff * MOMENTUM_WEIGHT
         delta = max(-0.05, min(0.05, delta))  # Clip to ±5%
         

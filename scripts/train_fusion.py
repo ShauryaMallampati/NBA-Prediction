@@ -3,7 +3,7 @@
 Train Gated Fusion Model for Multi-Modal NBA Prediction.
 
 This script trains the learnable fusion network that combines outputs
-from all modalities (Ensemble, Vision, Audio, Flow, Chemistry, Momentum, PBP).
+from all modalities (Ensemble, Vision, Audio, Flow, Chemistry, Momentum).
 
 Usage:
     poetry run python scripts/train_fusion.py --epochs 30 --batch_size 64
@@ -53,7 +53,7 @@ class FusionDataset(Dataset):
     Dataset for training the fusion model.
     
     Each sample contains:
-    - Modality outputs: [base_prob, vis_Δ, aud_Δ, flow_Δ, chem_Δ, mom_Δ, pbp_Δ]
+    - Modality outputs: [base_prob, vis_Δ, aud_Δ, flow_Δ, chem_Δ, mom_Δ]
     - Label: actual home win (0 or 1)
     """
     
@@ -73,7 +73,6 @@ class FusionDataset(Dataset):
                         'flow_delta': float(row['flow_delta']),
                         'chemistry_delta': float(row['chem_delta']),
                         'momentum_delta': float(row['mom_delta']),
-                        'pbp_delta': float(row['pbp_delta']),
                         'label': int(row['home_win']),
                     })
             else:
@@ -89,7 +88,6 @@ class FusionDataset(Dataset):
                         'flow_delta': 0.0,
                         'chemistry_delta': game.get('chemistry_delta', 0.0),
                         'momentum_delta': game.get('momentum_delta', 0.0),
-                        'pbp_delta': 0.0,
                         'label': game.get('actual_home_win', 0),
                     }
                     self.samples.append(sample)
@@ -108,13 +106,12 @@ class FusionDataset(Dataset):
             true_prob = base_prob + random.gauss(0, 0.1)
             true_prob = max(0.1, min(0.9, true_prob))
             
-            # Generate deltas that correlate with true outcome
+            # Generate deltas that correlate with true outcome (Equal Variance)
             vision_delta = random.gauss(0, 0.02)
-            audio_delta = random.gauss(0, 0.01)
-            flow_delta = random.gauss(0, 0.01)
+            audio_delta = random.gauss(0, 0.02)
+            flow_delta = random.gauss(0, 0.02)
             chemistry_delta = random.gauss(0, 0.02)
             momentum_delta = random.gauss(0, 0.02)
-            pbp_delta = random.gauss(0, 0.01)
             
             # Sample outcome
             label = 1 if random.random() < true_prob else 0
@@ -126,7 +123,6 @@ class FusionDataset(Dataset):
                 'flow_delta': flow_delta,
                 'chemistry_delta': chemistry_delta,
                 'momentum_delta': momentum_delta,
-                'pbp_delta': pbp_delta,
                 'label': label,
             })
     
@@ -142,7 +138,6 @@ class FusionDataset(Dataset):
             s['flow_delta'],
             s['chemistry_delta'],
             s['momentum_delta'],
-            s['pbp_delta'],
         ], dtype=torch.float32)
         y = torch.tensor([s['label']], dtype=torch.float32)
         return x, y

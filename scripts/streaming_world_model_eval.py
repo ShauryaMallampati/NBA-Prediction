@@ -517,8 +517,8 @@ class StreamingWorldModelEvaluator:
                 cap.release()
                 return 0.5, default_flow_stats
             
-            # Sample 5 non-overlapping clips of 16 frames each
-            num_clips = min(5, total_frames // num_frames)
+            # Sample 12 non-overlapping clips of 16 frames each (Sharpened for v4.1)
+            num_clips = min(12, total_frames // num_frames)
             clip_starts = np.linspace(0, total_frames - num_frames, num_clips, dtype=int)
             
             all_scores = []
@@ -650,16 +650,16 @@ class StreamingWorldModelEvaluator:
         chem_diff = self.chemistry.get_chemistry_differential(
             home, away, current_date=date, games_df=self.games_df
         )
-        chem_delta = chem_diff * 0.1
+        chem_delta = chem_diff * 0.15 # Sharpened from 0.1
         
         # 6. COMPONENT 4: VISION CNN (REAL from video!)
         vision_diff = home_vision_score - away_vision_score
-        vision_delta = vision_diff * 0.15
+        vision_delta = vision_diff * 0.20 # Sharpened from 0.15
         
         # 🚀 UPGRADE: Use Learnable Fusion with Uncertainty (MC Dropout)
         fusion_results = fusion_module.fuse_with_uncertainty(
             base_prob, vision_delta, audio_delta, flow_delta, 
-            chem_delta, momentum_delta, pbp_delta=0.0
+            chem_delta, momentum_delta
         )
         final_prob = fusion_results["probability"]
         uncertainty = fusion_results["uncertainty"]
@@ -667,7 +667,7 @@ class StreamingWorldModelEvaluator:
         # Get learned weights for interpretability
         weights = fusion_module.get_modality_weights(
             base_prob, vision_delta, audio_delta, flow_delta, 
-            chem_delta, momentum_delta, pbp_delta=0.0
+            chem_delta, momentum_delta
         )
         
         logger.info(f"      🔮 [PREDICTION] {home} vs {away}")
@@ -890,12 +890,8 @@ class StreamingWorldModelEvaluator:
         video_used = (home_games_analyzed >= self.min_games_for_vision or 
                       away_games_analyzed >= self.min_games_for_vision)
         
-        # Compute optical flow delta
-        home_flow = home_flow_stats.get("mean_flow", 0.0)
-        away_flow = away_flow_stats.get("mean_flow", 0.0)
-        home_flow = home_flow_stats.get("mean_flow", 0.0)
-        away_flow = away_flow_stats.get("mean_flow", 0.0)
-        flow_delta = min(0.03, max(-0.03, (home_flow - away_flow) * 0.02))
+        # Compute optical flow delta (Sharpened scaling: 0.10)
+        flow_delta = min(0.05, max(-0.05, (home_flow - away_flow) * 0.10))
         
         # Compute audio delta
         audio_delta = min(0.05, max(-0.05, (home_audio - away_audio) * 0.2))  # Scale factor 0.2
