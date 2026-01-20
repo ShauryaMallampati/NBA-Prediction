@@ -353,7 +353,7 @@ class StreamingWorldModelEvaluator:
                 url = f"ytsearch1:{query}"
                 logger.info(f"🔍 Searching (not in playlist): {query}")
             
-            # Simple yt-dlp command (VPN handles IP rotation)
+            # Simple yt-dlp command
             cmd = [
                 "yt-dlp",
                 "--sleep-requests", "2",     # Sleep between internal requests
