@@ -699,14 +699,14 @@ class StreamingWorldModelEvaluator:
             chem_delta, momentum_delta
         )
         
-        logger.info(f"      🔮 [PREDICTION] {home} vs {away}")
-        logger.info(f"      📊 [1. BASE]      Statistical Ensemble: {base_prob:.3f}")
-        logger.info(f"      📈 [2. MOMENTUM]  Delta:    {momentum_delta:+.4f}")
-        logger.info(f"      🔗 [3. CHEMISTRY] Delta:    {chem_delta:+.4f}")
-        logger.info(f"      👁️ [4. VISION]    Delta:    {vision_delta:+.4f} (Home={home_vision_score:.3f}, Away={away_vision_score:.3f})")
-        logger.info(f"      🌊 [5. FLOW]      Delta:    {flow_delta:+.4f}")
-        logger.info(f"      🎵 [6. AUDIO]     Delta:    {audio_delta:+.4f}")
-        logger.info(f"      🧠 [GATE WEIGHTS] Ens: {weights['ensemble']:.2f}, Vis: {weights['vision']:.2f}, Aud: {weights['audio']:.2f}, Flow: {weights['optical_flow']:.2f}, Chem: {weights['chemistry']:.2f}, Mom: {weights['momentum']:.2f}")
+        logger.info(f"      🔮 [PREDICTION] {home} vs {away} (6-WAY FUSION)")
+        logger.info(f"      📊 [1. STATISTICAL]   Statistical Ensemble: {base_prob:.3f}")
+        logger.info(f"      📈 [2. MOMENTUM]      Momentum Transformer: {momentum_delta:+.4f}")
+        logger.info(f"      👁️ [3. VISION]        Vision CNN Delta:     {vision_delta:+.4f}")
+        logger.info(f"      🔗 [4. CHEMISTRY]     Chemistry GNN Delta:  {chem_delta:+.4f}")
+        logger.info(f"      🌊 [5. FLOW]          Optical Flow Delta:   {flow_delta:+.4f}")
+        logger.info(f"      🎵 [6. AUDIO]         Audio Analytics Delta: {audio_delta:+.4f}")
+        logger.info(f"      🧠 [GATE WEIGHTS] Ens: {weights['ensemble']:.2f}, Mom: {weights['momentum']:.2f}, Vis: {weights['vision']:.2f}, Chem: {weights['chemistry']:.2f}, Flow: {weights['optical_flow']:.2f}, Aud: {weights['audio']:.2f}")
         logger.info(f"      ✨ [FINAL] {final_prob:.3f} (±{uncertainty:.3f}) | 95% CI: [{fusion_results['ci_lower']:.3f}, {fusion_results['ci_upper']:.3f}]")
         
         # 🧠 [THINKING] Scouting Report Logic (Enhanced with learned weights)

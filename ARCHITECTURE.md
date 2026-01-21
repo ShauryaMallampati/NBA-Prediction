@@ -10,21 +10,23 @@ The **NBA World Model v4** is a multi-modal, explainable AI system for NBA game 
 
 ## Architecture Components
 
-### Raw Data Streams (3 Inputs)
+### Raw Data Streams (4 Inputs)
 
 | Data Stream | Description | Source |
 |-------------|-------------|--------|
 | **Box Scores** | Historical game statistics, ELO ratings, win/loss records, rest days | `nba_games_enhanced.csv` |
 | **Video Highlights** | YouTube game highlight videos for visual and audio analysis | NBA Official Playlists (via yt-dlp) |
 | **Player Rosters** | Team composition and synergy data (progressive) | Chemistry scores calculated from past 10 games |
+| **Season Trajectory**| Long-term winning streaks and performance cycles | Momentum data from Transformer V2 |
 
 ---
 
-### 5-Way Encoders
+### 6-Way Encoders
 
 | Encoder | Input | Output | Implementation |
 |---------|-------|--------|----------------|
 | **Statistical Ensemble** | Box Scores | Base Win Probability (0-1) | XGBoost + LightGBM + CatBoost with Isotonic Calibration |
+| **Momentum Transformer** | Season Trajectory | Momentum Delta (±0.05) | Attention-based Transformer V2 (Time-series) |
 | **Vision CNN** | Video Frames | Vision Delta (±0.05) | MobileNetV3, trained on real NBA highlight videos |
 | **Chemistry GNN** | Player Rosters | Chemistry Delta (±0.05) | Progressive synergy score from last 10 games (consistency + form) |
 | **Optical Flow Analysis** | Video Frames | Flow Delta (±0.05) | OpenCV Farneback optical flow (game intensity) |
