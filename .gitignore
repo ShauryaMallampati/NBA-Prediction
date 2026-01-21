@@ -87,3 +87,9 @@ simulation_debug.log
 
 # Training logs (saved as JSON in artifacts, but don't need in git)
 **/training_log.json
+
+# Aggressive test files (local testing only)
+scripts/eval/test_run_aggressive.py
+scripts/eval/aggressive_fusion.py
+data/temp_video_aggressive/
+analyze_trends.py

@@ -683,8 +683,7 @@ class StreamingWorldModelEvaluator:
         
         # 6. COMPONENT 4: VISION CNN (REAL from video!)
         vision_diff = home_vision_score - away_vision_score
-        vision_delta = vision_diff * 0.20 # Sharpened from 0.15
-        
+        vision_delta = vision_diff * 0.20 # Sharpened from 0.15        
         # 🚀 UPGRADE: Use Learnable Fusion with Uncertainty (MC Dropout)
         fusion_results = fusion_module.fuse_with_uncertainty(
             base_prob, vision_delta, audio_delta, flow_delta, 
