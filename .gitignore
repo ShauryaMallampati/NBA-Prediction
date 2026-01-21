@@ -67,16 +67,12 @@ dist/
 .coverage
 htmlcov/
 .pytest_cache/
-tests/
 
 # Misc
 *.parquet
 *.pkl
 *.h5
 *.pth
-*.db
-*.sqlite
-*.sqlite3
 # Kaggle credentials
 **/.kaggle/
 .kaggle/
