@@ -971,13 +971,13 @@ class StreamingWorldModelEvaluator:
             "home_pts": row['home_pts'],
             "away_pts": row['away_pts'],
             "actual_home_win": int(actual_home_win),
-            "predicted_prob": round(predicted_prob, 4),
-            "base_prob": round(base_prob, 4),
-            "uncertainty": round(uncertainty, 4),
+            "predicted_prob": round(predicted_prob, 6),
+            "base_prob": round(base_prob, 6),
+            "uncertainty": round(uncertainty, 6),
             "predicted_home_win": predicted_home_win,
             "correct": correct,
             "video_used": video_used,
-            "home_vision_score": round(home_vision, 3),
+            "home_vision_score": round(home_vision, 4),
         }
         
         self.results.append(result)
