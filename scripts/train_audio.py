@@ -267,7 +267,8 @@ def main():
             
             if is_best:
                 best_path = OUTPUT_DIR / "crowd_classifier.pt"
-                torch.save(checkpoint, best_path)
+                # Save ONLY state_dict for compatibility (avoids pickle class issues)
+                torch.save(model.state_dict(), best_path)
                 logger.info(f"   💾 Saved best model: {best_path}")
     
     logger.info(f"\n✅ Training complete! Best accuracy: {best_acc:.2%}")

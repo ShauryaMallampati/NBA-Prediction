@@ -33,6 +33,41 @@ except ImportError:
     LIBROSA_AVAILABLE = False
     logger.warning("librosa not installed. Audio analysis disabled.")
 
+try:
+    import torch
+    import torch.nn as nn
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+    # Define a dummy nn.Module if torch is missing so the class definition doesn't fail
+    class nn:
+        class Module: pass
+    logger.warning("torch not installed. Neural network models will not work.")
+
+
+class AudioClassifier(nn.Module):
+    """
+    Simple MLP classifier for audio features.
+    Matches the architecture in scripts/train_audio.py
+    """
+    def __init__(self, input_dim: int = 4, hidden_dim: int = 16, dropout: float = 0.2):
+        super().__init__()
+        if TORCH_AVAILABLE:
+            self.net = nn.Sequential(
+                nn.Linear(input_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Dropout(dropout),
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Dropout(dropout),
+                nn.Linear(hidden_dim, 1),
+            )
+        else:
+            self.net = None
+        
+    def forward(self, x):
+        return self.net(x)
+
 
 class AudioAnalytics:
     """
@@ -56,16 +91,44 @@ class AudioAnalytics:
         if model_path is None:
             model_path = Path("artifacts/models/audio/crowd_classifier.pt")
         
+        print(f"[AUDIO_ANALYTICS] Attempting to load model from: {model_path}")
+        
         if model_path.exists():
+            print(f"[AUDIO_ANALYTICS] ✅ Model file exists")
             try:
                 import torch
-                self.model = torch.load(model_path, map_location='cpu')
+                print(f"[AUDIO_ANALYTICS] PyTorch imported successfully")
+                
+                # Try loading as state_dict first (preferred)
+                self.model = AudioClassifier()
+                print(f"[AUDIO_ANALYTICS] Created AudioClassifier architecture")
+                
+                state_dict = torch.load(model_path, map_location='cpu')
+                print(f"[AUDIO_ANALYTICS] Loaded file, type: {type(state_dict)}")
+                
+                if isinstance(state_dict, dict):
+                    print(f"[AUDIO_ANALYTICS] Loading as state_dict...")
+                    print(f"[AUDIO_ANALYTICS] Keys: {list(state_dict.keys())}")
+                    self.model.load_state_dict(state_dict)
+                else:
+                    print(f"[AUDIO_ANALYTICS] Loading from full object...")
+                    self.model.load_state_dict(state_dict.state_dict())
+                
+                self.model.eval()
                 self.model_loaded = True
-                logger.info(f"✅ Audio model loaded from {model_path}")
+                print(f"[AUDIO_ANALYTICS] ✅ Audio model loaded successfully!")
+                print(f"[AUDIO_ANALYTICS] Model: {self.model}")
                 return True
+
             except Exception as e:
-                logger.warning(f"Failed to load audio model: {e}")
+                print(f"[AUDIO_ANALYTICS] ❌ FAILED to load audio model: {e}")
+                import traceback
+                traceback.print_exc()
+                return False
+        else:
+            print(f"[AUDIO_ANALYTICS] ❌ Model file NOT FOUND: {model_path}")
         return False
+    
     
     def extract_audio(self, video_path: Path) -> Optional[Path]:
         """Extract audio track from video file using ffmpeg."""
