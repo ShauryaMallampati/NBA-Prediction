@@ -14,7 +14,7 @@ Process for EACH game:
 6. Repeat for all games
 
 Usage:
-    poetry run python scripts/streaming_world_model_eval.py --season 2025-26
+    poetry run python scripts/eval/streaming_world_model_eval.py --season 2025-26
 
 Dependencies:
     pip install yt-dlp opencv-python torch
@@ -66,7 +66,7 @@ except ImportError:
     SELENIUM_AVAILABLE = False
 
 # Add project root
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.models.pregame.train_ensemble import EnsembleTrainer
 from src.models.chemistry_gnn import get_chemistry_model

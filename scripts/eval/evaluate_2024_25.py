@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
+import sys
 from pathlib import Path
+# Add project root
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 from src.models.pregame.ensemble_predictor import EnsemblePredictor
 from sklearn.metrics import accuracy_score, classification_report
 

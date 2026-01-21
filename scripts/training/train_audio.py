@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """
-Train Gated Fusion Model for Multi-Modal NBA Prediction.
+Train Audio Crowd Classifier for Multi-Modal NBA Prediction.
 
-This script trains the learnable fusion network that combines outputs
-from all modalities (Ensemble, Vision, Audio, Flow, Chemistry, Momentum).
+This script trains a classifier on audio features extracted from
+highlight videos to predict home-team momentum from crowd noise.
 
 Usage:
-    poetry run python scripts/train_fusion.py --epochs 30 --batch_size 64
-    poetry run python scripts/train_fusion.py --resume  # Resume from checkpoint
+    poetry run python scripts/training/train_audio.py --epochs 20 --batch_size 32
+    poetry run python scripts/training/train_audio.py --resume  # Resume from checkpoint
 
 Training Data:
-    Uses predictions from the 4-modality system on the 2023-24 season
-    to train the fusion weights.
+    Extracted audio features from pre-October 2024 highlight videos.
 """
 
 import argparse
@@ -21,7 +20,6 @@ import sys
 import time
 import random
 from pathlib import Path
-from datetime import datetime
 
 import numpy as np
 import torch
@@ -30,9 +28,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 
 # Add project root
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from src.models.fusion.learnable_fusion import GatedFusion
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,86 +40,85 @@ logger = logging.getLogger(__name__)
 TRAINING_CUTOFF = "2024-10-01"
 
 # Output directory
-OUTPUT_DIR = Path("artifacts/models/fusion")
+OUTPUT_DIR = Path("artifacts/models/audio")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-class FusionDataset(Dataset):
+class AudioClassifier(nn.Module):
     """
-    Dataset for training the fusion model.
+    Simple MLP classifier for audio features.
+    
+    Input: 4 audio features (mean_loudness, max_loudness, num_peaks, peak_std)
+    Output: 1 logit for home win probability
+    """
+    
+    def __init__(self, input_dim: int = 4, hidden_dim: int = 16, dropout: float = 0.2):
+        super().__init__()
+        
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, 1),
+        )
+    
+    def forward(self, x):
+        return self.net(x)
+
+
+class AudioDataset(Dataset):
+    """
+    Dataset for training the audio classifier.
     
     Each sample contains:
-    - Modality outputs: [base_prob, vis_Δ, aud_Δ, flow_Δ, chem_Δ, mom_Δ]
-    - Label: actual home win (0 or 1)
+    - Audio features: [mean_loudness, max_loudness, num_peaks, peak_std]
+    - Label: home win (0 or 1)
     """
     
     def __init__(self, data_path: Path = None):
         self.samples = []
         
         if data_path and data_path.exists():
-            if data_path.suffix == '.csv':
-                import pandas as pd
-                df = pd.read_csv(data_path)
-                logger.info(f"Loaded {len(df)} samples from CSV")
-                for _, row in df.iterrows():
-                    self.samples.append({
-                        'base_prob': float(row['base_prob']),
-                        'vision_delta': float(row['vis_delta']),
-                        'audio_delta': float(row['aud_delta']),
-                        'flow_delta': float(row['flow_delta']),
-                        'chemistry_delta': float(row['chem_delta']),
-                        'momentum_delta': float(row['mom_delta']),
-                        'label': int(row['home_win']),
-                    })
-            else:
-                with open(data_path, 'r') as f:
-                    raw_data = json.load(f)
-                
-                for game in raw_data.get('games', []):
-                    # Extract modality outputs
-                    sample = {
-                        'base_prob': game.get('predicted_prob', 0.5),
-                        'vision_delta': (game.get('home_vision_score', 0.5) - 0.5) * 0.15,
-                        'audio_delta': 0.0,
-                        'flow_delta': 0.0,
-                        'chemistry_delta': game.get('chemistry_delta', 0.0),
-                        'momentum_delta': game.get('momentum_delta', 0.0),
-                        'label': game.get('actual_home_win', 0),
-                    }
-                    self.samples.append(sample)
+            with open(data_path, 'r') as f:
+                raw_data = json.load(f)
+            
+            for entry in raw_data:
+                self.samples.append({
+                    'features': entry['features'],
+                    'label': entry['home_win'],
+                })
         else:
-            # Generate synthetic training data for initial development
+            # Generate synthetic training data
             logger.warning("No training data found. Using synthetic data.")
-            self._generate_synthetic_data(500)
+            self._generate_synthetic_data(300)
     
     def _generate_synthetic_data(self, n_samples: int):
-        """Generate synthetic training data for development."""
+        """Generate synthetic training data."""
         for _ in range(n_samples):
-            # Generate realistic-ish modality outputs
-            base_prob = random.uniform(0.3, 0.7)
+            # Home games have louder crowds (on average)
+            is_home_win = random.random() < 0.55  # Home advantage
             
-            # True home win probability (unknown, simulate)
-            true_prob = base_prob + random.gauss(0, 0.1)
-            true_prob = max(0.1, min(0.9, true_prob))
+            # Generate features with some correlation to outcome
+            base_loudness = 0.05 + random.uniform(0, 0.1)
+            if is_home_win:
+                # Winning home team = louder crowd
+                mean_loudness = base_loudness + random.uniform(0.02, 0.05)
+                max_loudness = mean_loudness * (1.5 + random.uniform(0, 0.5))
+                num_peaks = random.randint(20, 60)
+            else:
+                # Losing home team = quieter crowd
+                mean_loudness = base_loudness
+                max_loudness = mean_loudness * (1.2 + random.uniform(0, 0.3))
+                num_peaks = random.randint(10, 40)
             
-            # Generate deltas that correlate with true outcome (Equal Variance)
-            vision_delta = random.gauss(0, 0.02)
-            audio_delta = random.gauss(0, 0.02)
-            flow_delta = random.gauss(0, 0.02)
-            chemistry_delta = random.gauss(0, 0.02)
-            momentum_delta = random.gauss(0, 0.02)
-            
-            # Sample outcome
-            label = 1 if random.random() < true_prob else 0
+            peak_std = random.uniform(0.01, 0.05)
             
             self.samples.append({
-                'base_prob': base_prob,
-                'vision_delta': vision_delta,
-                'audio_delta': audio_delta,
-                'flow_delta': flow_delta,
-                'chemistry_delta': chemistry_delta,
-                'momentum_delta': momentum_delta,
-                'label': label,
+                'features': [mean_loudness, max_loudness, num_peaks, peak_std],
+                'label': 1 if is_home_win else 0,
             })
     
     def __len__(self):
@@ -131,14 +126,7 @@ class FusionDataset(Dataset):
     
     def __getitem__(self, idx):
         s = self.samples[idx]
-        x = torch.tensor([
-            s['base_prob'],
-            s['vision_delta'],
-            s['audio_delta'],
-            s['flow_delta'],
-            s['chemistry_delta'],
-            s['momentum_delta'],
-        ], dtype=torch.float32)
+        x = torch.tensor(s['features'], dtype=torch.float32)
         y = torch.tensor([s['label']], dtype=torch.float32)
         return x, y
 
@@ -182,15 +170,15 @@ def evaluate(model, dataloader, device):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train Gated Fusion Model")
-    parser.add_argument("--epochs", type=int, default=30, help="Number of epochs")
-    parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
+    parser = argparse.ArgumentParser(description="Train Audio Classifier")
+    parser.add_argument("--epochs", type=int, default=20, help="Number of epochs")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
-    parser.add_argument("--hidden_dim", type=int, default=32, help="Hidden dimension")
-    parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate")
+    parser.add_argument("--hidden_dim", type=int, default=16, help="Hidden dimension")
+    parser.add_argument("--dropout", type=float, default=0.2, help="Dropout rate")
     parser.add_argument("--resume", action="store_true", help="Resume from checkpoint")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
-    parser.add_argument("--data_path", type=str, default=None, 
+    parser.add_argument("--data_path", type=str, default=None,
                        help="Path to training data JSON")
     args = parser.parse_args()
     
@@ -206,9 +194,9 @@ def main():
     
     # Dataset
     data_path = Path(args.data_path) if args.data_path else None
-    dataset = FusionDataset(data_path)
+    dataset = AudioDataset(data_path)
     
-    # Train/val split (80/20)
+    # Train/val split
     train_size = int(0.8 * len(dataset))
     val_size = len(dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
@@ -219,8 +207,8 @@ def main():
     logger.info(f"📊 Dataset: {len(dataset)} samples (train={train_size}, val={val_size})")
     
     # Model
-    model = GatedFusion(
-        n_modalities=6,
+    model = AudioClassifier(
+        input_dim=4,
         hidden_dim=args.hidden_dim,
         dropout=args.dropout,
     ).to(device)
@@ -234,7 +222,7 @@ def main():
     best_acc = 0.0
     
     if args.resume:
-        checkpoints = sorted(OUTPUT_DIR.glob("gated_fusion_epoch*.pt"))
+        checkpoints = sorted(OUTPUT_DIR.glob("audio_classifier_epoch*.pt"))
         if checkpoints:
             latest = checkpoints[-1]
             checkpoint = torch.load(latest, map_location=device)
@@ -250,15 +238,11 @@ def main():
     for epoch in range(start_epoch, args.epochs):
         start_time = time.time()
         
-        # Train
         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
-        
-        # Evaluate
         val_acc = evaluate(model, val_loader, device)
         
         epoch_time = time.time() - start_time
         
-        # Log
         is_best = val_acc > best_acc
         if is_best:
             best_acc = val_acc
@@ -268,30 +252,27 @@ def main():
                    f"Best: {best_acc:.2%} | Time: {epoch_time:.1f}s"
                    f"{' ⭐' if is_best else ''}")
         
-        # Save checkpoint every 5 epochs
+        # Save checkpoint
         if (epoch + 1) % 5 == 0 or is_best:
             checkpoint = {
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'best_acc': best_acc,
-                'n_modalities': 6,
-                'hidden_dim': args.hidden_dim,
                 'training_cutoff': TRAINING_CUTOFF,
             }
             
-            # Save epoch checkpoint
-            ckpt_path = OUTPUT_DIR / f"gated_fusion_epoch{epoch+1}.pt"
+            ckpt_path = OUTPUT_DIR / f"audio_classifier_epoch{epoch+1}.pt"
             torch.save(checkpoint, ckpt_path)
             
-            # Save best model
             if is_best:
-                best_path = OUTPUT_DIR / "gated_fusion.pt"
-                torch.save(checkpoint, best_path)
+                best_path = OUTPUT_DIR / "crowd_classifier.pt"
+                # Save ONLY state_dict for compatibility (avoids pickle class issues)
+                torch.save(model.state_dict(), best_path)
                 logger.info(f"   💾 Saved best model: {best_path}")
     
     logger.info(f"\n✅ Training complete! Best accuracy: {best_acc:.2%}")
-    logger.info(f"   Model saved to: {OUTPUT_DIR / 'gated_fusion.pt'}")
+    logger.info(f"   Model saved to: {OUTPUT_DIR / 'crowd_classifier.pt'}")
 
 
 if __name__ == "__main__":

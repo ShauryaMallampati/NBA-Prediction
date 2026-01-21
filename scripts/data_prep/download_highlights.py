@@ -6,7 +6,7 @@ Downloads NBA game highlights from YouTube for the 2024-2026 seasons
 to run through the Vision CNN for the "Real Video" validation.
 
 Usage:
-    poetry run python scripts/download_highlights.py --season 2025-26 --num-games 100
+    poetry run python scripts/data_prep/download_highlights.py --season 2025-26 --num-games 100
 
 Dependencies:
     pip install yt-dlp

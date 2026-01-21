@@ -7,7 +7,7 @@ whether the HOME team won based on visual content. The underlying hypothesis
 is that winning team footage contains more "makes", energetic plays, etc.
 
 Usage:
-    poetry run python scripts/train_vision_real.py --epochs 10
+    poetry run python scripts/training/train_vision_real.py --epochs 10
 
 Outputs:
     artifacts/models/vision/basketball_shot_classifier.pt

@@ -67,13 +67,13 @@ To ensure **no data leakage**, the model operates in a strict time-series manner
 | Component | File Path |
 |-----------|-----------|
 | Statistical Ensemble | `src/models/pregame/train_ensemble.py` |
-| Vision CNN | `scripts/train_vision_real.py` |
+| Vision CNN | `scripts/training/train_vision_real.py` |
 | Chemistry GNN | `src/models/chemistry_gnn.py` |
-| Optical Flow | `scripts/streaming_world_model_eval.py` (integrated) |
+| Optical Flow | `scripts/eval/streaming_world_model_eval.py` (integrated) |
 | Audio Analytics | `src/models/vision/audio_analytics.py` |
 | Gated Fusion | `src/models/fusion/learnable_fusion.py` |
 | Momentum Transformer | `src/models/momentum/momentum_transformer.py` |
-| Full Evaluation | `scripts/streaming_world_model_eval.py` |
+| Full Evaluation | `scripts/eval/streaming_world_model_eval.py` |
 
 ---
 
@@ -84,5 +84,5 @@ To ensure **no data leakage**, the model operates in a strict time-series manner
 poetry install
 
 # Run full evaluation (2024-25 & 2025-26 seasons)
-poetry run python scripts/streaming_world_model_eval.py --season all
+poetry run python scripts/eval/streaming_world_model_eval.py --season all
 ```

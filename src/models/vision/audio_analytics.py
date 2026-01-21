@@ -48,7 +48,7 @@ except ImportError:
 class AudioClassifier(nn.Module):
     """
     Simple MLP classifier for audio features.
-    Matches the architecture in scripts/train_audio.py
+    Matches the architecture in scripts/training/train_audio.py
     """
     def __init__(self, input_dim: int = 4, hidden_dim: int = 16, dropout: float = 0.2):
         super().__init__()

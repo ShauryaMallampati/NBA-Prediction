@@ -10,7 +10,7 @@ This script:
 Hypothesis: Louder home crowd audio correlates with Home Win.
 
 Usage:
-    poetry run python scripts/train_audio_real.py --epochs 30
+    poetry run python scripts/training/train_audio_real.py --epochs 30
 
 Outputs:
     artifacts/models/audio/crowd_classifier.pt
