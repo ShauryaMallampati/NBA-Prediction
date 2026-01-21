@@ -38,7 +38,7 @@ ENV/
 .env.local
 
 # Data
-data/
+/data/
 !data/predictions/
 !data/schedules/
 !data/metrics/

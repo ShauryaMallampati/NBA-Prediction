@@ -58,14 +58,13 @@ def add_injury_availability_features(df: pd.DataFrame) -> pd.DataFrame:
     
     df = df.copy()
     
-    # Initialize injury features (will be populated from NBA API)
+    # Initialize injury features
     df['home_injury_count'] = 0
     df['away_injury_count'] = 0
     df['home_key_player_injured'] = 0
     df['away_key_player_injured'] = 0
     
-    # TODO: Fetch actual injury data from nba_api
-    # For now, use placeholder (will be implemented with injury_fetcher.py)
+    # Placeholder: Injury data fetching disabled to avoid API limits
     
     logger.info("  ✓ Added 4 injury/availability features")
     return df

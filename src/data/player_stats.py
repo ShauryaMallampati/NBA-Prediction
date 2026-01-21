@@ -94,7 +94,7 @@ class PlayerStatsFetcher:
                     'team_id': team_id,
                     'team_name': team['full_name'],
                     'avg_points': df['PTS'].mean(),
-                    'avg_points_against': df['PTS'].mean(),  # TODO: fix
+                    'avg_points_against': (df['PTS'] - df['PLUS_MINUS']).mean(),
                     'wins': df['WL'].value_counts().get('W', 0),
                     'losses': df['WL'].value_counts().get('L', 0)
                 })
