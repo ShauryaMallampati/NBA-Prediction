@@ -16,134 +16,87 @@ from typing import Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 
-class GatedFusion(nn.Module):
-    """Gated fusion that learns to weight each modality based on input values."""
+class ExpertFusion:
+    """Deterministic fusion using domain-expert weights."""
     
-    def __init__(
-        self,
-        n_modalities: int = 6,
-        hidden_dim: int = 32,
-        dropout: float = 0.1,
-    ):
-        super().__init__()
-        
+    def __init__(self, n_modalities: int = 6, weights: Optional[List[float]] = None):
         self.n_modalities = n_modalities
         
-        # gate learns weights for the 5 deltas (not base)
-        self.gate = nn.Sequential(
-            nn.Linear(n_modalities - 1, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim, n_modalities - 1),
-            nn.Softmax(dim=-1)
-        )
-        self._init_weights()
-    
-    def _init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.xavier_uniform_(m.weight)
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
-    
+        if weights is not None:
+            # Use provided custom weights
+            self.weights = torch.tensor(weights)
+        else:
+            # Default Static weights: [Vision, Audio, Flow, Chemistry, Momentum]
+            # Defaulting to Aggressive profile if not specified
+            self.weights = torch.tensor([0.35, 0.10, 0.10, 0.20, 0.25])
+        
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass with residual skip-connection."""
+        """Apply weighted correction to base probability."""
         base_prob = x[:, 0:1]
         deltas = x[:, 1:]
         
-        weights = self.gate(deltas)
-        correction = torch.sum(deltas * weights, dim=1, keepdim=True)
-        
+        # Expand weights to match batch size
+        w = self.weights.to(x.device).unsqueeze(0).expand(x.size(0), -1)
+        correction = torch.sum(deltas * w, dim=1, keepdim=True)
         return base_prob + correction
-    
+
     def forward_with_floor(self, x: torch.Tensor, min_weight_base: float = 0.01) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Dynamic attention scaling with floor to prevent zero weights."""
+        """Weighted correction with floor logic (simplified)."""
         base_prob = x[:, 0:1]
         deltas = x[:, 1:]
         
-        weights = self.gate(deltas)
+        w = self.weights.to(x.device).unsqueeze(0).expand(x.size(0), -1)
         
-        # apply dynamic floor based on delta magnitudes
+        # Apply dynamic floor based on delta magnitudes (optional but kept for consistency)
         delta_magnitudes = torch.abs(deltas)
         boost_factors = torch.ones_like(deltas) * 2.0
         dynamic_floors = min_weight_base + (delta_magnitudes * boost_factors)
-        weights = torch.max(weights, dynamic_floors)
         
-        # re-normalize after floor
-        weights = weights / (weights.sum(dim=-1, keepdim=True) + 1e-6)
+        # Use expert weights but respect the floor if deltas are massive
+        w_final = torch.max(w, dynamic_floors)
+        w_final = w_final / (w_final.sum(dim=-1, keepdim=True) + 1e-6)
         
-        correction = torch.sum(deltas * weights, dim=1, keepdim=True)
+        correction = torch.sum(deltas * w_final, dim=1, keepdim=True)
         final_prob = base_prob + correction
         
-        # pad weights with 1.0 for base for logging
-        full_weights = torch.cat([torch.ones_like(base_prob), weights], dim=1)
+        # Pad for logging: [Base Weight (1.0), Vis, Aud, Flow, Chem, Mom]
+        full_weights = torch.cat([torch.ones_like(base_prob), w_final], dim=1)
         
         return final_prob, full_weights
-    
-    def predict_proba(self, x: torch.Tensor, use_dynamic_floor: bool = False) -> torch.Tensor:
+
+    def predict_proba(self, x: torch.Tensor, use_dynamic_floor: bool = True) -> torch.Tensor:
         if use_dynamic_floor:
             prob, _ = self.forward_with_floor(x)
         else:
             prob = self.forward(x)
         return torch.clamp(prob, 0.0, 1.0)
-    
-    def get_weights(self, x: torch.Tensor) -> torch.Tensor:
-        return self.gate(x)
-
-    def get_weights_with_floor(self, x: torch.Tensor, min_weight_base: float = 0.01) -> torch.Tensor:
-        _, weights = self.forward_with_floor(x, min_weight_base)
-        return weights
 
 
 class FusionModule:
     """
-    High-level fusion module wrapping GatedFusion for inference.
+    High-level fusion module using ExpertWeightedFusion.
     
     Handles:
-    - Loading pretrained weights
-    - Fixed-sum fallback when model unavailable
-    - MC Dropout for uncertainty quantification
+    - Weighted modality fusion
+    - MC Dropout simulation (now using perturbation since gate is fixed)
+    - Interpretability
     """
     
     def __init__(
         self,
         model_path: Optional[Path] = None,
-        use_learnable: bool = True,
+        use_learnable: bool = False, # Force false now
         mc_dropout_samples: int = 50,
+        custom_weights: Optional[List[float]] = None,
     ):
-        self.use_learnable = use_learnable
+        self.use_learnable = False
         self.mc_dropout_samples = mc_dropout_samples
-        self.model = None
-        self.model_loaded = False
+        self.model = ExpertFusion(n_modalities=6, weights=custom_weights)
+        self.model_loaded = True
         
-        if model_path is None:
-            model_path = Path("artifacts/models/fusion/gated_fusion.pt")
-        
-        if use_learnable and model_path.exists():
-            self._load_model(model_path)
-    
-    def _load_model(self, model_path: Path):
-        """Load pretrained fusion model."""
-        try:
-            checkpoint = torch.load(model_path, map_location='cpu')
-            
-            n_modalities_ckpt = checkpoint.get('n_modalities', 7)
-            expected_modalities = 6
-            
-            if n_modalities_ckpt != expected_modalities:
-                raise ValueError(f"Checkpoint has {n_modalities_ckpt} modalities, expected {expected_modalities}")
-
-            hidden_dim = checkpoint.get('hidden_dim', 32)
-            self.model = GatedFusion(n_modalities=expected_modalities, hidden_dim=hidden_dim)
-            self.model.load_state_dict(checkpoint['model_state_dict'])
-            self.model.eval()
-            self.model_loaded = True
-            
-            logger.info(f"✅ Learnable fusion loaded from {model_path}")
-        except Exception as e:
-            logger.warning(f"Failed to load fusion model: {e}. Using FRESH dynamic model {expected_modalities}-inputs (un-trained gate).")
-            self.model = GatedFusion(n_modalities=expected_modalities)
-            self.model_loaded = True
+        weight_str = ", ".join([f"{w:.2f}" for w in self.model.weights.tolist()])
+        logger.info(f"✅ Expert-Weighted Fusion Architecture initialized (Determinism Enabled)")
+        logger.info(f"   ⚖️ Weights: [{weight_str}]")
     
     def fuse(
         self,
@@ -154,37 +107,15 @@ class FusionModule:
         chemistry_delta: float = 0.0,
         momentum_delta: float = 0.0,
     ) -> float:
-        """
-        Fuse modality outputs into final probability.
+        """Fuse modality outputs into final probability."""
+        x = torch.tensor([
+            base_prob, vision_delta, audio_delta, flow_delta, chemistry_delta, momentum_delta
+        ], dtype=torch.float32).unsqueeze(0)
         
-        Args:
-            base_prob: Base probability from ensemble [0, 1]
-            *_delta: Deltas from each modality [-0.1, 0.1]
-            
-        Returns:
-            Final probability [0.05, 0.95]
-        """
-        if self.model_loaded and self.model is not None:
-            # Learnable fusion
-            x = torch.tensor([
-                base_prob,
-                vision_delta,
-                audio_delta,
-                flow_delta,
-                chemistry_delta,
-                momentum_delta,
-            ], dtype=torch.float32).unsqueeze(0)
-            
-            if self.use_learnable:
-                # Use Dynamic Attention Scaling
-                with torch.no_grad():
-                    prob = self.model.predict_proba(x, use_dynamic_floor=True).item()
-            
-            return float(np.clip(prob, 0.05, 0.95))
-        else:
-            # Fixed-sum fallback
-            final = base_prob + vision_delta + audio_delta + flow_delta + chemistry_delta + momentum_delta
-            return float(np.clip(final, 0.05, 0.95))
+        with torch.no_grad():
+            prob = self.model.predict_proba(x, use_dynamic_floor=True).item()
+        
+        return float(np.clip(prob, 0.05, 0.95))
     
     def fuse_with_uncertainty(
         self,
@@ -196,43 +127,23 @@ class FusionModule:
         momentum_delta: float = 0.0,
     ) -> Dict[str, float]:
         """
-        Fuse with Monte Carlo Dropout for uncertainty estimation.
-        
-        Returns:
-            Dict with: probability, uncertainty, ci_lower, ci_upper
+        Since the weights are now fixed, 'Uncertainty' represents the sensitivity 
+        to small fluctuations in modality inputs (Monte Carlo Perturbation).
         """
-        if not self.model_loaded or self.model is None:
-            # Fallback: no uncertainty
-            prob = self.fuse(base_prob, vision_delta, audio_delta, flow_delta,
-                           chemistry_delta, momentum_delta)
-            return {
-                "probability": prob,
-                "uncertainty": 0.0,
-                "ci_lower": prob,
-                "ci_upper": prob,
-            }
-        
-        x = torch.tensor([
-            base_prob,
-            vision_delta,
-            audio_delta,
-            flow_delta,
-            chemistry_delta,
-            momentum_delta,
+        x_base = torch.tensor([
+            base_prob, vision_delta, audio_delta, flow_delta, chemistry_delta, momentum_delta
         ], dtype=torch.float32).unsqueeze(0)
-        
-        # Enable dropout for MC sampling
-        self.model.train()
         
         predictions = []
         for _ in range(self.mc_dropout_samples):
+            # Perturb deltas slightly to estimate sensitivity
+            noise = torch.randn_like(x_base[:, 1:]) * 0.005 
+            x_noisy = x_base.clone()
+            x_noisy[:, 1:] += noise
+            
             with torch.no_grad():
-                # Apply Dynamic Scaling in MC Dropout too
-                prob = self.model.predict_proba(x, use_dynamic_floor=True).item()
+                prob = self.model.predict_proba(x_noisy, use_dynamic_floor=True).item()
                 predictions.append(prob)
-        
-        # Disable dropout
-        self.model.eval()
         
         mean_prob = float(np.mean(predictions))
         std_prob = float(np.std(predictions))
@@ -255,48 +166,24 @@ class FusionModule:
         chemistry_delta: float = 0.0,
         momentum_delta: float = 0.0,
     ) -> Dict[str, float]:
-        """
-        Get learned weights for each modality (for interpretability).
-        
-        Returns:
-            Dict mapping modality name to weight [0, 1]
-        """
-        if not self.model_loaded or self.model is None:
-            # Fixed weights fallback
-            return {
-                "ensemble": 1.0,
-                "vision": 0.15,
-                "audio": 0.10,
-                "optical_flow": 0.08,
-                "chemistry": 0.10,
-                "momentum": 0.12,
-            }
-        
+        """Provides weights used for this specific fusion instance."""
         x = torch.tensor([
-            base_prob,
-            vision_delta,
-            audio_delta,
-            flow_delta,
-            chemistry_delta,
-            momentum_delta,
+            base_prob, vision_delta, audio_delta, flow_delta, chemistry_delta, momentum_delta
         ], dtype=torch.float32).unsqueeze(0)
         
         with torch.no_grad():
-            if self.use_learnable:
-                 # CRITICAL FIX: Use the DYNAMIC weights for logging, not the raw gate weights
-                weights = self.model.get_weights_with_floor(x).squeeze().numpy()
-            else:
-                weights = self.model.get_weights(x).squeeze().numpy()
+            _, weights = self.model.forward_with_floor(x)
+            w = weights.squeeze().numpy()
         
         return {
-            "ensemble": float(weights[0]),
-            "vision": float(weights[1]),
-            "audio": float(weights[2]),
-            "optical_flow": float(weights[3]),
-            "chemistry": float(weights[4]),
-            "momentum": float(weights[5]),
+            "ensemble": float(w[0]),
+            "vision": float(w[1]),
+            "audio": float(w[2]),
+            "optical_flow": float(w[3]),
+            "chemistry": float(w[4]),
+            "momentum": float(w[5]),
         }
 
 
-# Global instance with fallback
-fusion_module = FusionModule(use_learnable=True)
+# Global instance
+fusion_module = FusionModule()

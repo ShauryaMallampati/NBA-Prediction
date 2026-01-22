@@ -73,7 +73,9 @@ from src.models.chemistry_gnn import get_chemistry_model
 from src.models.vision.audio_analytics import audio_analytics
 from src.models.momentum.momentum_transformer import MomentumAnalytics
 from src.common.features import RunningWorldState
-from src.models.fusion.learnable_fusion import fusion_module
+from src.models.momentum.momentum_transformer import MomentumAnalytics
+from src.common.features import RunningWorldState
+from src.models.fusion.learnable_fusion import FusionModule
 
 logging.basicConfig(
     level=logging.INFO, 
@@ -142,6 +144,11 @@ class StreamingWorldModelEvaluator:
         # Baseline State for streaming simulation
         self.world_state = RunningWorldState()
         
+        # Fusion Module - BALANCED BASELINE (Uniform weights)
+        # Weights: [Vision, Audio, Flow, Chemistry, Momentum]
+        self.conservative_weights = [0.20, 0.20, 0.20, 0.20, 0.20]
+        self.fusion_module = FusionModule(custom_weights=self.conservative_weights)
+
         # Performance metrics
         self.results = []
         
@@ -353,15 +360,16 @@ class StreamingWorldModelEvaluator:
                 url = f"ytsearch1:{query}"
                 logger.info(f"🔍 Searching (not in playlist): {query}")
             
-            # Simple yt-dlp command
+            # yt-dlp command - use android client and format 18 (360p mp4)
             cmd = [
                 "yt-dlp",
-                "--sleep-requests", "2",     # Sleep between internal requests
-                "--sleep-interval", "3",     # Sleep before download
-                "--retries", "5",            # Retry on failure
+                "--sleep-requests", "2",
+                "--sleep-interval", "3",
+                "--retries", "5",
+                "--extractor-args", "youtube:player_client=android",
                 url,
                 "-o", str(output_path),
-                "-f", "best[height<=480]",   # Lower quality for speed
+                "-f", "18/best",  # Format 18 = 360p mp4 (always available)
             ]
             
             logger.info(f"📂 Output path: {output_path}")
@@ -399,15 +407,20 @@ class StreamingWorldModelEvaluator:
                 logger.info(f"✅ Downloaded: {file_size:.1f} MB")
                 return output_path
             else:
-                # Log the error with FLASHY RED X
-                print("\n" + "!"*60)
+                # Detailed download failure logging
+                print()
+                print("!" * 60)
                 print("❌❌❌ DOWNLOAD FAILED ❌❌❌")
-                print("!"*60)
+                print("!" * 60)
+                print(f"   Game: {away} @ {home} ({date})")
                 if result and result.stderr:
-                    print(f"ERROR: {result.stderr[:300]}")
-                print("!"*60 + "\n")
-                
-                logger.warning(f"Return code: {result.returncode if result else 'N/A'}, File exists: {output_path.exists()}")
+                    stderr_lines = result.stderr.strip().split('\n')
+                    for line in stderr_lines[-5:]:
+                        if line.strip():
+                            print(f"   {line.strip()[:80]}")
+                print("!" * 60)
+                print()
+                logger.warning(f"Download failed: {home} vs {away}")
                 return None
                 
         except Exception as e:
@@ -685,7 +698,7 @@ class StreamingWorldModelEvaluator:
         vision_diff = home_vision_score - away_vision_score
         vision_delta = vision_diff * 0.20 # Sharpened from 0.15        
         # 🚀 UPGRADE: Use Learnable Fusion with Uncertainty (MC Dropout)
-        fusion_results = fusion_module.fuse_with_uncertainty(
+        fusion_results = self.fusion_module.fuse_with_uncertainty(
             base_prob, vision_delta, audio_delta, flow_delta, 
             chem_delta, momentum_delta
         )
@@ -693,7 +706,7 @@ class StreamingWorldModelEvaluator:
         uncertainty = fusion_results["uncertainty"]
         
         # Get learned weights for interpretability
-        weights = fusion_module.get_modality_weights(
+        weights = self.fusion_module.get_modality_weights(
             base_prob, vision_delta, audio_delta, flow_delta, 
             chem_delta, momentum_delta
         )
@@ -981,15 +994,21 @@ class StreamingWorldModelEvaluator:
         
         self.results.append(result)
         
-        # Running accuracy
+        # Running accuracy with PROMINENT DISPLAY
         correct_count = sum(r['correct'] for r in self.results)
         total = len(self.results)
         accuracy = correct_count / total * 100
         
         status = "✅" if correct else "❌"
-        logger.info(f"   {status} Predicted: {'HOME' if predicted_home_win else 'AWAY'} | "
-                   f"Actual: {'HOME' if actual_home_win else 'AWAY'} | "
-                   f"Running Acc: {accuracy:.2f}% ({correct_count}/{total})")
+        
+        # Flashy accuracy banner every game
+        print("\n" + "="*70)
+        print(f"   {status} GAME {total}: {away} @ {home}")
+        print(f"   Predicted: {'HOME' if predicted_home_win else 'AWAY'} ({predicted_prob:.1%}) | Actual: {'HOME' if actual_home_win else 'AWAY'}")
+        print(f"   " + "="*60)
+        acc_bar = '█' * int(accuracy // 5) + '░' * (20 - int(accuracy // 5))
+        print(f"   🎯 ACCURACY: [{acc_bar}] {accuracy:.2f}% ({correct_count}/{total})")
+        print("="*70 + "\n")
         
         return result
     
@@ -1006,9 +1025,12 @@ class StreamingWorldModelEvaluator:
         if season == "2025-26":
             # Start from Oct 21 (first regular season game)
             games = df[(df['date'] >= '2025-10-21') & (df['date'] <= '2026-06-30')]
-        else:
-            # 2024-25 regular season: Oct 22, 2024 (Opening Night) to June 2025
+        elif season == "2024-25":
+            # 2024-25 regular season
             games = df[(df['date'] >= '2024-10-22') & (df['date'] <= '2025-06-30')]
+        else:
+            # ALL seasons (2024-2026)
+            games = df[(df['date'] >= '2024-10-22') & (df['date'] <= '2026-06-30')]
         
         games = games.sort_values('date').reset_index(drop=True)
         print(f"\n📅 Evaluating {len(games)} games from {season} season")
@@ -1083,24 +1105,29 @@ class StreamingWorldModelEvaluator:
         
         elapsed = time.time() - start_time
         
-        # Final summary
-        print("\n" + "=" * 70)
-        print("📊 FINAL RESULTS")
+        # Final summary with BIG BANNER
+        print()
+        print()
+        print("=" * 70)
+        print("🏆🏀 FINAL RESULTS - WORLD MODEL EVALUATION 🏀🏆")
         print("=" * 70)
         
         correct = sum(r['correct'] for r in self.results)
         total = len(self.results)
         videos_used = sum(r['video_used'] for r in self.results)
         
-        print(f"   Total Games: {total}")
-        print(f"   Correct Predictions: {correct}")
+        print(f"\n   📊 Total Games: {total}")
+        print(f"   ✅ Correct:     {correct}")
         if total > 0:
-            print(f"   ACCURACY: {correct/total*100:.2f}%")
-            print(f"   Videos Successfully Analyzed: {videos_used}/{total} ({videos_used/total*100:.1f}%)")
+            acc = correct/total*100
+            acc_bar = '█' * int(acc // 5) + '░' * (20 - int(acc // 5))
+            print(f"   🎯 ACCURACY:    [{acc_bar}] {acc:.2f}%")
+            print(f"   📹 Videos:      {videos_used}/{total} ({videos_used/total*100:.1f}%)")
         else:
             print("   ACCURACY: N/A (no games completed)")
-        print(f"   Time Elapsed: {elapsed/3600:.1f} hours")
+        print(f"   ⏱️  Time:        {elapsed/3600:.1f} hours")
         print("=" * 70)
+        print()
     
     def _save_results(self, season: str, partial: bool = False):
         """Save results to JSON."""
