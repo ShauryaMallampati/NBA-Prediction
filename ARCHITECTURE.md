@@ -1,10 +1,10 @@
-# NBA World Model v4 - Technical Architecture
+# NBA World Model v5 - Technical Architecture
 
 ## Overview
 
-The **NBA World Model v4** is a multi-modal, explainable AI system for NBA game prediction. It combines classical machine learning, deep learning, and real-time video analysis into a unified prediction framework.
+The **NBA World Model v5** is a multi-modal, explainable AI system for NBA game prediction. It combines classical machine learning, deep learning, and real-time video analysis into a unified prediction framework.
 
-![NBA World Model v4: Technical Architecture Diagram](docs/assets/architecture_v4.png)
+![NBA World Model v5: Technical Architecture Diagram](docs/assets/architecture_v5.png)
 
 ---
 
@@ -17,7 +17,7 @@ The **NBA World Model v4** is a multi-modal, explainable AI system for NBA game 
 | **Box Scores** | Historical game statistics, ELO ratings, win/loss records, rest days | `nba_games_enhanced.csv` |
 | **Video Highlights** | YouTube game highlight videos for visual and audio analysis | NBA Official Playlists (via yt-dlp) |
 | **Player Rosters** | Team composition and synergy data (progressive) | Chemistry scores calculated from past 10 games |
-| **Season Trajectory**| Long-term winning streaks and performance cycles | Momentum data from Transformer V2 |
+
 
 ---
 
@@ -34,9 +34,9 @@ The **NBA World Model v4** is a multi-modal, explainable AI system for NBA game 
 
 ---
 
-### Master Architecture: Neural Referee
+### Master Architecture: "Weighted Consensus"
 
-The **Neural Referee** is a Gated Attention Fusion module that learns to weight each modality dynamically.
+The **Weighted Consensus** (previously Expert Referee) is a determinstic fusion module.
 
 ```
 Final Probability = Base Probability + Σ(Weight_i × Delta_i)
@@ -44,9 +44,9 @@ Final Probability = Base Probability + Σ(Weight_i × Delta_i)
 
 **Key Components:**
 
-1.  **Gated Fusion**: A learned neural network (MLP with Dropout) that produces attention weights for each modality.
+1.  **Weighted Consensus**: A deterministic module that applies expert-defined weights (e.g., Vision=0.35, Momentum=0.25) to each modality's delta.
 2.  **Residual Skip-Connection**: The Statistical Ensemble output serves as a "Conservative Anchor," ensuring predictions never deviate too far from the strong baseline.
-3.  **50x Monte Carlo Dropout Simulation**: The fusion module is run 50 times with dropout enabled to sample from the posterior distribution.
+3.  **Monte Carlo Perturbation**: The fusion module input is perturbed 50 times to simulate sensitivity and estimate uncertainty.
 4.  **Bayesian Uncertainty Estimator**: The standard deviation of the 50 samples provides a confidence interval (e.g., `78.4% ± 1.2%`).
 
 ---
@@ -73,7 +73,7 @@ To ensure **no data leakage**, the model operates in a strict time-series manner
 | Chemistry GNN | `src/models/chemistry_gnn.py` |
 | Optical Flow | `scripts/eval/streaming_world_model_eval.py` (integrated) |
 | Audio Analytics | `src/models/vision/audio_analytics.py` |
-| Gated Fusion | `src/models/fusion/learnable_fusion.py` |
+| Expert Fusion | `src/models/fusion/learnable_fusion.py` |
 | Momentum Transformer | `src/models/momentum/momentum_transformer.py` |
 | Full Evaluation | `scripts/eval/streaming_world_model_eval.py` |
 

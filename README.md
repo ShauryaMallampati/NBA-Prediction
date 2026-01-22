@@ -1,4 +1,4 @@
-# NBA Prediction System
+# NBA Prediction System v5
 
 **Multi-Modal Deep Learning for NBA Game Prediction**
 
@@ -8,12 +8,12 @@
 
 ## Overview
 
-Advanced NBA prediction system combining multiple deep learning modalities through a learnable fusion architecture. The system processes pregame stats, player chemistry graphs, momentum sequences, video highlights, and audio commentary to generate accurate game predictions.
+Advanced NBA prediction system combining multiple deep learning modalities through an expert-weighted fusion architecture. The system processes pregame stats, player chemistry graphs, momentum sequences, video highlights, and audio commentary to generate accurate game predictions.
 
 ## Key Features
 
 - **Multi-Modal World Model**: Combines 6+ data sources for comprehensive game analysis
-- **Learnable Fusion**: Gated attention mechanism dynamically weights each modality
+- **Expert Fusion**: Expert-weighted mechanism prioritizes high-signal modalities like Vision and Momentum
 - **Real-Time Predictions**: Live game predictions with uncertainty quantification
 - **Chemistry Analysis**: GNN-based team chemistry and lineup synergy modeling
 - **Momentum Tracking**: Transformer-based temporal momentum analysis
@@ -21,6 +21,8 @@ Advanced NBA prediction system combining multiple deep learning modalities throu
 - **Interactive Dashboard**: Next.js web app with real-time updates
 
 ## Architecture
+
+![NBA World Model v5 Architecture](docs/assets/architecture_v5.png)
 
 The system uses a hierarchical World Model architecture:
 
@@ -31,7 +33,7 @@ The system uses a hierarchical World Model architecture:
    - Optical Flow: Player movement patterns
    - Chemistry GNN: Team synergy graphs
    - Momentum Transformer: Temporal sequences
-3. **Learnable Fusion**: Gated attention combines all modalities
+3. **Weighted Consensus**: Expert-weighted mixing combines all modalities
 4. **Uncertainty Quantification**: Bayesian MC Dropout
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed system design.
@@ -42,7 +44,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed system design.
 NBA-Prediction/
 ├── src/
 │   ├── models/          # Deep learning models
-│   │   ├── fusion/      # Learnable fusion module
+│   │   ├── fusion/      # Expert fusion module
 │   │   ├── chemistry/   # GNN models
 │   │   ├── momentum/    # Transformer models
 │   │   ├── vision/      # CNN models
@@ -112,8 +114,8 @@ poetry run python scripts/train/train_chemistry.py
 # Train momentum transformer
 poetry run python scripts/train/train_momentum.py
 
-# Train fusion module
-poetry run python scripts/train/train_fusion.py
+# Note: Fusion weights are now expert-defined (no training needed)
+# poetry run python scripts/train/train_fusion.py
 ```
 
 ### Run Predictions
@@ -142,7 +144,7 @@ poetry run isort src/
 ### Python API
 
 ```python
-from src.models.fusion.learnable_fusion import FusionModule
+from src.models.fusion.learnable_fusion import FusionModule # Expert Fusion Module
 from src.services.prediction_service import PredictionService
 
 # Initialize prediction service
@@ -174,9 +176,9 @@ Features:
 
 ## Model Performance
 
-- **Game Winner Accuracy**: ~68% (2024-25 season)
-- **Against Spread**: ~55% (2024-25 season)
-- **Calibration Error**: < 3% (well-calibrated probabilities)
+- **Game Winner Accuracy**: ~71% (Target with v5 Expert Fusion)
+- **Against Spread**: ~56% (Target)
+- **Calibration Error**: < 3% (Bayesian Confidence)
 
 ## Data Sources
 

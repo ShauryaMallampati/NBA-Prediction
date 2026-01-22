@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "nba-prediction"
-version = "1.0.0"
-description = "NBA Game Prediction using 7-way Multimodal Fusion"
+version = "5.0.0"
+description = "NBA Game Prediction using 6-way Multimodal Expert Fusion"
 authors = ["Shaurya Mallampati <shaurya@example.com>"]
 readme = "README.md"
 packages = [{include = "src"}]
