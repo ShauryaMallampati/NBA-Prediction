@@ -54,7 +54,7 @@ class ExpertFusion:
         vis_delta = deltas[:, 0:1]
         
         # Condition 1: Favoring Home heavily but Vision is mediocre
-        veto_mask = (base_prob > 0.75) & (vis_delta < 0.02)
+        veto_mask = ((base_prob > 0.75) & (vis_delta < 0.02)).squeeze(-1)
         amplified_deltas = deltas.clone()
         # Triple the impact of negative Vision/Momentum when favorites are 'vibe-checked'
         amplified_deltas[veto_mask, 0] *= 3.0  # Vision
@@ -76,7 +76,7 @@ class ExpertFusion:
         
         # Additional "Panic Dampening" for extreme favorites with zero visual momentum
         # This prevents 85% favorites from staying above 80% if they look like trash on tape.
-        panic_mask = (base_prob > 0.80) & (vis_delta < 0.0)
+        panic_mask = ((base_prob > 0.80) & (vis_delta < 0.0)).squeeze(-1)
         final_prob[panic_mask] = (final_prob[panic_mask] + 0.5) / 2.0  # Shrink toward neutral
         
         # Pad for logging: [Base Weight (1.0), Vis, Aud, Flow, Chem, Mom]
