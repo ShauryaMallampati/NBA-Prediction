@@ -41,23 +41,43 @@ class ExpertFusion:
         return base_prob + correction
 
     def forward_with_floor(self, x: torch.Tensor, min_weight_base: float = 0.01) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Weighted correction with floor logic (simplified)."""
+        """Weighted correction with floor logic and non-linear veto mitigation."""
         base_prob = x[:, 0:1]
-        deltas = x[:, 1:]
+        deltas = x[:, 1:] # [Vis, Aud, Flow, Chem, Mom]
         
+        # Expert weights: [Vision, Audio, Flow, Chemistry, Momentum]
         w = self.weights.to(x.device).unsqueeze(0).expand(x.size(0), -1)
         
-        # Apply dynamic floor based on delta magnitudes (optional but kept for consistency)
-        delta_magnitudes = torch.abs(deltas)
-        boost_factors = torch.ones_like(deltas) * 2.0
+        # --- NON-LINEAR VETO LOGIC (The "Anti-Slump" Engine) ---
+        # If stats say Win (>0.75) but Vision is neutral/negative (delta <= 0), 
+        # the model is effectively 'blind' to a fatigue loss. We must amplify the negative delta.
+        vis_delta = deltas[:, 0:1]
+        
+        # Condition 1: Favoring Home heavily but Vision is mediocre
+        veto_mask = (base_prob > 0.75) & (vis_delta < 0.02)
+        amplified_deltas = deltas.clone()
+        # Triple the impact of negative Vision/Momentum when favorites are 'vibe-checked'
+        amplified_deltas[veto_mask, 0] *= 3.0  # Vision
+        amplified_deltas[veto_mask, 4] *= 3.0  # Momentum
+        
+        # Apply dynamic floor based on delta magnitudes
+        delta_magnitudes = torch.abs(amplified_deltas)
+        boost_factors = torch.ones_like(amplified_deltas) * 2.0
         dynamic_floors = min_weight_base + (delta_magnitudes * boost_factors)
         
         # Use expert weights but respect the floor if deltas are massive
         w_final = torch.max(w, dynamic_floors)
         w_final = w_final / (w_final.sum(dim=-1, keepdim=True) + 1e-6)
         
-        correction = torch.sum(deltas * w_final, dim=1, keepdim=True)
+        correction = torch.sum(amplified_deltas * w_final, dim=1, keepdim=True)
+        
+        # Final probability calculation
         final_prob = base_prob + correction
+        
+        # Additional "Panic Dampening" for extreme favorites with zero visual momentum
+        # This prevents 85% favorites from staying above 80% if they look like trash on tape.
+        panic_mask = (base_prob > 0.80) & (vis_delta < 0.0)
+        final_prob[panic_mask] = (final_prob[panic_mask] + 0.5) / 2.0  # Shrink toward neutral
         
         # Pad for logging: [Base Weight (1.0), Vis, Aud, Flow, Chem, Mom]
         full_weights = torch.cat([torch.ones_like(base_prob), w_final], dim=1)
