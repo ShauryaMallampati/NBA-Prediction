@@ -1135,7 +1135,7 @@ class StreamingWorldModelEvaluator:
         output_file = RESULTS_DIR / f"real_video_eval_{season}{suffix}.json"
         
         correct = sum(r['correct'] for r in self.results)
-        total = len(self.results)
+        total = len(self.results) 
         
         data = {
             "season": season,
