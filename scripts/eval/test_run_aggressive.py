@@ -185,6 +185,14 @@ class StreamingWorldModelEvaluator:
         try:
             self.games_df = pd.read_csv("data/nba_games_enhanced.csv")
             self.games_df['date'] = pd.to_datetime(self.games_df['date'])
+            # Ensure Elo-derived columns exist for momentum features
+            if 'elo_p_home' not in self.games_df.columns or 'elo_win_prob' not in self.games_df.columns:
+                try:
+                    from src.common.features import calculate_elo
+                    logger.info("🔧 Computing Elo columns for momentum features...")
+                    self.games_df = calculate_elo(self.games_df)
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to compute Elo columns: {e}")
             logger.info(f"✅ Historical data loaded: {len(self.games_df)} games")
         except Exception as e:
             logger.warning(f"⚠️ Historical data not loaded: {e}")

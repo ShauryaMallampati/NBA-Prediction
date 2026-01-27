@@ -136,9 +136,23 @@ class RunningWorldState:
         self.loss_streaks = {}
         self.last_game_date = {}
         self.games_in_last_7 = {} # {team: [dates]}
+        # Track cumulative home/away game counts across all history
+        self.home_game_counts = {}
+        self.away_game_counts = {}
         self.default_elo = default_elo
         self.k = k
         self.home_advantage = home_advantage
+
+    def _season_phase(self, d: pd.Timestamp) -> float:
+        """
+        Match historical_2024.parquet season phase mapping:
+        0 = Oct/Nov/Dec, 1 = Jan/Feb, 2 = Mar-Apr-May-Jun-Jul-Aug-Sep
+        """
+        if d.month in [10, 11, 12]:
+            return 0.0
+        if d.month in [1, 2]:
+            return 1.0
+        return 2.0
         
     def get_team_features(self, home, away, date) -> Dict:
         """ Generate features for a pre-game matchup based on current state. """
@@ -156,6 +170,10 @@ class RunningWorldState:
         cutoff = d - pd.Timedelta(days=7)
         h_g7 = len([dt for dt in self.games_in_last_7.get(home, []) if dt > cutoff])
         a_g7 = len([dt for dt in self.games_in_last_7.get(away, []) if dt > cutoff])
+
+        # Home/Away game number within season (home/away specific counts)
+        h_home_games = self.home_game_counts.get(home, 0)
+        a_away_games = self.away_game_counts.get(away, 0)
         
         features = {
             'elo_home': h_elo,
@@ -181,12 +199,15 @@ class RunningWorldState:
             'away_loss_streak': float(self.loss_streaks.get(away, 0)),
             'home_games_last_7_days': float(h_g7),
             'away_games_last_7_days': float(a_g7),
-            'home_fatigue_score': h_g7 * 0.5 + (1.0 if h_rest <= 1 else 0.0) * 2,
-            'away_fatigue_score': a_g7 * 0.5 + (1.0 if a_rest <= 1 else 0.0) * 2,
-            'home_game_number': 41.0, # Placeholder
-            'away_game_number': 41.0,
-            'home_season_phase': 1.0 if d.month in [10,11,12] else 2.0,
-            'away_season_phase': 1.0 if d.month in [10,11,12] else 2.0
+            # Match historical_2024.parquet: 0.5*games_last_7 + 2*b2b
+            'home_fatigue_score': h_g7 * 0.5 + (1.0 if h_rest <= 1 else 0.0) * 2.0,
+            'away_fatigue_score': a_g7 * 0.5 + (1.0 if a_rest <= 1 else 0.0) * 2.0,
+            # Match historical_2024.parquet: cumulative home/away game counts
+            'home_game_number': float(h_home_games + 1),
+            'away_game_number': float(a_away_games + 1),
+            # Match historical_2024.parquet: month-based season phase (0/1/2)
+            'home_season_phase': self._season_phase(d),
+            'away_season_phase': self._season_phase(d)
         }
         return features
 
@@ -223,3 +244,7 @@ class RunningWorldState:
         self.games_in_last_7[away].append(d)
         self.games_in_last_7[home] = self.games_in_last_7[home][-10:]
         self.games_in_last_7[away] = self.games_in_last_7[away][-10:]
+
+        # Update cumulative home/away game counts
+        self.home_game_counts[home] = self.home_game_counts.get(home, 0) + 1
+        self.away_game_counts[away] = self.away_game_counts.get(away, 0) + 1

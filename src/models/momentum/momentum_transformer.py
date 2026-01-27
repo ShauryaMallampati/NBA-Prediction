@@ -214,7 +214,7 @@ class MomentumAnalytics:
             team_games = games_df[
                 ((games_df['home'] == team) | (games_df['away'] == team)) &
                 (games_df['date'] < target_date)
-            ].sort_values('date', ascending=False).head(15)  # Last 15 games
+            ].sort_values('date', ascending=True).tail(15)  # Last 15 games, chronological
             
             if len(team_games) < 1:
                 # No games yet - return neutral
@@ -224,46 +224,58 @@ class MomentumAnalytics:
             sequence = []
             prev_date = None
             streak = 0
-            games_last_7 = 0
+            recent_dates = []
             
             for _, game in team_games.iterrows():
                 is_home = 1.0 if game['home'] == team else 0.0
                 
                 if is_home:
                     won = float(game['home_win'])
-                    margin = float(game['margin']) / 30.0  # Normalize
+                    margin = float(game['margin']) / 50.0  # Normalize (match training)
                 else:
                     won = 1.0 - float(game['home_win'])
-                    margin = -float(game['margin']) / 30.0
+                    margin = -float(game['margin']) / 50.0
                 
                 # Rest days
                 if prev_date is not None:
-                    rest = (prev_date - game['date']).days
+                    rest = (game['date'] - prev_date).days
+                    rest = max(rest, 0)
                     rest = min(rest, 7) / 7.0  # Normalize to [0, 1]
                 else:
                     rest = 0.5
                 
-                # Update streak
+                # Streak BEFORE current game (match training behavior)
+                streak_norm = np.clip(streak / 10.0, -1, 1)
+                
+                # Fatigue: match historical_2024/pregame_full definition
+                # home_fatigue_score = games_last_7 * 0.5 + 2.0 * (rest_days <= 1)
+                cutoff = game['date'] - pd.Timedelta(days=7)
+                games_last_7 = sum(1 for dt in recent_dates if dt > cutoff)
+                fatigue_score = games_last_7 * 0.5 + (1.0 if rest <= (1.0 / 7.0) else 0.0) * 2.0
+                fatigue = min(fatigue_score / 5.0, 1.0)
+                
+                # ELO probability (use stored value or estimate)
+                if 'elo_p_home' in game:
+                    elo_prob = float(game['elo_p_home'])
+                    if not is_home:
+                        elo_prob = 1.0 - elo_prob
+                else:
+                    elo_prob = float(game.get('elo_win_prob', 0.5))
+                    if not is_home:
+                        elo_prob = 1.0 - elo_prob
+                
+                sequence.append([is_home, won, margin, rest, streak_norm, fatigue, elo_prob])
+                
+                # Update streak AFTER current game
                 if won > 0.5:
                     streak = max(streak, 0) + 1
                 else:
                     streak = min(streak, 0) - 1
-                streak_norm = np.clip(streak / 10.0, -1, 1)
                 
-                # Fatigue: games in last 7 days (approximate)
-                fatigue = min(games_last_7 / 4.0, 1.0)
-                games_last_7 = min(games_last_7 + 1, 4)
-                
-                # ELO probability (use stored value or estimate)
-                elo_prob = game.get('elo_win_prob', 0.5)
-                if not is_home:
-                    elo_prob = 1.0 - elo_prob
-                
-                sequence.append([is_home, won, margin, rest, streak_norm, fatigue, elo_prob])
+                recent_dates.append(game['date'])
                 prev_date = game['date']
             
-            # Reverse to chronological order and take last 15
-            sequence = sequence[::-1][-15:]
+            # Already chronological and capped to last 15 games
             
             if self.loaded and self.model is not None:
                 # Run through trained Transformer
@@ -275,7 +287,7 @@ class MomentumAnalytics:
                         x = torch.cat([pad, x], dim=1)
                     
                     output = self.model(x)
-                    prob = torch.sigmoid(output).item()
+                    prob = output.item()
                     # Map to [0.4, 0.6] range
                     return 0.4 + prob * 0.2
             else:

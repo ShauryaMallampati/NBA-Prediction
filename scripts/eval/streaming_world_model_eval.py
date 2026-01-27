@@ -160,7 +160,7 @@ class StreamingWorldModelEvaluator:
             
             vision_path = Path("artifacts/models/vision/basketball_shot_classifier.pt")
             if vision_path.exists():
-                # Load MobileNetV3 architecture matching train_vision_real.py
+                # Load MobileNetV3 architecture matching                                                                                           train_vision_real.py
                 model = mobilenet_v3_large(weights=None)
                 in_features = model.classifier[3].in_features
                 model.classifier[3] = nn.Linear(in_features, 1)  # Binary output
@@ -189,6 +189,14 @@ class StreamingWorldModelEvaluator:
         try:
             self.games_df = pd.read_csv("data/nba_games_enhanced.csv")
             self.games_df['date'] = pd.to_datetime(self.games_df['date'])
+            # Ensure Elo-derived columns exist for momentum features
+            if 'elo_p_home' not in self.games_df.columns or 'elo_win_prob' not in self.games_df.columns:
+                try:
+                    from src.common.features import calculate_elo
+                    logger.info("🔧 Computing Elo columns for momentum features...")
+                    self.games_df = calculate_elo(self.games_df)
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to compute Elo columns: {e}")
             logger.info(f"✅ Historical data loaded: {len(self.games_df)} games")
         except Exception as e:
             logger.warning(f"⚠️ Historical data not loaded: {e}")
