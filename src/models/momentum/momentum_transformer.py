@@ -134,8 +134,31 @@ class MomentumAnalytics:
         self.model_path = model_path
         self.model = None
         self.loaded = False
+        self._games_df_id = None
+        self._team_games_index = {}
+        self._team_games_dates = {}
         
         self._try_load()
+
+    def set_games_df(self, games_df) -> None:
+        """Pre-index games by team for fast momentum lookups."""
+        if games_df is None:
+            return
+        try:
+            import pandas as pd
+            df = games_df.copy()
+            df['date'] = pd.to_datetime(df['date'])
+            self._games_df_id = id(games_df)
+            self._team_games_index = {}
+            self._team_games_dates = {}
+            teams = pd.concat([df['home'], df['away']]).unique()
+            df = df.sort_values('date')
+            for team in teams:
+                team_games = df[(df['home'] == team) | (df['away'] == team)].sort_values('date')
+                self._team_games_index[team] = team_games
+                self._team_games_dates[team] = team_games['date'].to_numpy()
+        except Exception as e:
+            logger.warning(f"Failed to build momentum game index: {e}")
     
     def _try_load(self):
         """Attempt to load a trained model, dynamically inferring architecture."""
@@ -211,10 +234,19 @@ class MomentumAnalytics:
             target_date = pd.to_datetime(current_date)
             
             # Get team's past games before this date
-            team_games = games_df[
-                ((games_df['home'] == team) | (games_df['away'] == team)) &
-                (games_df['date'] < target_date)
-            ].sort_values('date', ascending=True).tail(15)  # Last 15 games, chronological
+            if self._games_df_id != id(games_df):
+                self.set_games_df(games_df)
+
+            if team in self._team_games_index:
+                team_games = self._team_games_index[team]
+                team_dates = self._team_games_dates[team]
+                end_idx = np.searchsorted(team_dates, target_date, side='left')
+                team_games = team_games.iloc[:end_idx].tail(15)  # Last 15 games, chronological
+            else:
+                team_games = games_df[
+                    ((games_df['home'] == team) | (games_df['away'] == team)) &
+                    (games_df['date'] < target_date)
+                ].sort_values('date', ascending=True).tail(15)  # Last 15 games, chronological
             
             if len(team_games) < 1:
                 # No games yet - return neutral

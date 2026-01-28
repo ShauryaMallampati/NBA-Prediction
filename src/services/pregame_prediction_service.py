@@ -26,6 +26,39 @@ class PregamePredictionService:
         self.feature_names = None
         self.metadata = None
         self._load_model()
+        self._features_df = None
+        self._features_mtime = None
+        self._home_latest = {}
+        self._away_latest = {}
+
+    def _load_feature_cache(self) -> Optional[pd.DataFrame]:
+        """Load and cache engineered features to avoid repeated O(N) scans."""
+        try:
+            features_path = Path(__file__).parent.parent.parent / "data" / "processed" / "engineered_features.csv"
+            if not features_path.exists():
+                logger.warning(f"Features file not found: {features_path}")
+                return None
+
+            mtime = features_path.stat().st_mtime
+            if self._features_df is not None and self._features_mtime == mtime:
+                return self._features_df
+
+            df = pd.read_csv(features_path)
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.sort_values('date')
+
+            # Cache latest rows per team (home/away)
+            if 'home_team' in df.columns:
+                self._home_latest = df.groupby('home_team', sort=False).tail(1).set_index('home_team')
+            if 'away_team' in df.columns:
+                self._away_latest = df.groupby('away_team', sort=False).tail(1).set_index('away_team')
+
+            self._features_df = df
+            self._features_mtime = mtime
+            return df
+        except Exception as e:
+            logger.error(f"Error loading feature cache: {e}")
+            return None
     
     async def load_model_async(self):
         """Async version of model loading"""
@@ -105,14 +138,19 @@ class PregamePredictionService:
             }
         
         try:
-            # Load engineered features
-            features_path = Path(__file__).parent.parent.parent / "data" / "processed" / "engineered_features.csv"
-            df = pd.read_csv(features_path)
-            df['date'] = pd.to_datetime(df['date'])
-            
+            # Load engineered features (cached)
+            df = self._load_feature_cache()
+            if df is None:
+                logger.warning("Features not available")
+                return {
+                    'error': 'Features not available',
+                    'home_win_prob': 0.5,
+                    'away_win_prob': 0.5,
+                }
+
             # Get latest features for each team to use as baseline
-            home_features = df[df['home_team'] == home_team].iloc[-1] if len(df[df['home_team'] == home_team]) > 0 else None
-            away_features = df[df['away_team'] == away_team].iloc[-1] if len(df[df['away_team'] == away_team]) > 0 else None
+            home_features = self._home_latest.loc[home_team] if home_team in self._home_latest.index else None
+            away_features = self._away_latest.loc[away_team] if away_team in self._away_latest.index else None
             
             if home_features is None or away_features is None:
                 logger.warning(f"Features not found for {home_team} vs {away_team}")

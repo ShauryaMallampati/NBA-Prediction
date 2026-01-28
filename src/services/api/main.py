@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from src.common.config import settings
 from src.common.logger import setup_logger
 from src.common.paths import Paths
+from src.data.ingest.cache_manager import get_cache_manager
 from src.data.ingest.live_feature_extractor import LiveFeatureExtractor
 from src.services.live_prediction_service import LivePredictionService
 from src.services.pregame_prediction_service import PregamePredictionService
@@ -239,6 +240,12 @@ async def get_predictions(date: Optional[str] = None, home_team: Optional[str] =
         List of predictions with probabilities and feature importance
     """
     try:
+        cache = get_cache_manager()
+        cache_key = cache._make_key("api_predictions", date or "today", home_team or "", away_team or "")
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         # Load ensemble predictor
         from src.models.pregame.predictor import EnsemblePredictor
         predictor = EnsemblePredictor(str(Paths.MODELS / "pregame"))
@@ -306,6 +313,8 @@ async def get_predictions(date: Optional[str] = None, home_team: Optional[str] =
                 top_features=top_features,
             ))
         
+        cache_value = [r.dict() for r in result]
+        cache.set(cache_key, cache_value, ttl=300, cache_type="live_scores")
         logger.info(f"Generated {len(result)} predictions using ensemble model")
         return result
     
@@ -353,7 +362,7 @@ async def get_teams():
     
     try:
         client = get_nba_client()
-        teams = client.get_teams()
+        teams = await asyncio.to_thread(client.get_teams)
         return {"success": True, "count": len(teams), "teams": teams}
     except Exception as e:
         logger.error(f"Failed to fetch teams: {e}")
@@ -369,9 +378,9 @@ async def get_games(date: Optional[str] = None):
         fetcher = get_game_fetcher()
         
         if date:
-            games = fetcher.get_games_by_date(date)
+            games = await asyncio.to_thread(fetcher.get_games_by_date, date)
         else:
-            games = fetcher.get_today_games()
+            games = await asyncio.to_thread(fetcher.get_today_games)
         
         return {"success": True, "count": len(games), "games": games}
     except Exception as e:
@@ -386,7 +395,7 @@ async def get_live_games():
     
     try:
         fetcher = get_game_fetcher()
-        live_games = fetcher.get_live_scores()
+        live_games = await asyncio.to_thread(fetcher.get_live_scores)
         return {"success": True, "count": len(live_games), "games": live_games}
     except Exception as e:
         logger.error(f"Failed to fetch live games: {e}")
@@ -400,7 +409,7 @@ async def search_players(name: str, limit: int = 10):
     
     try:
         fetcher = get_player_fetcher()
-        players = fetcher.search_players(name)
+        players = await asyncio.to_thread(fetcher.search_players, name)
         return {"success": True, "count": len(players), "players": players[:limit]}
     except Exception as e:
         logger.error(f"Failed to search players: {e}")
@@ -414,7 +423,7 @@ async def get_player_stats(player_id: int, games: int = 10):
     
     try:
         fetcher = get_player_fetcher()
-        stats = fetcher.get_player_stats(player_id, last_n_games=games)
+        stats = await asyncio.to_thread(fetcher.get_player_stats, player_id, last_n_games=games)
         return {"success": True, "player_id": player_id, "games": len(stats), "stats": stats}
     except Exception as e:
         logger.error(f"Failed to fetch player stats: {e}")
@@ -428,7 +437,7 @@ async def get_player_performance(player_id: int, games: int = 5):
     
     try:
         fetcher = get_player_fetcher()
-        performance = fetcher.get_recent_performance(player_id, games=games)
+        performance = await asyncio.to_thread(fetcher.get_recent_performance, player_id, games=games)
         return {"success": True, "player_id": player_id, **performance}
     except Exception as e:
         logger.error(f"Failed to fetch player performance: {e}")
@@ -441,9 +450,17 @@ async def get_betting_odds():
     from src.data.ingest.odds_fetcher import get_odds_fetcher
     
     try:
+        cache = get_cache_manager()
+        cache_key = cache._make_key("api_odds")
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         fetcher = get_odds_fetcher()
-        odds = fetcher.get_current_odds()
-        return {"success": True, "count": len(odds), "odds": odds}
+        odds = await asyncio.to_thread(fetcher.get_current_odds)
+        response = {"success": True, "count": len(odds), "odds": odds}
+        cache.set(cache_key, response, cache_type="odds")
+        return response
     except Exception as e:
         logger.error(f"Failed to fetch odds: {e}")
         raise HTTPException(status_code=500, detail=str(e))

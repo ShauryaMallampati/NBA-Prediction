@@ -7,6 +7,7 @@ Uses PyTorch (no need for torch_geometric for this simple version).
 
 import json
 import numpy as np
+import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Tuple
 import logging
@@ -31,6 +32,29 @@ class PlayerChemistryModel:
         self.top_duos: List[Dict] = []
         self.player_pairs: Dict[str, Dict] = {}
         self.loaded = False
+        # Optional pre-indexed games for fast progressive chemistry lookups
+        self._games_df_id = None
+        self._team_games_index = {}
+        self._team_games_dates = {}
+
+    def set_games_df(self, games_df) -> None:
+        """Pre-index games by team for fast chemistry lookups."""
+        if games_df is None:
+            return
+        try:
+            df = games_df.copy()
+            df['date'] = pd.to_datetime(df['date'])
+            self._games_df_id = id(games_df)
+            self._team_games_index = {}
+            self._team_games_dates = {}
+            teams = pd.concat([df['home'], df['away']]).unique()
+            df = df.sort_values('date')
+            for team in teams:
+                team_games = df[(df['home'] == team) | (df['away'] == team)].sort_values('date')
+                self._team_games_index[team] = team_games
+                self._team_games_dates[team] = team_games['date'].to_numpy()
+        except Exception as e:
+            logger.warning(f"Failed to build chemistry game index: {e}")
     
     async def load_async(self) -> bool:
         """Async version of chemistry data loading."""
@@ -97,14 +121,26 @@ class PlayerChemistryModel:
         if current_date is not None and games_df is not None:
             try:
                 target_date = pd.to_datetime(current_date)
-                
+
+                # Build or refresh index if needed
+                if self._games_df_id != id(games_df):
+                    self.set_games_df(games_df)
+
                 # Get team's past games in this season (after Oct 1 of that year)
-                season_start = f"{target_date.year if target_date.month >= 10 else target_date.year - 1}-10-01"
-                team_games = games_df[
-                    ((games_df['home'] == team_abbr) | (games_df['away'] == team_abbr)) &
-                    (games_df['date'] >= season_start) &
-                    (games_df['date'] < target_date)
-                ].sort_values('date', ascending=False).head(10)
+                season_start = pd.Timestamp(f"{target_date.year if target_date.month >= 10 else target_date.year - 1}-10-01")
+
+                if team_abbr in self._team_games_index:
+                    team_games = self._team_games_index[team_abbr]
+                    team_dates = self._team_games_dates[team_abbr]
+                    start_idx = np.searchsorted(team_dates, season_start, side='left')
+                    end_idx = np.searchsorted(team_dates, target_date, side='left')
+                    team_games = team_games.iloc[start_idx:end_idx].tail(10)
+                else:
+                    team_games = games_df[
+                        ((games_df['home'] == team_abbr) | (games_df['away'] == team_abbr)) &
+                        (games_df['date'] >= season_start) &
+                        (games_df['date'] < target_date)
+                    ].sort_values('date', ascending=False).head(10)
                 
                 if len(team_games) < 1:
                     # No games yet - return neutral

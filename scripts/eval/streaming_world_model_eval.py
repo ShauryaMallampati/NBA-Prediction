@@ -29,6 +29,7 @@ import numpy as np
 import pandas as pd
 import subprocess
 import logging
+import shutil
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Tuple, Optional
@@ -139,7 +140,8 @@ class StreamingWorldModelEvaluator:
         logger.info(f"✅ Momentum loaded: {self.momentum.loaded}")
         
         # Load Audio Model (Fix: Ensure not using heuristic)
-        audio_analytics.load_model()
+        if not audio_analytics.load_model():
+            raise RuntimeError("Audio model failed to load; aborting to avoid heuristic fallback.")
         
         # Baseline State for streaming simulation
         self.world_state = RunningWorldState()
@@ -201,6 +203,16 @@ class StreamingWorldModelEvaluator:
         except Exception as e:
             logger.warning(f"⚠️ Historical data not loaded: {e}")
             self.games_df = None
+
+        # Pre-index team games for fast lookups (Vision/Chemistry/Momentum)
+        self._team_games_index = {}
+        self._team_games_dates = {}
+        if self.games_df is not None:
+            self._build_team_game_index()
+            if hasattr(self.chemistry, "set_games_df"):
+                self.chemistry.set_games_df(self.games_df)
+            if hasattr(self.momentum, "set_games_df"):
+                self.momentum.set_games_df(self.games_df)
         
         # Results storage
         # self.results = [] # Moved above
@@ -396,7 +408,6 @@ class StreamingWorldModelEvaluator:
                     if "failed to resolve" in stderr_content or "connection" in stderr_content:
                         retry_count += 1
                         logger.warning(f"   ⚠️ Network blip detected (Retry {retry_count}/{max_retries}). Waiting 30s...")
-                        import time
                         time.sleep(30)
                         continue
                     else:
@@ -404,7 +415,6 @@ class StreamingWorldModelEvaluator:
                 except subprocess.TimeoutExpired:
                     retry_count += 1
                     logger.warning(f"   ⚠️ Download timed out (Retry {retry_count}/{max_retries}). Waiting 30s...")
-                    import time
                     time.sleep(30)
                 except Exception as e:
                     logger.error(f"   ❌ Unexpected error in download subprocess: {e}")
@@ -779,17 +789,37 @@ class StreamingWorldModelEvaluator:
 
 
     # Removed _get_team_strength and _get_past_games as they are covered by WorldState
+
+    def _build_team_game_index(self):
+        """Pre-index games by team for fast date filtering."""
+        if self.games_df is None:
+            return
+        df = self.games_df.sort_values('date')
+        teams = pd.concat([df['home'], df['away']]).unique()
+        for team in teams:
+            team_games = df[(df['home'] == team) | (df['away'] == team)].sort_values('date')
+            self._team_games_index[team] = team_games
+            self._team_games_dates[team] = team_games['date'].to_numpy()
     
     def _get_past_games(self, team: str, current_date: str, limit: int = 5) -> list:
         """Get past N games for a team before the current date."""
         try:
             target_date = pd.to_datetime(current_date)
-            # Strict filter: Only consider Regular Season/Playoff games (Oct 22, 2024 onwards)
-            # This excludes Preseason and Exhibition games (Abu Dhabi, etc.)
+            if team in self._team_games_index:
+                team_games = self._team_games_index[team]
+                team_dates = self._team_games_dates[team]
+                # Strict filter: Only consider Regular Season/Playoff games (Oct 22, 2024 onwards)
+                season_start = pd.Timestamp('2024-10-22')
+                start_idx = np.searchsorted(team_dates, season_start, side='left')
+                end_idx = np.searchsorted(team_dates, target_date, side='left')
+                past_games = team_games.iloc[start_idx:end_idx].tail(limit)
+                return past_games.to_dict('records')
+
+            # Fallback to original filtering if index missing
             past_games = self.games_df[
                 ((self.games_df['home'] == team) | (self.games_df['away'] == team)) &
-                (self.games_df['date'] < target_date) & 
-                (self.games_df['date'] >= '2024-10-22') 
+                (self.games_df['date'] < target_date) &
+                (self.games_df['date'] >= '2024-10-22')
             ].sort_values('date', ascending=False).head(limit)
             return past_games.to_dict('records')
         except Exception as e:
@@ -824,7 +854,6 @@ class StreamingWorldModelEvaluator:
         if video_path and video_path.exists():
             # Move to cache
             try:
-                import shutil
                 shutil.move(str(video_path), str(cache_path))
                 logger.info(f"   💾 Cached: {cache_path.name}")
                 return cache_path
@@ -969,7 +998,6 @@ class StreamingWorldModelEvaluator:
         try:
             cache_key = f"{date}_{home}_{away}"
             cache_path = self.video_cache_dir / f"{cache_key}.mp4"
-            import shutil
             shutil.move(str(current_video), str(cache_path))
             logger.info(f"   💾 Cached video for future predictions")
         except Exception as e:
