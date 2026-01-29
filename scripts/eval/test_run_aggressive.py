@@ -226,6 +226,12 @@ class StreamingWorldModelEvaluator:
         
         # Build playlist index from NBA official playlist
         self.playlist_index = {}
+        # Prefer cookies.txt (Netscape) but allow cookies.json if that's what exists
+        self.cookies_path = None
+        if Path("cookies.txt").exists():
+            self.cookies_path = Path("cookies.txt")
+        elif Path("cookies.json").exists():
+            self.cookies_path = Path("cookies.json")
         self._build_playlist_index()
     
     def _build_playlist_index(self):
@@ -246,7 +252,7 @@ class StreamingWorldModelEvaluator:
                 
                 cmd = [
                     "yt-dlp", "--flat-playlist",
-                    "--cookies", "cookies.txt",  # Bypass bot detection
+                    "--cookies", str(self.cookies_path) if self.cookies_path else "cookies.txt",  # Bypass bot detection
                     "--user-agent", user_agent,  # Spoof browser
                     "--sleep-requests", "2",     # Sleep between requests
                     "--retries", "10",           # Retry failed requests
@@ -379,6 +385,7 @@ class StreamingWorldModelEvaluator:
             # yt-dlp command - use android client and format 18 (360p mp4)
             cmd = [
                 "yt-dlp",
+                "--cookies", str(self.cookies_path) if self.cookies_path else "cookies.txt",
                 "--sleep-requests", "2",
                 "--sleep-interval", "3",
                 "--retries", "5",
