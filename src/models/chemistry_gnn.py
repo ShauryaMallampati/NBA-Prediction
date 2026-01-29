@@ -52,7 +52,7 @@ class PlayerChemistryModel:
             for team in teams:
                 team_games = df[(df['home'] == team) | (df['away'] == team)].sort_values('date')
                 self._team_games_index[team] = team_games
-                self._team_games_dates[team] = team_games['date'].to_numpy()
+            self._team_games_dates[team] = team_games['date'].to_numpy(dtype='datetime64[ns]')
         except Exception as e:
             logger.warning(f"Failed to build chemistry game index: {e}")
     
@@ -127,13 +127,14 @@ class PlayerChemistryModel:
                     self.set_games_df(games_df)
 
                 # Get team's past games in this season (after Oct 1 of that year)
-                season_start = pd.Timestamp(f"{target_date.year if target_date.month >= 10 else target_date.year - 1}-10-01")
+                season_start = np.datetime64(f"{target_date.year if target_date.month >= 10 else target_date.year - 1}-10-01")
+                target_dt = np.datetime64(target_date)
 
                 if team_abbr in self._team_games_index:
                     team_games = self._team_games_index[team_abbr]
                     team_dates = self._team_games_dates[team_abbr]
                     start_idx = np.searchsorted(team_dates, season_start, side='left')
-                    end_idx = np.searchsorted(team_dates, target_date, side='left')
+                    end_idx = np.searchsorted(team_dates, target_dt, side='left')
                     team_games = team_games.iloc[start_idx:end_idx].tail(10)
                 else:
                     team_games = games_df[

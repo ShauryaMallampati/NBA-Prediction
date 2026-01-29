@@ -156,7 +156,7 @@ class MomentumAnalytics:
             for team in teams:
                 team_games = df[(df['home'] == team) | (df['away'] == team)].sort_values('date')
                 self._team_games_index[team] = team_games
-                self._team_games_dates[team] = team_games['date'].to_numpy()
+            self._team_games_dates[team] = team_games['date'].to_numpy(dtype='datetime64[ns]')
         except Exception as e:
             logger.warning(f"Failed to build momentum game index: {e}")
     
@@ -240,7 +240,8 @@ class MomentumAnalytics:
             if team in self._team_games_index:
                 team_games = self._team_games_index[team]
                 team_dates = self._team_games_dates[team]
-                end_idx = np.searchsorted(team_dates, target_date, side='left')
+                target_dt = np.datetime64(target_date)
+                end_idx = np.searchsorted(team_dates, target_dt, side='left')
                 team_games = team_games.iloc[:end_idx].tail(15)  # Last 15 games, chronological
             else:
                 team_games = games_df[

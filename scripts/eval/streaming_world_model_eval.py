@@ -799,7 +799,7 @@ class StreamingWorldModelEvaluator:
         for team in teams:
             team_games = df[(df['home'] == team) | (df['away'] == team)].sort_values('date')
             self._team_games_index[team] = team_games
-            self._team_games_dates[team] = team_games['date'].to_numpy()
+            self._team_games_dates[team] = team_games['date'].to_numpy(dtype='datetime64[ns]')
     
     def _get_past_games(self, team: str, current_date: str, limit: int = 5) -> list:
         """Get past N games for a team before the current date."""
@@ -809,9 +809,10 @@ class StreamingWorldModelEvaluator:
                 team_games = self._team_games_index[team]
                 team_dates = self._team_games_dates[team]
                 # Strict filter: Only consider Regular Season/Playoff games (Oct 22, 2024 onwards)
-                season_start = pd.Timestamp('2024-10-22')
+                season_start = np.datetime64('2024-10-22')
+                target_dt = np.datetime64(target_date)
                 start_idx = np.searchsorted(team_dates, season_start, side='left')
-                end_idx = np.searchsorted(team_dates, target_date, side='left')
+                end_idx = np.searchsorted(team_dates, target_dt, side='left')
                 past_games = team_games.iloc[start_idx:end_idx].tail(limit)
                 return past_games.to_dict('records')
 
