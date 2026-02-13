@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 BALLDONTLIE_API_KEY = os.getenv("BALLDONTLIE_API_KEY", "")
 SPORTSDATA_API_KEY = os.getenv("SPORTSDATA_API_KEY", "")
 RAPIDAPI_KEY = os.getenv("NBA_STATS_API_KEY", "")
-ODDS_API_KEY = os.getenv("ODDS_API_KEY", "REMOVED_ODDS_KEY")
+ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
 
 # Rate limiting configuration
 RATE_LIMITS = {

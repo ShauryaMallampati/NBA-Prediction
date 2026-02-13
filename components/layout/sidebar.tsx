@@ -6,8 +6,12 @@ import {
     Brain,
     Calendar,
     FlaskConical,
+    Gauge,
     Home,
+    Layers,
+    MessageCircle,
     Settings,
+    Swords,
     Target,
     Users,
 } from 'lucide-react'
@@ -20,6 +24,13 @@ const navigation = [
     { name: 'Teams', href: '/teams', icon: Users },
     { name: 'Analysis', href: '/analysis', icon: Brain },
     { name: 'Chemistry', href: '/chemistry', icon: FlaskConical },
+]
+
+const labs = [
+    { name: 'Postgame', href: '/postgame', icon: Gauge },
+    { name: 'Compare', href: '/compare', icon: Swords },
+    { name: 'Consensus', href: '/ensemble-predictions', icon: Layers },
+    { name: 'Sentiment', href: '/sentiment', icon: MessageCircle },
 ]
 
 const secondary = [
@@ -69,7 +80,30 @@ export function Sidebar() {
                     {/* Divider */}
                     <div className="my-4 h-px bg-border" />
 
-                    {/* Secondary nav */}
+                    {/* Labs */}
+                    <div className="px-3 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground">Labs</div>
+                    <div className="space-y-1 mb-4">
+                        {labs.map((item) => {
+                            const isActive = pathname === item.href
+                            return (
+                                <Link
+                                    key={item.name}
+                                    href={item.href}
+                                    className={cn(
+                                        'group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                                        isActive
+                                            ? 'bg-foreground text-background'
+                                            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                                    )}
+                                >
+                                    <item.icon className="h-4 w-4" />
+                                    {item.name}
+                                </Link>
+                            )
+                        })}
+                    </div>
+
+                    {/* Settings */}
                     <div className="space-y-1">
                         {secondary.map((item) => {
                             const isActive = pathname === item.href

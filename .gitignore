@@ -38,13 +38,18 @@ ENV/
 .env.local
 
 # Data
-/data/
-!data/predictions/
-!data/schedules/
-!data/metrics/
+/data/*
 !data/.gitkeep
 artifacts/
 !artifacts/.gitkeep
+
+# Generated data files (dynamic, not source control)
+data/schedules/*.json
+data/metrics/**
+data/chemistry/
+data/processed/
+data/engineered_features/
+data/cache/
 
 # Logs
 logs/
@@ -62,6 +67,10 @@ node_modules/
 .next/
 out/
 dist/
+build/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+.turbo/
 
 # Testing
 .coverage
@@ -73,6 +82,10 @@ htmlcov/
 *.pkl
 *.h5
 *.pth
+# Old/duplicate architecture diagrams (keep only in docs/)
+System_Architecture.jpeg
+System_Architecture.png
+/System_Architecture_v*.jpeg
 # Kaggle credentials
 **/.kaggle/
 .kaggle/
@@ -93,3 +106,33 @@ scripts/eval/test_run_aggressive.py
 scripts/eval/aggressive_fusion.py
 data/temp_video_aggressive/
 analyze_trends.py
+
+# Video downloads / archives
+*.mp4
+*.mkv
+*.webm
+*.mov
+*.m4v
+*.avi
+*.flv
+*.ts
+*.m3u8
+*.part
+*.ytdl
+.downloaded.txt
+
+# Common Drive mount or sync paths (if accidentally placed in repo)
+/mnt/gdrive/
+/drive/
+/drive/My Drive/
+/drive/My Drive/nba videos/
+/Users/*/Google Drive/
+/Users/*/My Drive/
+
+# Google Drive OAuth & Cache
+credentials.json
+drive_credentials.json
+token.json
+/.config/nba_drive/
+.gdrive_cache_index.json
+simulation_gdrive.log

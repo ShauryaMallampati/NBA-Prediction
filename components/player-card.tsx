@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils'
 
 interface PlayerStats {
   ppg: number
@@ -31,157 +32,109 @@ export function PlayerCard({
   position,
   jerseyNumber,
   showDetailedStats = false,
-  className = "",
+  className = '',
 }: PlayerCardProps) {
   const isHighScorer = stats.ppg >= 25
   const isEfficientShooter = stats.fg_pct >= 50
 
   return (
-    <div
-      className={`glass-strong rounded-xl p-6 hover:bg-white/5 transition-all duration-200 group ${className}`}
-    >
-      {/* Player Header */}
+    <div className={cn('bento-item card-interactive', className)}>
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-4">
-          {/* Avatar */}
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-            {jerseyNumber || teamAbbreviation.substring(0, 2)}
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-md bg-foreground text-background flex items-center justify-center font-semibold text-sm">
+            {jerseyNumber || teamAbbreviation}
           </div>
 
-          {/* Name and Team */}
           <div>
-            <h3 className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">
-              {playerName}
-            </h3>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm text-gray-400">{teamAbbreviation}</span>
-              {position && (
-                <>
-                  <span className="text-gray-600">•</span>
-                  <span className="text-sm text-gray-400">{position}</span>
-                </>
-              )}
+            <h3 className="text-lg font-semibold">{playerName}</h3>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{teamAbbreviation}</span>
+              {position && <span>• {position}</span>}
             </div>
           </div>
         </div>
 
-        {/* Status Badges */}
         <div className="flex flex-col gap-2">
-          {isHighScorer && (
-            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-orange-500/20 text-orange-400 border border-orange-500/30">
-              🔥 High Scorer
-            </span>
-          )}
-          {isEfficientShooter && (
-            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 border border-green-500/30">
-              ✨ Efficient
-            </span>
-          )}
+          {isHighScorer && <span className="badge badge-warning">High scorer</span>}
+          {isEfficientShooter && <span className="badge badge-success">Efficient</span>}
         </div>
       </div>
 
-      {/* Primary Stats Grid */}
       <div className="grid grid-cols-3 gap-4 mb-4">
         <div className="text-center">
-          <p className="text-2xl font-bold text-white">{stats.ppg.toFixed(1)}</p>
-          <p className="text-xs text-gray-500 mt-1">PPG</p>
+          <p className="text-xl font-bold tabular-nums">{stats.ppg.toFixed(1)}</p>
+          <p className="text-xs text-muted-foreground mt-1">PPG</p>
         </div>
         <div className="text-center">
-          <p className="text-2xl font-bold text-white">{stats.rpg.toFixed(1)}</p>
-          <p className="text-xs text-gray-500 mt-1">RPG</p>
+          <p className="text-xl font-bold tabular-nums">{stats.rpg.toFixed(1)}</p>
+          <p className="text-xs text-muted-foreground mt-1">RPG</p>
         </div>
         <div className="text-center">
-          <p className="text-2xl font-bold text-white">{stats.apg.toFixed(1)}</p>
-          <p className="text-xs text-gray-500 mt-1">APG</p>
+          <p className="text-xl font-bold tabular-nums">{stats.apg.toFixed(1)}</p>
+          <p className="text-xs text-muted-foreground mt-1">APG</p>
         </div>
       </div>
 
-      {/* Shooting Percentages */}
-      <div className="space-y-2 mb-4">
-        <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-gray-400">FG%</span>
-            <span className="text-white font-medium">{stats.fg_pct.toFixed(1)}%</span>
-          </div>
-          <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-500"
-              style={{ width: `${Math.min(stats.fg_pct, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-gray-400">3P%</span>
-            <span className="text-white font-medium">{stats.fg3_pct.toFixed(1)}%</span>
-          </div>
-          <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
-              style={{ width: `${Math.min(stats.fg3_pct, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-gray-400">FT%</span>
-            <span className="text-white font-medium">{stats.ft_pct.toFixed(1)}%</span>
-          </div>
-          <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-green-500 to-emerald-500 transition-all duration-500"
-              style={{ width: `${Math.min(stats.ft_pct, 100)}%` }}
-            />
-          </div>
-        </div>
+      <div className="space-y-3 mb-4">
+        <StatBar label="FG%" value={stats.fg_pct} />
+        <StatBar label="3P%" value={stats.fg3_pct} />
+        <StatBar label="FT%" value={stats.ft_pct} />
       </div>
 
-      {/* Detailed Stats (Optional) */}
       {showDetailedStats && (
-        <div className="pt-4 border-t border-gray-800">
+        <div className="pt-4 border-t border-border">
           <div className="grid grid-cols-2 gap-3 text-sm">
             {stats.spg !== undefined && (
-              <div className="flex justify-between">
-                <span className="text-gray-400">Steals</span>
-                <span className="text-white font-medium">{stats.spg.toFixed(1)}</span>
-              </div>
+              <DetailRow label="Steals" value={stats.spg} />
             )}
             {stats.bpg !== undefined && (
-              <div className="flex justify-between">
-                <span className="text-gray-400">Blocks</span>
-                <span className="text-white font-medium">{stats.bpg.toFixed(1)}</span>
-              </div>
+              <DetailRow label="Blocks" value={stats.bpg} />
             )}
             {stats.tpg !== undefined && (
-              <div className="flex justify-between">
-                <span className="text-gray-400">Turnovers</span>
-                <span className="text-white font-medium">{stats.tpg.toFixed(1)}</span>
-              </div>
+              <DetailRow label="Turnovers" value={stats.tpg} />
             )}
             {stats.mpg !== undefined && (
-              <div className="flex justify-between">
-                <span className="text-gray-400">Minutes</span>
-                <span className="text-white font-medium">{stats.mpg.toFixed(1)}</span>
-              </div>
+              <DetailRow label="Minutes" value={stats.mpg} />
             )}
           </div>
         </div>
       )}
 
-      {/* View Details Link */}
-      <div className="mt-4 pt-4 border-t border-gray-800">
+      <div className="mt-4 pt-4 border-t border-border">
         <a
           href={`/players/${playerId}`}
-          className="text-sm text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-2 opacity-0 group-hover:opacity-100"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-2"
         >
-          View Full Stats
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+          View full stats
+          <span className="text-xs">→</span>
         </a>
       </div>
+    </div>
+  )
+}
+
+function StatBar({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <div className="flex justify-between text-xs mb-1 text-muted-foreground">
+        <span>{label}</span>
+        <span className="font-medium text-foreground">{value.toFixed(1)}%</span>
+      </div>
+      <div className="prob-bar">
+        <div
+          className="prob-bar-fill bg-foreground"
+          style={{ width: `${Math.min(value, 100)}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function DetailRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex justify-between text-muted-foreground">
+      <span>{label}</span>
+      <span className="font-medium text-foreground">{value.toFixed(1)}</span>
     </div>
   )
 }

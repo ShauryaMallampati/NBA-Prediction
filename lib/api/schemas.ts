@@ -10,26 +10,27 @@ export const GamePredictionSchema = z.object({
     home_win_probability: z.number(),
     away_win_probability: z.number(),
     confidence: z.number(),
-    models_agree: z.string(),
-    consensus_percentage: z.number(),
-    individual_votes: z.record(z.string(), z.string()),
-    home_odds: z.number(),
-    away_odds: z.number(),
-    home_spread: z.number(),
-    away_spread: z.number(),
+    models_agree: z.union([z.number(), z.string()]).optional(),
+    consensus_percentage: z.number().optional(),
+    individual_votes: z.record(z.string(), z.string()).optional(),
+    home_odds: z.number().optional(),
+    away_odds: z.number().optional(),
+    home_spread: z.number().optional(),
+    away_spread: z.number().optional(),
 })
 
 export const PredictionsResponseSchema = z.object({
-    timestamp: z.string(),
-    total_games: z.number(),
-    predictions: z.array(GamePredictionSchema),
+    timestamp: z.string().optional(),
+    total_games: z.number().optional(),
+    predictions: z.array(GamePredictionSchema).default([]),
+    message: z.string().optional(),
     model_info: z.object({
         num_models: z.number(),
         model_names: z.array(z.string()),
         num_features: z.number(),
         feature_names: z.array(z.string()).optional(),
-    }),
-})
+    }).optional(),
+}).passthrough()
 
 // Schedule Schema
 export const ScheduleGameSchema = z.object({
@@ -42,10 +43,11 @@ export const ScheduleGameSchema = z.object({
 
 export const ScheduleResponseSchema = z.object({
     success: z.boolean(),
-    source: z.string(),
+    source: z.string().optional(),
     count: z.number(),
     games: z.array(ScheduleGameSchema),
-})
+    message: z.string().optional(),
+}).passthrough()
 
 // Chemistry Schema
 export const DuoSchema = z.object({
@@ -66,7 +68,7 @@ export const ChemistryLeagueResponseSchema = z.object({
     total_pairs: z.number(),
     top_duos: z.array(DuoSchema),
     team_rankings: z.array(TeamRankingSchema),
-})
+}).passthrough()
 
 // Model Info Schema
 export const ModelInfoResponseSchema = z.object({
@@ -81,14 +83,14 @@ export const ModelInfoResponseSchema = z.object({
         rnn_active: z.boolean(),
         cnn_active: z.boolean(),
     }).optional(),
-})
+}).passthrough()
 
 // Health Schema
 export const HealthResponseSchema = z.object({
     status: z.string(),
     model_loaded: z.boolean(),
     timestamp: z.string(),
-})
+}).passthrough()
 
 // Explanation Schema
 export const ExplanationResponseSchema = z.object({

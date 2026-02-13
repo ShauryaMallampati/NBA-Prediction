@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 """
-🏀 AGGRESSIVE TEST - WORLD MODEL EVALUATION
-============================================
-⚠️ THIS IS A TEST FILE - DO NOT COMMIT ⚠️
+🏀 STREAMING WORLD MODEL EVALUATION (FIXED ENSEMBLE)
+=====================================================
+This script evaluates the FULL World Model with the FIXED ensemble
+that properly computes features (Elo, rest, streaks, rolling stats).
 
-This script tests an AGGRESSIVE version of the World Model with:
-- Vision Delta: 0.50 (targets ±5% impact)
-- Chemistry Delta: 0.25 (boosted from 0.15)
-- Boost Factor: 3.0 in fusion gate (more reactive)
-
-Results are saved to a separate 'aggressive' subfolder.
+Uses SEPARATE output files from the original eval to allow comparison.
 
 Usage:
-    poetry run python scripts/eval/test_run_aggressive.py --season 2024-25
+    poetry run python scripts/eval/streaming_world_model_eval_fixed.py --season 2025-26
 
 Dependencies:
     pip install yt-dlp opencv-python torch
@@ -72,6 +68,8 @@ from src.models.chemistry_gnn import get_chemistry_model
 from src.models.vision.audio_analytics import audio_analytics
 from src.models.momentum.momentum_transformer import MomentumAnalytics
 from src.common.features import RunningWorldState
+from src.models.momentum.momentum_transformer import MomentumAnalytics
+from src.common.features import RunningWorldState
 from src.models.fusion.learnable_fusion import FusionModule
 
 logging.basicConfig(
@@ -84,11 +82,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configuration - AGGRESSIVE TEST MODE
-TEMP_VIDEO_DIR = Path("data/temp_video_aggressive")
-RESULTS_DIR = Path("artifacts/evaluation/real_video/aggressive")
+# Configuration - FIXED version uses separate directories
+TEMP_VIDEO_DIR = Path("data/temp_video")
+RESULTS_DIR = Path("artifacts/evaluation/real_video_fixed")  # Different from original
 TEMP_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Model directory for FIXED pipeline (now using ensemble v2)
+FIXED_MODEL_DIR = "artifacts/models/pregame"
 
 # Team name mappings for YouTube search
 TEAM_NAMES = {
@@ -111,13 +112,13 @@ TEAM_NAMES = {
 
 
 class StreamingWorldModelEvaluator:
-    def __init__(self, model_dir: str = "artifacts/models/pregame"):
-        logger.info(f"📦 Loading World Model components from {model_dir}...")
+    def __init__(self, model_dir: str = FIXED_MODEL_DIR):
+        logger.info(f"📦 Loading World Model components (ensemble v2) from {model_dir}...")
         
-        # Load Ensemble
+        # Load Ensemble (v2 stacking + enhanced features)
         self.ensemble = EnsembleTrainer(output_dir=model_dir)
         self.ensemble.load_models()
-        logger.info("✅ Ensemble loaded")
+        logger.info("✅ Ensemble v2 loaded")
         
         # Load Chemistry
         self.chemistry = get_chemistry_model()
@@ -142,10 +143,10 @@ class StreamingWorldModelEvaluator:
         # Baseline State for streaming simulation
         self.world_state = RunningWorldState()
         
-        # Fusion Module - AGGRESSIVE (High weights, trust video/momentum)
+        # Fusion Module - BALANCED BASELINE (Uniform weights)
         # Weights: [Vision, Audio, Flow, Chemistry, Momentum]
-        self.aggressive_weights = [0.35, 0.10, 0.10, 0.20, 0.25]
-        self.fusion_module = FusionModule(custom_weights=self.aggressive_weights)
+        self.conservative_weights = [0.20, 0.20, 0.20, 0.20, 0.20]
+        self.fusion_module = FusionModule(custom_weights=self.conservative_weights)
 
         # Performance metrics
         self.results = []
@@ -158,7 +159,7 @@ class StreamingWorldModelEvaluator:
             
             vision_path = Path("artifacts/models/vision/basketball_shot_classifier.pt")
             if vision_path.exists():
-                # Load MobileNetV3 architecture matching train_vision_real.py
+                # Load MobileNetV3 architecture matching                                                                                           train_vision_real.py
                 model = mobilenet_v3_large(weights=None)
                 in_features = model.classifier[3].in_features
                 model.classifier[3] = nn.Linear(in_features, 1)  # Binary output
@@ -580,7 +581,7 @@ class StreamingWorldModelEvaluator:
                 cap.release()
                 return 0.5, default_flow_stats
             
-            # Sample 12 non-overlapping clips of 16 frames each (Matched with Balanced Model)
+            # Sample 12 non-overlapping clips of 16 frames each (Sharpened for v4.1)
             num_clips = min(12, total_frames // num_frames)
             clip_starts = np.linspace(0, total_frames - num_frames, num_clips, dtype=int)
             
@@ -678,7 +679,8 @@ class StreamingWorldModelEvaluator:
         
         # Update state sequentially without predicting
         for _, row in past_games.iterrows():
-            self.world_state.update(row['home'], row['away'], row['date'], row['home_win'])
+            self.world_state.update(row['home'], row['away'], row['date'], row['home_win'],
+                                   row.get('home_pts', None), row.get('away_pts', None))
             
         logger.info(f"✅ State warmed up for {len(self.world_state.elo_ratings)} teams")
 
@@ -699,8 +701,8 @@ class StreamingWorldModelEvaluator:
         X = pd.DataFrame([features])
         # Ensure we only use columns the model was trained on
         model_features = self.ensemble.feature_names
-        # Reorder to match model's expected order
-        X_input = X[model_features]
+        # Reorder to match model's expected order, fill missing engineered features with 0
+        X_input = X.reindex(columns=model_features, fill_value=0.0)
         
         base_prob = self.ensemble.predict_ensemble(X_input)[0]
         
@@ -709,15 +711,15 @@ class StreamingWorldModelEvaluator:
             home, away, current_date=date, games_df=self.games_df
         )
         
-        # 5. COMPONENT 3: CHEMISTRY GNN (AGGRESSIVE)
+        # 5. COMPONENT 3: CHEMISTRY GNN (progressive)
         chem_diff = self.chemistry.get_chemistry_differential(
             home, away, current_date=date, games_df=self.games_df
         )
-        chem_delta = chem_diff * 0.25 # AGGRESSIVE: Boosted from 0.15
+        chem_delta = chem_diff * 0.15 # Sharpened from 0.1
         
-        # 6. COMPONENT 4: VISION CNN (AGGRESSIVE - targets ±5% impact)
+        # 6. COMPONENT 4: VISION CNN (REAL from video!)
         vision_diff = home_vision_score - away_vision_score
-        vision_delta = vision_diff * 0.50 # AGGRESSIVE: Boosted from 0.20        
+        vision_delta = vision_diff * 0.20 # Sharpened from 0.15        
         # 🚀 UPGRADE: Use Learnable Fusion with Uncertainty (MC Dropout)
         fusion_results = self.fusion_module.fuse_with_uncertainty(
             base_prob, vision_delta, audio_delta, flow_delta, 
@@ -1010,7 +1012,9 @@ class StreamingWorldModelEvaluator:
         
         # Update World State with the ACTUAL result after prediction
         # (keeping the simulation progressive)
-        self.world_state.update(home, away, date, actual_home_win)
+        self.world_state.update(home, away, date, actual_home_win,
+                               row.get('home_pts', None) if row is not None else None,
+                               row.get('away_pts', None) if row is not None else None)
         
         # Cleanup old cache periodically
         if len(self.results) % 20 == 0:
@@ -1080,17 +1084,16 @@ class StreamingWorldModelEvaluator:
         # WARM UP STATE
         self.warm_up_state(games['date'].min().strftime('%Y-%m-%d'))
         
-        # RESUME LOGIC: Check both _partial and _final in case a previous run was stopped
-        partial_file = RESULTS_DIR / f"aggressive_video_eval_{season}_partial.json"
-        final_file = RESULTS_DIR / f"aggressive_video_eval_{season}_final.json"
+        # RESUME LOGIC: Only resume from _partial; ignore _final to allow fresh runs
+        # FIXED version uses "_fixed" suffix to separate from original
+        partial_file = RESULTS_DIR / f"real_video_eval_{season}_fixed_partial.json"
+        final_file = RESULTS_DIR / f"real_video_eval_{season}_fixed_final.json"
         processed_keys = set()
         
         # Load existing results to avoid duplicates and resume
         target_file = None
         if partial_file.exists():
             target_file = partial_file
-        elif final_file.exists():
-            target_file = final_file
             
         if target_file and target_file.exists():
             try:
@@ -1110,6 +1113,8 @@ class StreamingWorldModelEvaluator:
             except Exception as e:
                 logger.error(f"⚠️ Failed to load resume file: {e}")
                 self.results = []
+        elif final_file.exists():
+            logger.info(f"ℹ️ Found final file {final_file.name} — starting fresh (no resume).")
         
         
         start_time = time.time()
@@ -1149,34 +1154,33 @@ class StreamingWorldModelEvaluator:
         print()
         print()
         print("=" * 70)
-        print("🔥🏆 AGGRESSIVE TEST - FINAL RESULTS 🏆🔥")
+        print("🏆🏀 FINAL RESULTS - WORLD MODEL EVALUATION 🏀🏆")
         print("=" * 70)
         
         correct = sum(r['correct'] for r in self.results)
         total = len(self.results)
         videos_used = sum(r['video_used'] for r in self.results)
         
-        print(f"\n   📊 Total Games Evaluated: {total}")
-        print(f"   ✅ Correct Predictions:  {correct}")
+        print(f"\n   📊 Total Games: {total}")
+        print(f"   ✅ Correct:     {correct}")
         if total > 0:
             acc = correct/total*100
             acc_bar = '█' * int(acc // 5) + '░' * (20 - int(acc // 5))
-            print(f"\n   " + "="*50)
-            print(f"   🎯 FINAL ACCURACY: [{acc_bar}] {acc:.2f}%")
-            print(f"   " + "="*50)
-            print(f"\n   📹 Videos Analyzed: {videos_used}/{total} ({videos_used/total*100:.1f}%)")
+            print(f"   🎯 ACCURACY:    [{acc_bar}] {acc:.2f}%")
+            print(f"   📹 Videos:      {videos_used}/{total} ({videos_used/total*100:.1f}%)")
         else:
             print("   ACCURACY: N/A (no games completed)")
-        print(f"   Time Elapsed: {elapsed/3600:.1f} hours")
+        print(f"   ⏱️  Time:        {elapsed/3600:.1f} hours")
         print("=" * 70)
+        print()
     
     def _save_results(self, season: str, partial: bool = False):
-        """Save results to JSON."""
-        suffix = "_partial" if partial else "_final"
-        output_file = RESULTS_DIR / f"aggressive_video_eval_{season}{suffix}.json"
+        """Save results to JSON (FIXED version with separate files)."""
+        suffix = "_fixed_partial" if partial else "_fixed_final"
+        output_file = RESULTS_DIR / f"real_video_eval_{season}{suffix}.json"
         
         correct = sum(r['correct'] for r in self.results)
-        total = len(self.results)
+        total = len(self.results) 
         
         data = {
             "season": season,
@@ -1184,13 +1188,14 @@ class StreamingWorldModelEvaluator:
             "total_games": total,
             "correct_predictions": correct,
             "accuracy": correct / total if total > 0 else 0,
+            "model_version": "FIXED_ENSEMBLE",  # Mark this as fixed version
             "games": self.results,
         }
         
         with open(output_file, 'w') as f:
             json.dump(data, f, indent=2)
         
-        logger.info(f"💾 Results saved to {output_file}")
+        logger.info(f"💾 FIXED Results saved to {output_file}")
 
 
 def main():
@@ -1200,15 +1205,16 @@ def main():
     parser.add_argument("--season", default="2025-26", choices=["2024-25", "2025-26", "all"])
     args = parser.parse_args()
     
-    # DETERMINE MODEL DIRECTORY
-    # Basic logic: Use historical model if available to avoid data leakage
-    hist_dir = Path("artifacts/models/historical_2024")
+    # FIXED VERSION: Use the v2 ensemble directory
+    fixed_dir = Path(FIXED_MODEL_DIR)
     
-    if hist_dir.exists() and (hist_dir / "xgb_model.pkl").exists():
-        logger.info(f"🔙 Using Historical Models ({hist_dir}) for valid time-series evaluation")
-        model_dir = str(hist_dir)
+    if fixed_dir.exists() and (fixed_dir / "xgb_model.pkl").exists():
+        logger.info(f"✅ Using Ensemble v2 Models ({fixed_dir})")
+        model_dir = str(fixed_dir)
     else:
-        logger.warning("⚠️ Historical models not found. Using 'pregame' (WARNING: Potential Data Leakage if trained on 2026 data)")
+        logger.warning(f"⚠️ Ensemble v2 models not found at {fixed_dir}. You need to train first!")
+        logger.warning("Run: poetry run python scripts/training/train_ensemble_v2.py")
+        # Fallback to pregame (best available)
         model_dir = "artifacts/models/pregame"
     
     # Determine seasons to run
@@ -1221,7 +1227,7 @@ def main():
     evaluator = StreamingWorldModelEvaluator(model_dir=model_dir)
     
     for season in seasons:
-        logger.info(f"\n{'='*60}\n🏀 STARTING SIMULATION FOR SEASON: {season}\n{'='*60}")
+        logger.info(f"\n{'='*60}\n🏀 STARTING FIXED ENSEMBLE SIMULATION FOR SEASON: {season}\n{'='*60}")
         try:
             evaluator.run_evaluation(season)
         except CriticalDownloadError as e:

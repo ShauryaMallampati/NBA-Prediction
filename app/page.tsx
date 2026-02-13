@@ -16,21 +16,21 @@ export default function HomePage() {
   const avgConfidence = data?.predictions.length
     ? Math.round(data.predictions.reduce((a, p) => a + p.confidence, 0) / data.predictions.length)
     : 0
-  const modelAccuracy = accuracyData?.accuracy ?? 67.7
+  const modelAccuracy = typeof accuracyData?.accuracy === 'number' ? accuracyData.accuracy : null
 
   return (
     <div className="min-h-screen">
-      {/* Hero - Clean, editorial style */}
+      {/* Hero: quick hit */}
       <section className="border-b border-border">
         <div className="container-wide py-16 lg:py-24">
           <div className="max-w-3xl">
-            {/* Subtle badge */}
+            {/* Tiny flex */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 text-xs font-medium uppercase tracking-wider text-muted-foreground border border-border rounded-full">
               <Sparkles className="h-3.5 w-3.5" />
               3 ML Models · Updated Daily
             </div>
 
-            {/* Clean headline - no gradients */}
+            {/* Big headline */}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
               NBA Game Predictions<br />
               <span className="text-muted-foreground">Powered by Machine Learning</span>
@@ -41,13 +41,19 @@ export default function HomePage() {
               and SHAP-powered explanations for every prediction.
             </p>
 
-            {/* Clean CTAs */}
+            {data?.message && (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 text-xs font-medium border border-border rounded-full text-muted-foreground">
+                {data.message}
+              </div>
+            )}
+
+            {/* CTAs */}
             <div className="flex flex-wrap gap-3">
               <Link href="/predictions" className="btn-primary">
                 View Predictions
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link href="/analytics" className="btn-secondary">
+              <Link href="/analysis" className="btn-secondary">
                 Model Performance
               </Link>
             </div>
@@ -55,12 +61,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats Bar - Swiss grid precision */}
+      {/* Stats bar */}
       <section className="border-b border-border bg-muted/30">
         <div className="container-wide py-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div>
-              <div className="stat-value">{data?.total_games || '—'}</div>
+              <div className="stat-value">{data?.total_games ?? (topPicks.length || '—')}</div>
               <div className="stat-label">Games Today</div>
             </div>
             <div>
@@ -72,20 +78,20 @@ export default function HomePage() {
               <div className="stat-label">Avg Probability</div>
             </div>
             <div>
-              <div className="stat-value text-secondary">{modelAccuracy}%</div>
+              <div className="stat-value text-secondary">{modelAccuracy !== null ? `${modelAccuracy}%` : '—'}</div>
               <div className="stat-label">Model Accuracy</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Today's Predictions - Bento Grid */}
+      {/* Today’s picks */}
       <section className="section-gap">
         <div className="container-wide">
           {/* Section header */}
           <div className="flex items-end justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-bold mb-1">Today's Predictions</h2>
+              <h2 className="text-2xl font-bold mb-1">Today’s Predictions</h2>
               <p className="text-muted-foreground">Ensemble model consensus for upcoming games</p>
             </div>
             <Link
@@ -130,7 +136,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features - Clean bento layout */}
+      {/* How it works */}
       <section className="section-gap border-t border-border bg-muted/20">
         <div className="container-wide">
           <div className="text-center mb-12">
@@ -161,7 +167,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Minimal footer CTA */}
+      {/* Footer CTA */}
       <section className="border-t border-border">
         <div className="container-wide py-16 text-center">
           <h3 className="text-xl font-bold mb-4">Ready to explore?</h3>
@@ -175,9 +181,7 @@ export default function HomePage() {
   )
 }
 
-// ==============================================
-// COMPONENTS
-// ==============================================
+// --- Components ---
 
 interface Prediction {
   game_id: string

@@ -3,7 +3,7 @@
 **Multi-Modal Deep Learning for NBA Game Prediction**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
@@ -87,18 +87,48 @@ cp .env.example .env
 
 ### Environment Variables
 
-Create a `.env` file with:
+Create a `.env` file with (see `.env.example` and `KEYS.md` for the full list):
 
 ```bash
-# API Keys
-RAPID_API_KEY=your_key_here
+# API Keys (optional unless you enable live ingestion)
+NBA_STATS_API_KEY=your_key_here
+ODDS_API_KEY=your_key_here
+RAPIDAPI_KEY=your_key_here
+
+# Optional data providers
+BALLDONTLIE_API_KEY=your_key_here
+SPORTSDATA_API_KEY=your_key_here
+HIGHLIGHTS_API_KEY=your_key_here
+
+# Social + sentiment (optional)
+X_BEARER_TOKEN=your_key_here
+REDDIT_CLIENT_ID=your_key_here
+REDDIT_CLIENT_SECRET=your_key_here
+YOUTUBE_API_KEY=your_key_here
+
+# Travel model (optional)
+ORS_API_KEY=your_key_here
+
+# Supabase (optional)
 SUPABASE_URL=your_url_here
 SUPABASE_KEY=your_key_here
+
+# Frontend → backend bridge (optional)
+NEXT_PUBLIC_API_URL=http://localhost:8000
 
 # Model Paths
 MODEL_DIR=artifacts/models
 DATA_DIR=data
 ```
+
+Security note: never commit real keys. If a key was ever exposed, rotate it immediately.
+For a quick reference on optional integrations, see `KEYS.md`.
+
+### Reproducibility & Citation
+
+- Reproducibility checklist and exact run order: `REPRODUCIBILITY.md`
+- How to cite this project in a paper: `CITATION.cff`
+- Responsible disclosure guidance: `SECURITY.md`
 
 ## Quick Start
 
@@ -173,6 +203,8 @@ Features:
 - Team chemistry analysis
 - Historical accuracy metrics
 - Momentum tracking
+
+The Next.js app can read from local data in `data/` out of the box. To use the FastAPI backend instead, set `NEXT_PUBLIC_API_URL` in `.env`.
 
 ## Model Performance
 

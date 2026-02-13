@@ -128,7 +128,7 @@ async def get_accuracy_stats():
         
         return {
             "success": True,
-            "accuracy": stats.get("current_accuracy", 67.7),
+            "accuracy": stats.get("current_accuracy"),
             "total_games": stats.get("total_games", 0),
             "total_correct": stats.get("total_correct", 0),
             "days_evaluated": stats.get("days_evaluated", 0),
@@ -136,14 +136,14 @@ async def get_accuracy_stats():
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        # Fallback to default
+        # Surface error without defaults
         return {
             "success": False,
-            "accuracy": 67.7,
+            "accuracy": None,
             "total_games": 0,
             "total_correct": 0,
             "days_evaluated": 0,
-            "source": "default",
+            "source": "error",
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }

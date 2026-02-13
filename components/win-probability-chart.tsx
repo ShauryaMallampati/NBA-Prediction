@@ -1,9 +1,7 @@
-"use client"
+'use client'
 
-import { motion } from "framer-motion"
-import { Card } from "@/components/ui/card"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
-import { cn } from "@/lib/utils"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { cn } from '@/lib/utils'
 
 interface WinProbabilityData {
   time: string
@@ -24,76 +22,51 @@ export function WinProbabilityChart({
   awayTeam,
   className,
 }: WinProbabilityChartProps) {
-  // Format chart data
-  const chartData = data.map((d) => ({
-    time: d.time,
-    [homeTeam]: d.homeProb * 100,
-    [awayTeam]: d.awayProb * 100,
+  const chartData = data.map((entry) => ({
+    time: entry.time,
+    [homeTeam]: entry.homeProb * 100,
+    [awayTeam]: entry.awayProb * 100,
   }))
 
   return (
-    <Card className={cn("p-6 bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700", className)}>
+    <div className={cn('bento-item', className)}>
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white">Win Probability Over Time</h3>
-        <p className="text-sm text-gray-400">Real-time probability shifts</p>
+        <h3 className="text-lg font-semibold">Win Probability Over Time</h3>
+        <p className="text-sm text-muted-foreground">Real-time probability shifts.</p>
       </div>
 
-      {/* Chart */}
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis
-            dataKey="time"
-            stroke="#9CA3AF"
-            tick={{ fill: "#D1D5DB" }}
-          />
+          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+          <XAxis dataKey="time" className="text-muted-foreground" />
           <YAxis
-            stroke="#9CA3AF"
-            tick={{ fill: "#D1D5DB" }}
+            className="text-muted-foreground"
             domain={[0, 100]}
-            label={{ value: "Win Probability (%)", angle: -90, position: "insideLeft", fill: "#D1D5DB" }}
+            label={{ value: 'Win Probability (%)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))' }}
           />
           <Tooltip
-            contentStyle={{
-              backgroundColor: "#1F2937",
-              border: "1px solid #374151",
-              borderRadius: "8px",
-              color: "#F9FAFB",
+            contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+            formatter={(value) => {
+              const numeric = typeof value === 'number' ? value : Number(value)
+              return Number.isFinite(numeric) ? `${numeric.toFixed(1)}%` : value
             }}
-            formatter={(value: number) => `${value.toFixed(1)}%`}
           />
-          <ReferenceLine y={50} stroke="#6B7280" strokeDasharray="2 2" />
-          <Line
-            type="monotone"
-            dataKey={homeTeam}
-            stroke="#3B82F6"
-            strokeWidth={2}
-            dot={{ r: 4, fill: "#3B82F6" }}
-            name={homeTeam}
-          />
-          <Line
-            type="monotone"
-            dataKey={awayTeam}
-            stroke="#EF4444"
-            strokeWidth={2}
-            dot={{ r: 4, fill: "#EF4444" }}
-            name={awayTeam}
-          />
+          <ReferenceLine y={50} stroke="hsl(var(--border))" strokeDasharray="2 2" />
+          <Line type="monotone" dataKey={homeTeam} stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+          <Line type="monotone" dataKey={awayTeam} stroke="hsl(var(--secondary))" strokeWidth={2} dot={{ r: 3 }} />
         </LineChart>
       </ResponsiveContainer>
 
-      {/* Legend */}
-      <div className="mt-4 flex items-center justify-center gap-4">
+      <div className="mt-4 flex items-center justify-center gap-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-blue-500" />
-          <span className="text-sm text-gray-300">{homeTeam}</span>
+          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--primary))' }} />
+          {homeTeam}
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-500" />
-          <span className="text-sm text-gray-300">{awayTeam}</span>
+          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--secondary))' }} />
+          {awayTeam}
         </div>
       </div>
-    </Card>
+    </div>
   )
 }
-

@@ -93,24 +93,21 @@ export function useAccuracy() {
         queryFn: async () => {
             const response = await fetch('/api/accuracy')
             if (!response.ok) {
-                // Return fallback data instead of throwing
-                return {
-                    success: true,
-                    accuracy: 67.7,
-                    total_games: 0,
-                    total_correct: 0,
-                    days_evaluated: 0,
-                    source: 'fallback'
-                }
+                throw new Error('Accuracy data unavailable')
             }
-            return response.json() as Promise<{
+            const data = await response.json() as {
                 success: boolean
-                accuracy: number
+                accuracy: number | null
                 total_games: number
                 total_correct: number
                 days_evaluated: number
                 source: string
-            }>
+                message?: string
+            }
+            if (!data.success) {
+                throw new Error(data.message || 'Accuracy data unavailable')
+            }
+            return data
         },
         staleTime: 1000 * 60 * 10, // 10 minutes
         retry: 1,

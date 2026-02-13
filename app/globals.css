@@ -4,13 +4,12 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================
-   NBA INTEL - SWISS MINIMALIST DESIGN SYSTEM
-   Inspired by International Typographic Style
-   + Newsprint texture for authenticity
+   NBA INTEL DESIGN SYSTEM
+   Swiss-ish grid, clean, and a little warm.
    ============================================ */
 
 :root {
-  /* Clean, professional palette - no AI gradients */
+  /* Clean palette — let the data do the flexing */
   --background: 0 0% 98%;
   --foreground: 222 47% 11%;
   --card: 0 0% 100%;
@@ -18,11 +17,11 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
 
-  /* Primary: Deep Navy - Trust & Authority */
+  /* Primary: Deep navy for trust */
   --primary: 222 47% 20%;
   --primary-foreground: 0 0% 98%;
 
-  /* Secondary: Warm Orange - Energy & Sport */
+  /* Secondary: Warm orange for energy */
   --secondary: 24 95% 53%;
   --secondary-foreground: 0 0% 98%;
 
@@ -38,12 +37,12 @@
   --success: 142 71% 45%;
   --success-foreground: 0 0% 98%;
 
-  /* Borders - subtle and intentional */
+  /* Borders — subtle, not noisy */
   --border: 220 13% 91%;
   --input: 220 13% 91%;
   --ring: 222 47% 20%;
 
-  /* Chart colors - muted, professional */
+  /* Chart colors — muted but readable */
   --chart-1: 222 47% 35%;
   --chart-2: 24 95% 53%;
   --chart-3: 142 71% 45%;
@@ -52,7 +51,7 @@
 
   --radius: 0.5rem;
 
-  /* Sidebar */
+  /* Sidebar tokens */
   --sidebar: 0 0% 100%;
   --sidebar-foreground: 222 47% 11%;
   --sidebar-primary: 222 47% 20%;
@@ -64,7 +63,7 @@
 }
 
 .dark {
-  /* Dark mode: Deep, rich, professional */
+  /* Dark mode: deep, readable */
   --background: 222 47% 6%;
   --foreground: 210 40% 98%;
   --card: 222 47% 8%;
@@ -72,11 +71,11 @@
   --popover: 222 47% 8%;
   --popover-foreground: 210 40% 98%;
 
-  /* Primary: Bright but not neon */
+  /* Primary: bright, not neon */
   --primary: 210 40% 98%;
   --primary-foreground: 222 47% 6%;
 
-  /* Secondary: Warm accent */
+  /* Secondary: warm accent */
   --secondary: 24 95% 58%;
   --secondary-foreground: 222 47% 6%;
 
@@ -123,6 +122,8 @@
   --color-primary-foreground: hsl(var(--primary-foreground));
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-accent: hsl(var(--accent));
@@ -168,7 +169,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Minimal, professional scrollbar */
+  /* Minimal scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -186,7 +187,7 @@
     @apply bg-muted-foreground/30;
   }
 
-  /* Typography scale */
+  /* Type scale */
   h1,
   h2,
   h3,
@@ -210,13 +211,13 @@
 }
 
 /* ============================================
-   SWISS MINIMALIST UTILITIES
+   UTILITIES
    Clean, intentional, no gimmicks
    ============================================ */
 
 @layer utilities {
 
-  /* Subtle paper texture for authenticity */
+  /* Subtle paper texture */
   .texture-paper {
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
   }
@@ -225,7 +226,7 @@
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
   }
 
-  /* Clean dividers */
+  /* Dividers */
   .divider {
     @apply h-px w-full bg-border;
   }
@@ -234,7 +235,7 @@
     @apply w-px h-full bg-border;
   }
 
-  /* Bento grid system */
+  /* Bento grid */
   .bento-grid {
     @apply grid gap-4;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -267,7 +268,7 @@
     @apply text-sm text-muted-foreground uppercase tracking-wide;
   }
 
-  /* Winner highlight - subtle, not screaming */
+  /* Winner highlight */
   .winner-badge {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full;
     background-color: hsla(142, 71%, 45%, 0.1);
@@ -284,7 +285,7 @@
     @apply h-full rounded-full transition-all duration-500 ease-out;
   }
 
-  /* Card hover - subtle elevation, no glow */
+  /* Card hover — subtle lift */
   .card-interactive {
     @apply transition-all duration-200 ease-out;
   }
@@ -313,7 +314,7 @@
    COMPONENT OVERRIDES
    ============================================ */
 
-/* Buttons - flat, clear hierarchy */
+/* Buttons — flat, clear hierarchy */
 .btn-primary {
   @apply inline-flex items-center justify-center gap-2 px-4 py-2.5;
   @apply bg-foreground text-background font-medium rounded-md;
@@ -348,7 +349,7 @@
   @apply ring-2 ring-ring ring-offset-2 ring-offset-background outline-none;
 }
 
-/* Badge - minimal */
+/* Badge — minimal */
 .badge {
   @apply inline-flex items-center px-2 py-0.5 text-xs font-medium rounded;
   @apply bg-muted text-muted-foreground;

@@ -8,54 +8,56 @@ export async function GET(request: NextRequest) {
     
     // Try to read model metadata
     const modelMetaPath = path.join(projectRoot, "artifacts", "models", "pregame", "metadata.json")
-    
-    let modelMetrics = {
-      ensemble_accuracy: 0.81,
-      cv_accuracy: 0.626,
-      auc: 0.94,
+
+    if (!fs.existsSync(modelMetaPath)) {
+      return NextResponse.json({
+        success: false,
+        error: "Model metadata not found",
+        message: "Train the pregame ensemble to generate artifacts/models/pregame/metadata.json.",
+      }, { status: 404 })
+    }
+
+    const metaData = JSON.parse(fs.readFileSync(modelMetaPath, "utf-8"))
+    const models = metaData.models || {}
+
+    const modelMetrics = {
+      ensemble_accuracy: null as number | null,
+      cv_accuracy: typeof metaData.cv_accuracy === 'number' ? metaData.cv_accuracy : null,
+      auc: null as number | null,
       models: {
-        xgboost: { accuracy: 0.795, auc: 0.92 },
-        lightgbm: { accuracy: 0.839, auc: 0.94 },
-        catboost: { accuracy: 0.801, auc: 0.93 }
+        xgboost: { accuracy: null as number | null, auc: null as number | null },
+        lightgbm: { accuracy: null as number | null, auc: null as number | null },
+        catboost: { accuracy: null as number | null, auc: null as number | null }
       }
     }
-    
-    // Try to load actual metadata if available
-    if (fs.existsSync(modelMetaPath)) {
-      const metaData = JSON.parse(fs.readFileSync(modelMetaPath, "utf-8"))
-      
-      // Extract metrics from metadata
-      if (metaData.models) {
-        const models = metaData.models
-        
-        // Calculate ensemble accuracy (average of all models)
-        const accuracies = Object.values(models).map((m: any) => m.accuracy || 0)
-        const aucs = Object.values(models).map((m: any) => m.auc || 0)
-        
-        if (accuracies.length > 0) {
-          modelMetrics.ensemble_accuracy = accuracies.reduce((a, b) => a + b, 0) / accuracies.length
-          modelMetrics.auc = aucs.reduce((a, b) => a + b, 0) / aucs.length
-        }
-        
-        // Add individual model metrics
-        if (models.xgboost) {
-          modelMetrics.models.xgboost = {
-            accuracy: models.xgboost.accuracy || 0.795,
-            auc: models.xgboost.auc || 0.92
-          }
-        }
-        if (models.lightgbm) {
-          modelMetrics.models.lightgbm = {
-            accuracy: models.lightgbm.accuracy || 0.839,
-            auc: models.lightgbm.auc || 0.94
-          }
-        }
-        if (models.catboost) {
-          modelMetrics.models.catboost = {
-            accuracy: models.catboost.accuracy || 0.801,
-            auc: models.catboost.auc || 0.93
-          }
-        }
+
+    const accuracies = Object.values(models).map((m: any) => m?.accuracy).filter((v: any) => typeof v === 'number') as number[]
+    const aucs = Object.values(models).map((m: any) => m?.auc).filter((v: any) => typeof v === 'number') as number[]
+
+    if (accuracies.length > 0) {
+      modelMetrics.ensemble_accuracy = accuracies.reduce((a, b) => a + b, 0) / accuracies.length
+    }
+
+    if (aucs.length > 0) {
+      modelMetrics.auc = aucs.reduce((a, b) => a + b, 0) / aucs.length
+    }
+
+    if (models.xgboost) {
+      modelMetrics.models.xgboost = {
+        accuracy: typeof models.xgboost.accuracy === 'number' ? models.xgboost.accuracy : null,
+        auc: typeof models.xgboost.auc === 'number' ? models.xgboost.auc : null,
+      }
+    }
+    if (models.lightgbm) {
+      modelMetrics.models.lightgbm = {
+        accuracy: typeof models.lightgbm.accuracy === 'number' ? models.lightgbm.accuracy : null,
+        auc: typeof models.lightgbm.auc === 'number' ? models.lightgbm.auc : null,
+      }
+    }
+    if (models.catboost) {
+      modelMetrics.models.catboost = {
+        accuracy: typeof models.catboost.accuracy === 'number' ? models.catboost.accuracy : null,
+        auc: typeof models.catboost.auc === 'number' ? models.catboost.auc : null,
       }
     }
     
@@ -67,27 +69,17 @@ export async function GET(request: NextRequest) {
           training_accuracy: modelMetrics.ensemble_accuracy,
           cv_accuracy: modelMetrics.cv_accuracy,
           auc: modelMetrics.auc,
-          calibration: 0.89 // Would calculate from predictions
+          calibration: typeof metaData.calibration === 'number' ? metaData.calibration : null,
         },
         by_model: {
           xgboost: modelMetrics.models.xgboost,
           lightgbm: modelMetrics.models.lightgbm,
-          catboost: modelMetrics.models.catboost
+          catboost: modelMetrics.models.catboost,
         },
-        feature_importance: [
-          { feature: "away_away_win_pct", importance: 0.156 },
-          { feature: "away_elo", importance: 0.142 },
-          { feature: "home_home_win_pct", importance: 0.128 },
-          { feature: "home_elo", importance: 0.115 },
-          { feature: "away_offensive_rating", importance: 0.087 },
-          { feature: "home_defensive_rating", importance: 0.081 },
-          { feature: "rest_days_differential", importance: 0.067 },
-          { feature: "away_injury_impact", importance: 0.054 },
-          { feature: "home_injury_impact", importance: 0.051 },
-          { feature: "away_back_to_back", importance: 0.043 }
-        ]
+        feature_importance: Array.isArray(metaData.feature_importance) ? metaData.feature_importance : [],
       },
-      generated_at: new Date().toISOString()
+      generated_at: metaData.generated_at || new Date().toISOString(),
+      source: 'metadata',
     }
     
     return NextResponse.json(response)

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { API_BASE_URL } from '@/lib/api/config'
 import { PageSkeleton } from '@/components/shared/loading-skeleton'
 import { AlertTriangle, Brain, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -41,7 +40,7 @@ export default function AnalysisPage() {
             setIsLoading(true)
             setError(null)
             try {
-                const res = await fetch(`${API_BASE_URL}/analysis?date=${selectedDate}`)
+                const res = await fetch(`/api/analysis?date=${selectedDate}`)
                 if (!res.ok) throw new Error('Failed to fetch analysis')
                 const json = await res.json()
                 setData(json)
@@ -71,21 +70,21 @@ export default function AnalysisPage() {
 
     return (
         <div className="min-h-screen">
-            {/* Page Header */}
+            {/* Page header */}
             <header className="border-b border-border">
                 <div className="container-wide py-8">
                     <div className="flex items-center gap-3 mb-2">
                         <Brain className="h-6 w-6 text-muted-foreground" />
-                        <h1 className="text-2xl font-bold tracking-tight">Why I Was Wrong</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">Postgame Review</h1>
                     </div>
                     <p className="text-muted-foreground">
-                        AI analysis of incorrect predictions using Gemini 3 Flash Preview
+                        Postgame explanations for misses, powered by the evaluation pipeline.
                     </p>
                 </div>
             </header>
 
             <div className="container-wide py-8">
-                {/* Date Selector */}
+                {/* Date selector */}
                 <div className="flex items-center justify-between mb-6">
                     <button
                         onClick={handlePrevDay}
@@ -119,7 +118,7 @@ export default function AnalysisPage() {
                 {!isLoading && !error && data?.analyses.length === 0 && (
                     <div className="bento-item text-center py-12">
                         <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">No Wrong Predictions</h3>
+                        <h3 className="text-lg font-semibold mb-2">No misses logged</h3>
                         <p className="text-sm text-muted-foreground">
                             {data.message || `No wrong predictions to analyze for ${selectedDate}`}
                         </p>

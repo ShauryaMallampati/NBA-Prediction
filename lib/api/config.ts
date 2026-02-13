@@ -10,8 +10,10 @@ export const API_ENDPOINTS = {
     modelInfo: '/model/info',
     health: '/health',
     accuracy: '/accuracy',
+    analysis: '/analysis',
     chemistryLeague: '/chemistry/league',
     chemistryMatchup: (home: string, away: string) => `/chemistry/matchup/${home}/${away}`,
     explain: (gameId: string) => `/explain/${gameId}`,
     scoutingReport: (gameId: string) => `/scouting-report/${gameId}`,
+    teamCompare: (teamA: string, teamB: string) => `/teams/compare?teamA=${teamA}&teamB=${teamB}`,
 } as const

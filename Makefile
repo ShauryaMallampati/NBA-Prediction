@@ -1,4 +1,4 @@
-.PHONY: help setup up down key-audit seed data train-pregame train-live train-vision train-chemistry social-build eval serve web test clean
+.PHONY: help setup up down key-audit seed data train-pregame train-live train-vision train-chemistry social-build eval serve web test lint typecheck clean setup-gdrive stream-gdrive
 
 help:
 	@echo "NBA Intelligence Platform - Make targets:"
@@ -14,9 +14,13 @@ help:
 	@echo "  train-chemistry  - Train GNN; export lineup embeddings"
 	@echo "  social-build     - Run social ETL + aggregates + social graph edges"
 	@echo "  eval             - Run ablations, calibration, notebooks → artifacts/"
+	@echo "  setup-gdrive     - Set up Google Drive integration (rclone or API)"
+	@echo "  stream-gdrive    - Run streaming model with Google Drive videos"
 	@echo "  serve            - Start FastAPI"
 	@echo "  web              - Start Next.js"
 	@echo "  test             - Run pytest suite"
+	@echo "  lint             - Run Next.js lint"
+	@echo "  typecheck        - Run TypeScript typecheck"
 	@echo "  clean            - Remove artifacts and caches"
 
 setup:
@@ -80,8 +84,22 @@ web:
 test:
 	poetry run pytest tests/ -v --cov=src --cov-report=html
 
+lint:
+	npm run lint
+
+typecheck:
+	npm run typecheck
+
 clean:
 	rm -rf artifacts/*.pkl artifacts/*.json
 	rm -rf data/cache/*
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
+setup-gdrive:
+	@echo "Setting up Google Drive integration..."
+	poetry install
+	poetry run python scripts/eval/setup_gdrive_integration.py
+
+stream-gdrive:
+	@echo "Starting streaming world model (Google Drive edition)..."
+	poetry run python scripts/eval/streaming_world_model_gdrive.py --season 2025-26

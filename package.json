@@ -5,7 +5,9 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "lint": "eslint .",
+    "lint": "eslint app components lib hooks --max-warnings 0",
+    "pretypecheck": "node scripts/ensure-next-types.js",
+    "typecheck": "tsc --noEmit",
     "start": "next start"
   },
   "dependencies": {
@@ -68,6 +70,8 @@
     "zustand": "^4.4.0"
   },
   "devDependencies": {
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.1.2",
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^22",
     "@types/react": "^19",

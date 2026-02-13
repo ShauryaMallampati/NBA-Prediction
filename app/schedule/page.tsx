@@ -16,8 +16,8 @@ export default function SchedulePage() {
 
   // Group games by date
   const gamesByDate = games.reduce((acc, game) => {
-    const dateStr = game.game_time || game.date
-    const date = new Date(dateStr).toLocaleDateString('en-CA')
+    const dateStr = game.date || (game.game_time?.includes('T') ? game.game_time.split('T')[0] : '')
+    const date = dateStr ? new Date(`${dateStr}T12:00:00`).toLocaleDateString('en-CA') : ''
     if (!acc[date]) acc[date] = []
     acc[date].push(game)
     return acc
@@ -34,11 +34,11 @@ export default function SchedulePage() {
 
   return (
     <div className="min-h-screen">
-      {/* Page Header */}
+      {/* Page header */}
       <header className="border-b border-border">
         <div className="container-wide py-8">
           <h1 className="text-2xl font-bold tracking-tight">Schedule</h1>
-          <p className="text-muted-foreground">Upcoming NBA games for the 2024-25 season</p>
+          <p className="text-muted-foreground">Upcoming NBA games (rolling 14-day window)</p>
         </div>
       </header>
 
@@ -51,7 +51,12 @@ export default function SchedulePage() {
 
         {data && !isLoading && (
           <>
-            {/* Date Navigation */}
+            {data.message && (
+              <div className="bento-item mb-6 text-sm text-muted-foreground">
+                {data.message}
+              </div>
+            )}
+            {/* Date nav */}
             <div className="flex items-center justify-between mb-6 p-4 bento-item">
               <button
                 onClick={() => canGoBack && setSelectedDate(dates[currentIndex - 1])}
@@ -84,7 +89,7 @@ export default function SchedulePage() {
               </button>
             </div>
 
-            {/* Quick Date Pills */}
+            {/* Quick date pills */}
             <div className="flex gap-2 overflow-x-auto pb-4 mb-6">
               {dates.slice(0, 10).map((date) => (
                 <button
@@ -101,12 +106,12 @@ export default function SchedulePage() {
               ))}
             </div>
 
-            {/* Games Count */}
+            {/* Games count */}
             <div className="mb-4 text-sm text-muted-foreground">
               {displayGames.length} game{displayGames.length !== 1 ? 's' : ''} scheduled
             </div>
 
-            {/* Games Grid */}
+            {/* Games grid */}
             {displayGames.length === 0 ? (
               <EmptyState
                 title="No Games Scheduled"
@@ -123,7 +128,9 @@ export default function SchedulePage() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground font-mono">
                         <Clock className="h-4 w-4" />
-                        {game.game_time || formatTime(game.date)}
+                        {game.game_time
+                          ? (game.game_time.includes('T') ? formatTime(game.game_time) : game.game_time)
+                          : 'TBD'}
                       </div>
                       <span className="badge">Scheduled</span>
                     </div>

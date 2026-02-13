@@ -156,11 +156,11 @@ class SupabaseClient:
         
         if not csv_path.exists():
             return {
-                "current_accuracy": 67.7,  # Default
+                "current_accuracy": None,
                 "total_games": 0,
                 "total_correct": 0,
                 "days_evaluated": 0,
-                "source": "default"
+                "source": "missing"
             }
         
         try:
@@ -169,7 +169,7 @@ class SupabaseClient:
             
             if df.empty:
                 return {
-                    "current_accuracy": 67.7,
+                    "current_accuracy": None,
                     "total_games": 0,
                     "total_correct": 0,
                     "days_evaluated": 0,
@@ -182,7 +182,7 @@ class SupabaseClient:
             if total_games > 0:
                 accuracy = round((total_correct / total_games) * 100, 1)
             else:
-                accuracy = 67.7
+                accuracy = None
             
             return {
                 "current_accuracy": accuracy,
@@ -194,7 +194,7 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"Failed to read CSV: {e}")
             return {
-                "current_accuracy": 67.7,
+                "current_accuracy": None,
                 "total_games": 0,
                 "total_correct": 0,
                 "days_evaluated": 0,

@@ -682,7 +682,8 @@ class StreamingWorldModelEvaluator:
         
         # Update state sequentially without predicting
         for _, row in past_games.iterrows():
-            self.world_state.update(row['home'], row['away'], row['date'], row['home_win'])
+            self.world_state.update(row['home'], row['away'], row['date'], row['home_win'],
+                                   row.get('home_pts', None), row.get('away_pts', None))
             
         logger.info(f"✅ State warmed up for {len(self.world_state.elo_ratings)} teams")
 
@@ -1014,7 +1015,9 @@ class StreamingWorldModelEvaluator:
         
         # Update World State with the ACTUAL result after prediction
         # (keeping the simulation progressive)
-        self.world_state.update(home, away, date, actual_home_win)
+        self.world_state.update(home, away, date, actual_home_win,
+                               row.get('home_pts', None) if row is not None else None,
+                               row.get('away_pts', None) if row is not None else None)
         
         # Cleanup old cache periodically
         if len(self.results) % 20 == 0:

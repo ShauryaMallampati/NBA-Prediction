@@ -16,6 +16,8 @@ interface Prediction {
   away_spread?: number
   home_odds?: number
   away_odds?: number
+  models_agree?: number | string
+  individual_votes?: Record<string, string>
 }
 
 export async function GET(request: NextRequest) {
@@ -28,6 +30,33 @@ export async function GET(request: NextRequest) {
 
     const projectRoot = process.cwd()
     const predictionsDir = path.join(projectRoot, "data", "predictions")
+    const modelMetaPath = path.join(projectRoot, "artifacts", "models", "pregame", "metadata.json")
+
+    const normalizeProb = (value: number | undefined) => {
+      if (typeof value !== "number") return 50
+      return value <= 1 ? Math.round(value * 1000) / 10 : value
+    }
+
+    const modelInfo = (() => {
+      if (!fs.existsSync(modelMetaPath)) return null
+      try {
+        const meta = JSON.parse(fs.readFileSync(modelMetaPath, "utf-8"))
+        const modelNames = meta?.models ? Object.keys(meta.models) : []
+        const featureNames = Array.isArray(meta?.feature_names)
+          ? meta.feature_names
+          : Array.isArray(meta?.feature_columns)
+            ? meta.feature_columns
+            : []
+        return {
+          num_models: modelNames.length,
+          model_names: modelNames,
+          num_features: featureNames.length,
+          feature_names: featureNames.length ? featureNames : undefined,
+        }
+      } catch {
+        return null
+      }
+    })()
 
     // Check if predictions directory exists
     if (!fs.existsSync(predictionsDir)) {
@@ -37,6 +66,9 @@ export async function GET(request: NextRequest) {
         total_games: 0,
         date: targetDate,
         predictions: [],
+        model_info: modelInfo || undefined,
+        timestamp: new Date().toISOString(),
+        source: "missing",
         message: "Predictions directory not found. Run the daily pipeline first.",
       })
     }
@@ -61,7 +93,10 @@ export async function GET(request: NextRequest) {
         total_games: 0,
         date: targetDate,
         predictions: [],
-        message: `No predictions found. The pipeline runs daily at 1:30 AM EST.`,
+        model_info: modelInfo || undefined,
+        timestamp: new Date().toISOString(),
+        source: "empty",
+        message: `No predictions found. Run the daily pipeline to generate predictions.`,
       })
     }
 
@@ -72,21 +107,32 @@ export async function GET(request: NextRequest) {
 
     const predictions: Prediction[] = lines.map(line => {
       const raw = JSON.parse(line)
+      const homeProb = normalizeProb(raw.home_win_prob ?? raw.home_win_probability)
+      const awayProb = normalizeProb(raw.away_win_prob ?? raw.away_win_probability)
+      const confidence = normalizeProb(raw.confidence ?? Math.max(homeProb, awayProb))
+      const homeSpread = raw.home_spread ?? raw.spread
+      const awaySpread = raw.away_spread ?? (typeof homeSpread === 'number' ? -homeSpread : undefined)
+      const homeOdds = raw.home_odds ?? raw.home_ml
+      const awayOdds = raw.away_odds ?? raw.away_ml
+      const commenceTime = raw.commence_time || raw.game_time || (raw.date ? `${raw.date}T12:00:00` : '')
+
       return {
         game_id: raw.game_id || raw.id || `${raw.home_team}-${raw.away_team}`,
         date: raw.date || targetDate,
         home_team: raw.home_team,
         away_team: raw.away_team,
-        home_win_prob: raw.home_win_prob || raw.home_win_probability || 50,
-        away_win_prob: raw.away_win_prob || raw.away_win_probability || 50,
+        home_win_prob: homeProb,
+        away_win_prob: awayProb,
         predicted_winner: raw.predicted_winner || raw.prediction ||
-          ((raw.home_win_prob || raw.home_win_probability || 50) > 50 ? raw.home_team : raw.away_team),
-        confidence: raw.confidence || Math.max(raw.home_win_prob || 50, raw.away_win_prob || 50),
-        commence_time: raw.commence_time || raw.game_time || new Date().toISOString(),
-        home_spread: raw.home_spread || raw.spread || 0,
-        away_spread: raw.away_spread || -(raw.home_spread || raw.spread || 0),
-        home_odds: raw.home_odds || raw.home_ml || -110,
-        away_odds: raw.away_odds || raw.away_ml || -110,
+          (homeProb > awayProb ? raw.home_team : raw.away_team),
+        confidence,
+        commence_time: commenceTime,
+        home_spread: homeSpread,
+        away_spread: awaySpread,
+        home_odds: homeOdds,
+        away_odds: awayOdds,
+        models_agree: raw.models_agree,
+        individual_votes: raw.individual_votes,
       }
     })
 
@@ -99,11 +145,14 @@ export async function GET(request: NextRequest) {
       away_win_probability: p.away_win_prob,
       prediction: p.home_win_prob > p.away_win_prob ? 'HOME_WIN' : 'AWAY_WIN',
       confidence: p.confidence,
+      consensus_percentage: p.confidence,
       commence_time: p.commence_time,
       home_spread: p.home_spread,
       home_odds: p.home_odds,
-      individual_votes: {},
-      models_agree: 3,
+      away_odds: p.away_odds,
+      away_spread: p.away_spread,
+      individual_votes: p.individual_votes ?? {},
+      models_agree: p.models_agree ?? modelInfo?.num_models,
     }))
 
     return NextResponse.json({
@@ -112,6 +161,9 @@ export async function GET(request: NextRequest) {
       total_games: formattedPredictions.length,
       date: targetFile.replace('.jsonl', ''),
       predictions: formattedPredictions,
+      model_info: modelInfo || undefined,
+      timestamp: new Date().toISOString(),
+      source: "file",
     })
 
   } catch (error) {

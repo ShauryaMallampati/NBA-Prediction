@@ -26,6 +26,9 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import accuracy_score, roc_auc_score, log_loss, brier_score_loss
 import optuna
 
+# Import feature engineering functions
+from src.common.features import calculate_elo, add_rest_features, add_streak_features
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,11 @@ class EnsembleTrainer:
         self.lgb_calibrated = None
         self.cat_calibrated = None
         
+        # v2 models (optional)
+        self.et_calibrated = None
+        self.meta_learner = None
+        self.meta_scaler = None
+        
         # Weights for ensemble
         self.weights = {'xgb': 0.33, 'lgb': 0.33, 'cat': 0.34}
         
@@ -57,7 +65,80 @@ class EnsembleTrainer:
         # Performance metrics
         self.metrics = {}
         
+        # Version
+        self.version = 1
+        
         logger.info("🎯 Ensemble trainer initialized")
+    
+    def _add_rolling_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Add rolling window features (points avg, win%, etc.) 
+        computed ONLY from PAST games (no data leakage).
+        """
+        df = df.sort_values('date').reset_index(drop=True)
+        
+        # Initialize rolling stats trackers
+        team_pts_history = {}  # {team: [list of pts scored]}
+        team_wins_history = {} # {team: [list of wins (1/0)]}
+        
+        # Output columns
+        home_pts_avg_l10, away_pts_avg_l10 = [], []
+        home_pts_allowed_avg_l10, away_pts_allowed_avg_l10 = [], []
+        home_win_pct_l10, away_win_pct_l10 = [], []
+        home_win_pct_l5, away_win_pct_l5 = [], []
+        
+        for idx, row in df.iterrows():
+            home, away = row['home'], row['away']
+            
+            # Get current rolling stats (from PAST only)
+            h_pts = team_pts_history.get(home, [])[-10:] or [100]
+            a_pts = team_pts_history.get(away, [])[-10:] or [100]
+            h_wins = team_wins_history.get(home, [])[-10:] or [0.5]
+            a_wins = team_wins_history.get(away, [])[-10:] or [0.5]
+            
+            # Compute averages
+            home_pts_avg_l10.append(np.mean(h_pts))
+            away_pts_avg_l10.append(np.mean(a_pts))
+            home_win_pct_l10.append(np.mean(h_wins))
+            away_win_pct_l10.append(np.mean(a_wins))
+            
+            # Last 5 games
+            h_wins_5 = team_wins_history.get(home, [])[-5:] or [0.5]
+            a_wins_5 = team_wins_history.get(away, [])[-5:] or [0.5]
+            home_win_pct_l5.append(np.mean(h_wins_5))
+            away_win_pct_l5.append(np.mean(a_wins_5))
+            
+            # Points allowed (need opponent scoring)
+            # We'll compute this as a secondary pass or skip for now
+            home_pts_allowed_avg_l10.append(100)  # Placeholder
+            away_pts_allowed_avg_l10.append(100)  # Placeholder
+            
+            # UPDATE history AFTER using it (so no leakage)
+            if pd.notna(row.get('home_pts')) and pd.notna(row.get('away_pts')):
+                if home not in team_pts_history: team_pts_history[home] = []
+                if away not in team_pts_history: team_pts_history[away] = []
+                team_pts_history[home].append(row['home_pts'])
+                team_pts_history[away].append(row['away_pts'])
+                
+            if pd.notna(row.get('home_win')):
+                if home not in team_wins_history: team_wins_history[home] = []
+                if away not in team_wins_history: team_wins_history[away] = []
+                team_wins_history[home].append(row['home_win'])
+                team_wins_history[away].append(1 - row['home_win'])
+        
+        df['home_pts_avg_l10'] = home_pts_avg_l10
+        df['away_pts_avg_l10'] = away_pts_avg_l10
+        df['home_win_pct_l10'] = home_win_pct_l10
+        df['away_win_pct_l10'] = away_win_pct_l10
+        df['home_win_pct_l5'] = home_win_pct_l5
+        df['away_win_pct_l5'] = away_win_pct_l5
+        
+        # Differentials
+        df['pts_avg_diff'] = df['home_pts_avg_l10'] - df['away_pts_avg_l10']
+        df['win_pct_diff_l10'] = df['home_win_pct_l10'] - df['away_win_pct_l10']
+        df['win_pct_diff_l5'] = df['home_win_pct_l5'] - df['away_win_pct_l5']
+        
+        return df
     
     def load_data(self, features_path: str) -> Tuple[pd.DataFrame, np.ndarray]:
         """
@@ -80,11 +161,36 @@ class EnsembleTrainer:
             df = pd.read_parquet(features_path)
         else:
             df = pd.read_csv(features_path)
+        
+        df['date'] = pd.to_datetime(df['date'])
+        
+        # ============================================================
+        # FEATURE ENGINEERING (Compute features from raw data)
+        # All features computed from PAST data only (no leakage)
+        # ============================================================
+        logger.info("🔧 Computing engineered features...")
+        
+        # 1. Elo ratings (computed progressively - each game uses only past data)
+        logger.info("  Computing Elo ratings...")
+        df = calculate_elo(df, k=20, home_advantage=100)
+        
+        # 2. Rest features (days since last game - known before game)
+        logger.info("  Computing rest features...")
+        df = add_rest_features(df)
+        
+        # 3. Win/loss streaks (computed from past games only)
+        logger.info("  Computing streak features...")
+        df = add_streak_features(df)
+        
+        # 4. Rolling averages (last N games - all from past)
+        logger.info("  Computing rolling features...")
+        df = self._add_rolling_features(df)
+        
+        logger.info(f"✅ Feature engineering complete: {len(df.columns)} total columns")
             
         # ENSURE PURE HOLDOUT: Exclude 2024-25 and 2025-26 seasons from TRAINING
         # Training cutoff: October 1st, 2024
         full_count = len(df)
-        df['date'] = pd.to_datetime(df['date'])
         df = df[df['date'] < '2024-10-01'].copy()
         holdout_count = full_count - len(df)
         
@@ -455,6 +561,7 @@ class EnsembleTrainer:
     def predict_ensemble(self, X: pd.DataFrame) -> np.ndarray:
         """
         Make ensemble prediction.
+        Supports v2 stacking (meta-learner + ExtraTrees) if available.
         
         Args:
             X: Features
@@ -470,11 +577,34 @@ class EnsembleTrainer:
         lgb_pred = self.lgb_calibrated.predict_proba(X)[:, 1]
         cat_pred = self.cat_calibrated.predict_proba(X)[:, 1]
         
-        # Weighted ensemble
+        # v2 stacking path
+        if self.meta_learner is not None and self.et_calibrated is not None:
+            et_pred = self.et_calibrated.predict_proba(X)[:, 1]
+            base_preds = np.column_stack([xgb_pred, lgb_pred, cat_pred, et_pred])
+            
+            meta_features = np.column_stack([
+                base_preds,
+                base_preds[:, 0] * base_preds[:, 1],
+                base_preds[:, 2] * base_preds[:, 3],
+                np.mean(base_preds, axis=1),
+                np.std(base_preds, axis=1),
+                np.max(base_preds, axis=1),
+                np.min(base_preds, axis=1),
+            ])
+            
+            meta_scaled = self.meta_scaler.transform(meta_features)
+            return self.meta_learner.predict_proba(meta_scaled)[:, 1]
+        
+        # v1 fallback: weighted average (renormalize if needed)
+        w_xgb = self.weights.get('xgb', 0.33)
+        w_lgb = self.weights.get('lgb', 0.33)
+        w_cat = self.weights.get('cat', 0.34)
+        total_w = w_xgb + w_lgb + w_cat
+        
         ensemble_pred = (
-            self.weights['xgb'] * xgb_pred +
-            self.weights['lgb'] * lgb_pred +
-            self.weights['cat'] * cat_pred
+            (w_xgb / total_w) * xgb_pred +
+            (w_lgb / total_w) * lgb_pred +
+            (w_cat / total_w) * cat_pred
         )
         
         return ensemble_pred
@@ -607,13 +737,16 @@ class EnsembleTrainer:
         logger.info("✅ Models loaded async")
 
     def load_models(self):
-        """Load models from disk (sync)."""
+        """Load models from disk (sync). Supports v1 and v2 models."""
         logger.info("📂 Loading models...")
         
         # Load individual models
         xgb_path = self.output_dir / "xgb_model.pkl"
         lgb_path = self.output_dir / "lgb_model.pkl"
         cat_path = self.output_dir / "cat_model.pkl"
+        et_path = self.output_dir / "et_model.pkl"
+        meta_path = self.output_dir / "meta_learner.pkl"
+        scaler_path = self.output_dir / "meta_scaler.pkl"
         metadata_path = self.output_dir / "ensemble_metadata.json"
         
         if xgb_path.exists():
@@ -628,14 +761,29 @@ class EnsembleTrainer:
             with open(cat_path, 'rb') as f:
                 self.cat_calibrated = pickle.load(f)
         
+        # v2 models
+        if et_path.exists():
+            with open(et_path, 'rb') as f:
+                self.et_calibrated = pickle.load(f)
+        
+        if meta_path.exists():
+            with open(meta_path, 'rb') as f:
+                self.meta_learner = pickle.load(f)
+        
+        if scaler_path.exists():
+            with open(scaler_path, 'rb') as f:
+                self.meta_scaler = pickle.load(f)
+        
         if metadata_path.exists():
             with open(metadata_path, 'r') as f:
                 metadata = json.load(f)
                 self.weights = metadata.get('weights', self.weights)
                 self.metrics = metadata.get('metrics', {})
                 self.feature_names = metadata.get('feature_names', [])
+                self.version = metadata.get('version', 1)
         
-        logger.info("✅ Models loaded")
+        v2_str = " (v2 stacking)" if self.meta_learner is not None else " (v1 weighted avg)"
+        logger.info(f"✅ Models loaded{v2_str}")
 
 
 def main():

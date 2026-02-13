@@ -1,10 +1,9 @@
-"use client"
+'use client'
 
-import { motion } from "framer-motion"
-import { Card } from "@/components/ui/card"
-import { ConfidenceMeter } from "@/components/confidence-meter"
-import { TrendingUp, TrendingDown, Minus } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { motion } from 'framer-motion'
+import { ConfidenceMeter } from '@/components/confidence-meter'
+import { TrendingUp } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface PredictionCardProps {
   homeTeam: string
@@ -35,11 +34,10 @@ export function PredictionCard({
   const winMargin = Math.abs(homeWinProb - awayWinProb)
   const displayConfidence = confidence ?? winMargin * 2
 
-  // Determine confidence level
   const getConfidenceLevel = (conf: number) => {
-    if (conf >= 0.7) return { label: "High", color: "text-green-500" }
-    if (conf >= 0.5) return { label: "Medium", color: "text-yellow-500" }
-    return { label: "Low", color: "text-red-500" }
+    if (conf >= 0.7) return { label: 'High', color: 'text-success' }
+    if (conf >= 0.5) return { label: 'Medium', color: 'text-secondary' }
+    return { label: 'Low', color: 'text-muted-foreground' }
   }
 
   const confidenceLevel = getConfidenceLevel(displayConfidence)
@@ -49,95 +47,94 @@ export function PredictionCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={cn("w-full", className)}
+      className={cn('w-full', className)}
     >
-      <Card className="p-6 bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700 shadow-xl">
-        {/* Header */}
+      <div className="bento-item">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">Prediction</span>
-            {date && <span className="text-xs text-gray-500">{date}</span>}
+            <span className="text-xs text-muted-foreground">Prediction</span>
+            {date && <span className="text-xs text-muted-foreground">{date}</span>}
           </div>
-          <span className={cn("text-xs font-medium", confidenceLevel.color)}>
+          <span className={cn('text-xs font-medium', confidenceLevel.color)}>
             {confidenceLevel.label} Confidence
           </span>
         </div>
 
-        {/* Teams */}
         <div className="space-y-4">
-          {/* Home Team */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold">
-                {homeTeam.slice(0, 2)}
-              </div>
-              <span className="font-semibold text-white">{homeTeam}</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-2xl font-bold text-white">{homePercentage}%</div>
-                <div className="text-xs text-gray-400">Win Probability</div>
-              </div>
-              {homeWinProb > awayWinProb && (
-                <TrendingUp className="w-5 h-5 text-green-500" />
-              )}
-            </div>
-          </div>
-
-          {/* Confidence Meter */}
+          <TeamRow
+            label="Home"
+            team={homeTeam}
+            percentage={homePercentage}
+            highlight={homeWinProb > awayWinProb}
+          />
           <ConfidenceMeter confidence={homeWinProb} size="lg" showLabel={false} />
-
-          {/* Away Team */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold">
-                {awayTeam.slice(0, 2)}
-              </div>
-              <span className="font-semibold text-white">{awayTeam}</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-2xl font-bold text-white">{awayPercentage}%</div>
-                <div className="text-xs text-gray-400">Win Probability</div>
-              </div>
-              {awayWinProb > homeWinProb && (
-                <TrendingUp className="w-5 h-5 text-green-500" />
-              )}
-            </div>
-          </div>
-
-          {/* Confidence Meter */}
+          <TeamRow
+            label="Away"
+            team={awayTeam}
+            percentage={awayPercentage}
+            highlight={awayWinProb > homeWinProb}
+          />
           <ConfidenceMeter confidence={awayWinProb} size="lg" showLabel={false} />
         </div>
 
-        {/* Divider */}
-        <div className="my-4 border-t border-slate-700" />
+        <div className="my-4 divider" />
 
-        {/* Prediction Summary */}
-        <div className="space-y-2">
+        <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">Predicted Winner</span>
-            <span className="font-semibold text-white">{predictedWinner}</span>
+            <span className="text-muted-foreground">Predicted winner</span>
+            <span className="font-medium">{predictedWinner}</span>
           </div>
           {expectedScore && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Expected Score</span>
-              <span className="text-sm text-white">{expectedScore}</span>
+              <span className="text-muted-foreground">Expected score</span>
+              <span className="font-medium">{expectedScore}</span>
             </div>
           )}
           {vegasLine && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Vegas Line</span>
-              <span className="text-sm text-white">{vegasLine}</span>
+              <span className="text-muted-foreground">Vegas line</span>
+              <span className="font-medium">{vegasLine}</span>
             </div>
           )}
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">Confidence</span>
+            <span className="text-muted-foreground">Confidence</span>
             <ConfidenceMeter confidence={displayConfidence} size="sm" />
           </div>
         </div>
-      </Card>
+      </div>
     </motion.div>
   )
 }
 
+function TeamRow({
+  label,
+  team,
+  percentage,
+  highlight,
+}: {
+  label: string
+  team: string
+  percentage: number
+  highlight: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xs font-semibold">
+          {team.slice(0, 3).toUpperCase()}
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+          <span className="font-semibold">{team}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="text-right">
+          <div className="text-2xl font-bold tabular-nums">{percentage}%</div>
+          <div className="text-xs text-muted-foreground">Win probability</div>
+        </div>
+        {highlight && <TrendingUp className="w-5 h-5 text-success" />}
+      </div>
+    </div>
+  )
+}

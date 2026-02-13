@@ -5,7 +5,7 @@ import { usePredictions, useAccuracy } from '@/lib/hooks'
 import { PageSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
 import { EmptyState } from '@/components/shared/empty-state'
-import { formatGameTime, formatSpread } from '@/lib/utils/format'
+import { formatGameTime, formatOdds, formatSpread } from '@/lib/utils/format'
 import { BarChart3, Calendar, ChevronDown, ChevronUp, DollarSign, TrendingUp } from 'lucide-react'
 import type { GamePrediction } from '@/lib/api/schemas'
 
@@ -26,8 +26,8 @@ export default function PredictionsPage() {
     ? Math.round(predictions.reduce((acc, p) => acc + p.confidence, 0) / predictions.length)
     : 0
 
-  const calculateKellyBet = (prob: number, odds: number) => {
-    if (!odds || odds <= 0) return 0
+  const calculateKellyBet = (prob: number, odds?: number) => {
+    if (typeof odds !== 'number' || odds === 0) return null
     const decimalOdds = odds > 0 ? odds / 100 + 1 : 100 / Math.abs(odds) + 1
     const kellyFraction = (prob * decimalOdds - 1) / (decimalOdds - 1)
     const quarterKelly = kellyFraction * 0.25
@@ -36,7 +36,7 @@ export default function PredictionsPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Page Header */}
+      {/* Page header */}
       <header className="border-b border-border">
         <div className="container-wide py-8">
           <div className="flex items-center justify-between">
@@ -64,15 +64,25 @@ export default function PredictionsPage() {
 
         {data && !isLoading && (
           <>
-            {/* Stats Row */}
+            {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <StatCard label="Total Games" value={data.total_games} />
+              <StatCard label="Total Games" value={data.total_games ?? predictions.length} />
               <StatCard label="High Confidence" value={highConfidence} highlight />
               <StatCard label="Avg Probability" value={`${avgConfidence}%`} />
-              <StatCard label="Model Accuracy" value={`${accuracyData?.accuracy ?? 67.7}%`} accent />
+              <StatCard
+                label="Model Accuracy"
+                value={typeof accuracyData?.accuracy === 'number' ? `${accuracyData.accuracy}%` : '—'}
+                accent
+              />
             </div>
 
-            {/* Sort Controls */}
+            {data.message && (
+              <div className="bento-item mb-6 text-sm text-muted-foreground">
+                {data.message}
+              </div>
+            )}
+
+            {/* Sort controls */}
             <div className="flex items-center gap-3 mb-6">
               <span className="text-sm text-muted-foreground">Sort:</span>
               <button
@@ -95,7 +105,7 @@ export default function PredictionsPage() {
               </button>
             </div>
 
-            {/* Empty State */}
+            {/* Empty state */}
             {predictions.length === 0 && (
               <EmptyState
                 title="No Predictions Available"
@@ -104,7 +114,7 @@ export default function PredictionsPage() {
               />
             )}
 
-            {/* Predictions List */}
+            {/* Predictions list */}
             <div className="space-y-3">
               {sortedPredictions.map((pred) => (
                 <PredictionRow
@@ -123,9 +133,7 @@ export default function PredictionsPage() {
   )
 }
 
-// ==============================================
-// COMPONENTS
-// ==============================================
+// --- Components ---
 
 function StatCard({ label, value, highlight, accent }: { label: string; value: string | number; highlight?: boolean; accent?: boolean }) {
   return (
@@ -142,16 +150,17 @@ interface PredictionRowProps {
   prediction: GamePrediction
   isExpanded: boolean
   onToggle: () => void
-  calculateKellyBet: (prob: number, odds: number) => number
+  calculateKellyBet: (prob: number, odds?: number) => number | null
 }
 
 function PredictionRow({ prediction: pred, isExpanded, onToggle, calculateKellyBet }: PredictionRowProps) {
   const isHomeWin = pred.prediction === 'HOME_WIN'
   const winProb = isHomeWin ? pred.home_win_probability : pred.away_win_probability
+  const kelly = calculateKellyBet(pred.home_win_probability / 100, pred.home_odds)
 
   return (
     <div className="bento-item overflow-hidden p-0">
-      {/* Main Row */}
+      {/* Main row */}
       <div className="p-5 cursor-pointer card-interactive" onClick={onToggle}>
         <div className="flex items-center justify-between gap-4">
           {/* Time */}
@@ -196,7 +205,7 @@ function PredictionRow({ prediction: pred, isExpanded, onToggle, calculateKellyB
             </div>
           </div>
 
-          {/* Confidence Badge + Expand */}
+          {/* Confidence + expand */}
           <div className="flex items-center gap-2">
             <span className={`badge ${winProb >= 65 ? 'badge-success' : winProb >= 55 ? 'badge-warning' : ''}`}>
               {winProb.toFixed(0)}%
@@ -208,11 +217,11 @@ function PredictionRow({ prediction: pred, isExpanded, onToggle, calculateKellyB
         </div>
       </div>
 
-      {/* Expanded Details */}
+      {/* Expanded details */}
       {isExpanded && (
         <div className="border-t border-border p-5 bg-muted/30">
           <div className="grid md:grid-cols-3 gap-4">
-            {/* Model Votes */}
+            {/* Model votes */}
             <div className="p-4 rounded-md border border-border">
               <div className="flex items-center gap-2 mb-3">
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -233,7 +242,7 @@ function PredictionRow({ prediction: pred, isExpanded, onToggle, calculateKellyB
               </div>
             </div>
 
-            {/* Key Factors */}
+            {/* Key factors */}
             <div className="p-4 rounded-md border border-border">
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -255,7 +264,7 @@ function PredictionRow({ prediction: pred, isExpanded, onToggle, calculateKellyB
               </div>
             </div>
 
-            {/* Betting Info */}
+            {/* Betting info */}
             <div className="p-4 rounded-md border border-border">
               <div className="flex items-center gap-2 mb-3">
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -265,16 +274,16 @@ function PredictionRow({ prediction: pred, isExpanded, onToggle, calculateKellyB
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Quarter Kelly</span>
                   <span className="font-medium">
-                    {calculateKellyBet(pred.home_win_probability / 100, pred.home_odds || -110).toFixed(1)}%
+                    {typeof kelly === 'number' ? `${kelly.toFixed(1)}%` : '—'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Spread</span>
-                  <span className="font-mono">{formatSpread(pred.home_spread)}</span>
+                  <span className="font-mono">{formatSpread(pred.home_spread ?? 0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Home Odds</span>
-                  <span className="font-mono">{pred.home_odds > 0 ? '+' : ''}{pred.home_odds}</span>
+                  <span className="font-mono">{formatOdds(pred.home_odds)}</span>
                 </div>
               </div>
             </div>

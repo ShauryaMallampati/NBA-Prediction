@@ -68,8 +68,8 @@ export async function GET(request: Request) {
           date: gameDate,
           home_team: game.home_team || game.homeTeam || game.home || '',
           away_team: game.away_team || game.awayTeam || game.away || '',
-          game_time: game.time || game.game_time || game.gameTime || game.startTime || '7:00 PM',
-          season: game.season || '2025-26'
+          game_time: game.time || game.game_time || game.gameTime || game.startTime || '',
+          season: game.season || ''
         }
 
         gamesByDate[gameDate].push(normalizedGame)
@@ -78,6 +78,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
+      source: games.length ? 'local' : 'empty',
       count: games.length,
       date_range: `${todayStr} to ${endDateStr}`,
       dates: Object.keys(gamesByDate).sort(),
@@ -90,6 +91,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       count: 0,
+      source: 'error',
       message: 'No schedule data available. Run the daily pipeline first.',
       games: [],
       gamesByDate: {},

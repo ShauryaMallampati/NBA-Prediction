@@ -6,9 +6,9 @@ This guide covers the comprehensive NBA data integration using RapidAPI. All end
 
 ## 🔑 API Key Setup
 
-Your RapidAPI key has been configured in `.env`:
+Set your RapidAPI key in `.env` (never commit real keys):
 ```
-NBA_STATS_API_KEY=REMOVED_RAPIDAPI_KEY
+NBA_STATS_API_KEY=your_key_here
 ```
 
 ## 📚 Available APIs

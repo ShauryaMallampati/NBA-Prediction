@@ -2,9 +2,17 @@ import { type NextRequest, NextResponse } from "next/server"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
-export async function GET(request: NextRequest, { params }: { params: { gameId: string } }) {
+type RouteParams = {
+  gameId: string
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<RouteParams> }
+) {
+  const { gameId } = await params
   try {
-    const response = await fetch(`${API_URL}/live/${params.gameId}`, {
+    const response = await fetch(`${API_URL}/live/${gameId}`, {
       headers: {
         "Content-Type": "application/json",
       },

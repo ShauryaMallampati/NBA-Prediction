@@ -36,7 +36,7 @@ The **NBA World Model v5** is a multi-modal, explainable AI system for NBA game 
 
 ### Master Architecture: "Weighted Consensus"
 
-The **Weighted Consensus** (previously Expert Referee) is a determinstic fusion module.
+The **Weighted Consensus** (previously Expert Referee) is a deterministic fusion module.
 
 ```
 Final Probability = Base Probability + Σ(Weight_i × Delta_i)

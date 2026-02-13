@@ -10,7 +10,7 @@ export default function ChemistryPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Page Header */}
+      {/* Page header */}
       <header className="border-b border-border">
         <div className="container-wide py-8">
           <h1 className="text-2xl font-bold tracking-tight">Player Chemistry</h1>
@@ -27,7 +27,7 @@ export default function ChemistryPage() {
 
         {data && !isLoading && (
           <>
-            {/* Stats Row */}
+            {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-8">
               <StatCard label="Teams" value={data.total_teams} icon={Users} />
               <StatCard label="Player Pairs" value={data.total_pairs.toLocaleString()} icon={FlaskConical} />
@@ -38,7 +38,7 @@ export default function ChemistryPage() {
             </div>
 
             <div className="grid lg:grid-cols-2 gap-6">
-              {/* Top Duos */}
+              {/* Top duos */}
               <section className="bento-item">
                 <div className="flex items-center gap-2 mb-6">
                   <FlaskConical className="h-5 w-5 text-muted-foreground" />
@@ -65,7 +65,7 @@ export default function ChemistryPage() {
                 </div>
               </section>
 
-              {/* Team Rankings */}
+              {/* Team rankings */}
               <section className="bento-item">
                 <div className="flex items-center gap-2 mb-6">
                   <Medal className="h-5 w-5 text-muted-foreground" />
@@ -104,9 +104,7 @@ export default function ChemistryPage() {
   )
 }
 
-// ==============================================
-// COMPONENTS
-// ==============================================
+// --- Components ---
 
 function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon?: React.ElementType }) {
   return (

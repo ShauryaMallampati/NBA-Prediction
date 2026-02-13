@@ -26,10 +26,8 @@ export function ErrorState({ title = 'Something went wrong', message, retry }: E
                 </button>
             )}
             <p className="mt-6 text-xs text-muted-foreground">
-                Make sure the API is running:{' '}
-                <code className="px-2 py-1 rounded-md bg-muted font-mono text-[11px]">
-                    poetry run python src/api/ensemble_predictions.py
-                </code>
+                If you rely on the FastAPI backend, make sure it is running and your
+                <span className="font-mono"> NEXT_PUBLIC_API_URL</span> is set.
             </p>
         </div>
     )
