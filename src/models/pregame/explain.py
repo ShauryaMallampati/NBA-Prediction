@@ -1,7 +1,8 @@
 """
-SHAP Explanation Service for NBA Game Predictions
+"""Use SHAP to explain why our model makes each prediction.
 
-Calculates SHAP values for model interpretability.
+Instead of just giving you a prediction, we break down which features
+were most important for that specific game.
 """
 
 import pandas as pd
@@ -25,10 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 class SHAPExplainer:
-    """Generate SHAP explanations for predictions."""
+    """Break down predictions using SHAP values."""
     
     def __init__(self, model_dir: str = "artifacts/models/pregame"):
-        """Initialize SHAP explainer."""
+        """Set up the SHAP explainer."""
         self.model_dir = Path(model_dir)
         self.explainer = None
         self.feature_names = None
@@ -40,7 +41,7 @@ class SHAPExplainer:
         logger.info("🔍 SHAP explainer initialized")
     
     def load_model(self):
-        """Load trained model for SHAP."""
+        """Load the trained model so we can explain its predictions."""
         if self.loaded:
             return
         

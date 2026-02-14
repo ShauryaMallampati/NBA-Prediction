@@ -1,7 +1,8 @@
 """
-Video Metadata Utilities - Extract game info from YouTube videos.
+"""Pull game details out of YouTube video titles.
 
-Parses team names, dates, and other metadata from YouTube video titles.
+When you have a video like "Lakers vs Warriors Full Highlights",
+we extract the teams, date, and other metadata.
 """
 
 import re
@@ -58,7 +59,7 @@ for full_name, (name, short, abbrev) in NBA_TEAMS.items():
 
 
 def normalize_team_name(name: str) -> str:
-    """Convert any team reference to full team name."""
+    """Take any variation of a team name and return the full official version."""
     return TEAM_LOOKUP.get(name.lower().strip(), name)
 
 
@@ -68,16 +69,16 @@ def normalize_team_name(name: str) -> str:
 
 def extract_game_info_from_title(title: str) -> dict:
     """
-    Extract home/away teams from YouTube video title.
+    """Parse out home vs. away teams from a YouTube video title.
     
-    Common patterns:
+    We handle all the common formats:
     - "Boston Celtics vs New York Knicks Full Game Highlights"
     - "LAL vs GSW | NBA Highlights"
     - "Celtics @ Knicks"
     - "Heat vs Celtics - Full Game"
     
     Returns:
-        {"home_team": "...", "away_team": "...", "date": None}
+        Dictionary with home_team, away_team, and date (if we can find it)
     """
     result = {
         "home_team": "Unknown",

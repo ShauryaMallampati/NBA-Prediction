@@ -1,4 +1,8 @@
-"""Momentum Transformer for NBA prediction - treats a team's season as a sequence."""
+"""Momentum Transformer - treats each team's season as a sequence of games.
+
+Instead of just averaging recent stats, we let the Transformer learn patterns
+like "after 2 losses, this team tends to bounce back" or "they fade late in road trips".
+"""
 
 import math
 import torch
@@ -11,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class PositionalEncoding(nn.Module):
-    """Sinusoidal positional encoding for game sequence position."""
+    """Add positional encoding so the model knows what part of the season we're in."""
     
     def __init__(self, d_model: int, max_len: int = 100, dropout: float = 0.1):
         super().__init__()
@@ -36,7 +40,7 @@ class PositionalEncoding(nn.Module):
 
 
 class MomentumTransformer(nn.Module):
-    """Transformer for modeling team momentum from game sequences."""
+    """Transformer model that captures momentum from game sequences."""
     
     def __init__(
         self,

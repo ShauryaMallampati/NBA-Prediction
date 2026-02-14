@@ -7,12 +7,9 @@ availability, so record the date/time and data source versions you used.
 ## Environment
 
 - Python 3.10+ with `poetry.lock`
-- Node.js 20+ with `package-lock.json`
 
 ```bash
 poetry install
-npm install
-cp .env.example .env
 ```
 
 ## Data snapshots
@@ -26,25 +23,12 @@ Most pipelines read from `data/`. To make runs reproducible:
 ## Full pipeline (recommended order)
 
 ```bash
-make seed
 make data
 make train-pregame
-make train-live
-make train-vision
-make train-chemistry
-make eval
 ```
 
 Artifacts typically land in `artifacts/` or `data/metrics/` depending on the script.
 If you change output paths, note them in your experiment log.
-
-## Frontend verification
-
-```bash
-npm run lint
-npm run typecheck
-npm run build
-```
 
 ## Suggested experiment log
 

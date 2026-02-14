@@ -1,6 +1,8 @@
 """
-Player Stats & Injury Fetcher
-Uses nba_api for official stats (no key needed!)
+"""Fetch player and team stats using nba_api.
+
+The nba_api package is free and doesn't need any API keys - it just
+talks to stats.nba.com directly.
 """
 import logging
 from typing import Dict, List
@@ -17,14 +19,14 @@ from nba_api.stats.static import players, teams
 logger = logging.getLogger(__name__)
 
 class PlayerStatsFetcher:
-    """Fetch player and team statistics"""
+    """Grab player and team statistics from the NBA API."""
     
     def __init__(self):
         self.cache_dir = Path("data/player_stats")
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
     def get_all_players(self) -> List[Dict]:
-        """Get list of all active players"""
+        """Get the full list of active NBA players."""
         try:
             all_players = players.get_active_players()
             logger.info(f"✅ Found {len(all_players)} active players")
@@ -34,7 +36,7 @@ class PlayerStatsFetcher:
             return []
     
     def get_player_season_stats(self, season: str = '2024-25') -> pd.DataFrame:
-        """Get season stats for all players"""
+        """Pull season stats for all players."""
         try:
             logger.info(f"Fetching player stats for {season}...")
             stats = leaguedashplayerstats.LeagueDashPlayerStats(
@@ -54,7 +56,7 @@ class PlayerStatsFetcher:
             return pd.DataFrame()
     
     def get_player_recent_form(self, player_id: int, last_n_games: int = 5) -> Dict:
-        """Get player's recent performance (last N games)"""
+        """Check how a player has been performing in their most recent games."""
         try:
             gamelog = playergamelog.PlayerGameLog(
                 player_id=player_id,
@@ -74,7 +76,7 @@ class PlayerStatsFetcher:
             return {}
     
     def get_team_stats(self, season: str = '2024-25') -> pd.DataFrame:
-        """Get team-level statistics"""
+        """Get aggregated stats for each team."""
         try:
             all_teams = teams.get_teams()
             team_stats = []

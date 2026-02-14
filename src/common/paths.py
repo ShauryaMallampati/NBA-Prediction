@@ -1,10 +1,10 @@
-"""Path management for data and artifacts."""
+"""Centralized file paths so we don't hardcode them everywhere."""
 
 from pathlib import Path
 
 
 class Paths:
-    """Centralized path management."""
+    """All the important file paths in one place."""
 
     ROOT = Path(__file__).parent.parent.parent
     DATA = ROOT / "data"
@@ -19,7 +19,7 @@ class Paths:
 
     @classmethod
     def ensure_dirs(cls) -> None:
-        """Create all necessary directories."""
+        """Make sure all these directories exist."""
         for attr_name in dir(cls):
             attr = getattr(cls, attr_name)
             if isinstance(attr, Path) and not attr_name.startswith("_"):

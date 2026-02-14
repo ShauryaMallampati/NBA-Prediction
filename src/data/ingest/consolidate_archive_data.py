@@ -1,10 +1,14 @@
 """
-Consolidate All Real NBA Data from Archive Files
+"""Merge all our Basketball-Reference archive data into one big dataset.
 
-Combines multiple Basketball-Reference data files into a unified training dataset.
-Processes: Player Per Game, Player Totals, Advanced, Shooting, and Team data.
+We pull from multiple data files:
+- Player Per Game stats
+- Player Totals
+- Advanced metrics
+- Shooting stats
+- Team data
 
-Output: consolidated_player_stats.csv ready for feature engineering
+Output: One clean consolidated_player_stats.csv ready for feature engineering.
 """
 
 import pandas as pd
@@ -19,14 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 def find_csv_files(pattern: str = "data/archive*/Player Per Game.csv") -> list:
-    """Find all CSV files matching pattern across archive folders."""
+    """Find all CSV files that match the pattern across archive folders."""
     files = glob.glob(pattern)
     logger.info(f"Found {len(files)} files matching pattern: {pattern}")
     return files
 
 
 def consolidate_player_per_game() -> pd.DataFrame:
-    """Consolidate Player Per Game data from all archives."""
+    """Combine Player Per Game data from all our archive folders."""
     logger.info("\n" + "=" * 80)
     logger.info("CONSOLIDATING REAL NBA DATA")
     logger.info("=" * 80)
@@ -65,7 +69,7 @@ def consolidate_player_per_game() -> pd.DataFrame:
 
 
 def consolidate_advanced_stats() -> pd.DataFrame:
-    """Consolidate Advanced stats."""
+    """Pull together all Advanced stats from the archives."""
     logger.info("\n📊 Step 2: Loading Advanced stats...")
     
     files = find_csv_files("data/archive*/Advanced.csv")
@@ -92,7 +96,7 @@ def consolidate_advanced_stats() -> pd.DataFrame:
 
 
 def consolidate_shooting_stats() -> pd.DataFrame:
-    """Consolidate Shooting stats."""
+    """Merge Shooting stats from all archive files."""
     logger.info("\n📊 Step 3: Loading Shooting stats...")
     
     files = find_csv_files("data/archive*/Player Shooting.csv")

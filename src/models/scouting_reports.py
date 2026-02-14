@@ -1,8 +1,8 @@
 """
-Agentic Scouting Report Generator
+"""Generate scouting reports that read like a real analyst wrote them.
 
-Uses the model's predictions and SHAP explanations to generate
-human-readable scouting reports for each game.
+We take the model's predictions and SHAP explanations and turn them into
+natural language that tells you what's actually happening in the matchup.
 """
 
 import logging
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class ScoutingReportGenerator:
-    """Generate AI-powered scouting reports for NBA games."""
+    """Turn predictions into readable scouting reports."""
     
     def __init__(self):
         self.templates = {

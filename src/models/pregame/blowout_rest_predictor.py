@@ -1,22 +1,20 @@
 """
-Blowout Risk & Rest Prediction Engine (Task #17)
+"""Predict when starters might sit due to blowouts or fatigue.
 
-TWO-COMPONENT SYSTEM:
-  1. LightGBM base model (trained on team stats + historical blowouts)
-  2. Custom rules layer (sports domain knowledge)
+This is a two-part system:
+  1. LightGBM model (learns from historical blowouts and rest patterns)
+  2. Rule-based logic (captures coach behavior we know about)
 
-Purpose: Adjust player props predictions when rest risk is high
-  - Blowout games → starters sit in Q4
-  - Back-to-back games → fatigue increases rest risk
-  - High minutes yesterday → coach limits playing time
+Why this matters: If LeBron has a 55% chance to hit 25+ points, but
+there's a 30% chance he sits in the 4th quarter... your real edge is
+only 38.5%. We need to show users that adjustment.
 
-Example Flow:
-  Model: "LeBron 25+ PTS = 55%"
-  Blowout risk: 30% (Lakers up 25, Q4, 8 min left)
-  Adjusted: 55% * (1 - 0.30) = 38.5%
-  Show user: "Model 55%, but 30% rest risk → net 38.5% confidence"
+Example triggers:
+- Blowout games: Starters sit when it's not close
+- Back-to-backs: Coaches manage minutes after heavy usage
+- High minutes last night: Rotation gets shorter today
 
-NO CUSTOM NEURAL NETWORK - Just LightGBM + logic rules
+No fancy neural nets - just LightGBM + smart rules that work.
 """
 
 from __future__ import annotations
@@ -32,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class GameContext:
-    """Current game state for rest risk assessment."""
+    """What's happening right now in the game."""
     score_diff: float  # Positive = home team leading
     quarter: int  # 1, 2, 3, 4
     time_remaining_sec: int  # Seconds left in quarter
@@ -45,7 +43,7 @@ class GameContext:
 
 @dataclass
 class RestRiskAssessment:
-    """Rest risk prediction output."""
+    """Our assessment of rest risk for this situation."""
     blowout_risk: float  # 0-1, probability of blowout
     fatigue_risk: float  # 0-1, fatigue-based rest risk
     combined_risk: float  # 0-1, final rest risk
@@ -55,12 +53,13 @@ class RestRiskAssessment:
 
 class BlowoutRestPredictor:
     """
-    Predicts rest risk using LightGBM + domain rules.
-    Adjusts player props when starters likely to sit.
+    """Figure out when starters are likely to sit.
+    
+    Uses LightGBM plus rule-based logic to adjust player prop probabilities.
     """
     
     def __init__(self):
-        """Initialize predictor."""
+        """Set up the predictor."""
         # Rule thresholds (tuned from historical data)
         self.blowout_threshold = 15  # Points
         self.critical_quarter = 4
@@ -70,18 +69,18 @@ class BlowoutRestPredictor:
         
     def assess_blowout_risk(self, context: GameContext) -> float:
         """
-        Calculate blowout risk using rules.
+        """How likely is this to turn into a blowout where starters sit?
         
-        Rules:
-          - Score diff > 20 AND Q4 AND < 8 min → 60% risk
-          - Score diff > 15 AND Q4 AND < 6 min → 40% risk
-          - Score diff > 10 AND Q4 AND < 4 min → 20% risk
+        Rules based on real NBA patterns:
+          - Up 20+ in Q4 with < 8 min left → 60% rest risk
+          - Up 15+ in Q4 with < 6 min left → 40% risk
+          - Up 10+ in Q4 with < 4 min left → 20% risk
         
         Args:
             context: Current game state
         
         Returns:
-            Blowout risk (0-1)
+            Blowout risk between 0 and 1
         """
         risk = 0.0
         

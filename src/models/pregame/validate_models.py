@@ -1,7 +1,8 @@
 """
-Task #15: Validate Model Performance - Simplified Version
+"""Quick check that our models actually work.
 
-Quick validation that models load and work.
+Loads the saved models and runs a few test predictions to make sure
+nothing is broken before we deploy.
 """
 
 import pandas as pd
@@ -15,7 +16,7 @@ logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 def validate_models():
-    """Validate that models load and make predictions."""
+    """Make sure models load correctly and can make predictions."""
     
     print("\n" + "="*80)
     print("TASK #15: MODEL VALIDATION")

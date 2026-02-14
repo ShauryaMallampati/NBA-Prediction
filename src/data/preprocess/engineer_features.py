@@ -1,13 +1,13 @@
 """
-Feature Engineering Pipeline for Player Props Model Training
+"""Build features for training player prop models.
 
-Takes raw player stats (15,000 player-game records) and engineers 40+ features:
-  - Rolling statistics (3-game, 7-game, season averages)
-  - Opponent-adjusted metrics
-  - Rest days, travel distance, game context
-  - Shooting efficiency, usage rate
+We take raw game logs and transform them into ML-ready features:
+  - Recent rolling averages (last 3, 7 games)
+  - How they perform against specific opponents  
+  - Rest and travel factors
+  - Shooting percentages and usage
 
-Output: features_df.csv ready for LightGBM training
+Output: A clean CSV ready to train LightGBM models on
 """
 
 import pandas as pd
@@ -21,13 +21,13 @@ logger = logging.getLogger(__name__)
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Engineer 40+ features for player props prediction.
+    """Turn raw stats into useful features that help predict player performance.
     
     Args:
-        df: Raw player stats DataFrame (from collect_real_data.py)
+        df: The player game logs from our data collection
     
     Returns:
-        DataFrame with engineered features, ready for model training
+        Enhanced dataframe with 40+ features ready for training
     """
     logger.info("=" * 80)
     logger.info("FEATURE ENGINEERING PIPELINE")
@@ -38,30 +38,30 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values('date').reset_index(drop=True)
     
     # =====================================================================
-    # 1. ROLLING STATISTICS (Most Important)
+    # Rolling averages are the bread and butter of sports prediction
     # =====================================================================
-    logger.info("\n📊 1. Computing rolling statistics...")
+    logger.info("\n📊 1. Building rolling averages...")
     
     # Group by player for rolling calculations
     for col in ['PTS_actual', 'AST_actual', 'REB_actual', 'STL_actual', 'BLK_actual']:
-        # 3-game rolling average
+        # Last 3 games average - shows current hot/cold streak
         df[f'{col}_rolling_3'] = df.groupby('player_name')[col].rolling(3, min_periods=1).mean().reset_index(drop=True)
         
-        # 7-game rolling average
+        # Last 7 games - more stable baseline
         df[f'{col}_rolling_7'] = df.groupby('player_name')[col].rolling(7, min_periods=1).mean().reset_index(drop=True)
         
-        # Season average (all games so far in season)
+        # Season average for context
         df[f'{col}_season_avg'] = df.groupby(['season', 'player_name'])[col].transform('mean')
         
-        # Standard deviation (form/consistency)
+        # Consistency score (low std = reliable)
         df[f'{col}_rolling_std_7'] = df.groupby('player_name')[col].rolling(7, min_periods=1).std().reset_index(drop=True)
     
     logger.info(f"  ✓ Generated {len([c for c in df.columns if 'rolling' in c])} rolling features")
     
     # =====================================================================
-    # 2. OPPONENT-ADJUSTED METRICS
+    # Some teams just play better/worse defense against certain stats
     # =====================================================================
-    logger.info("\n📊 2. Computing opponent adjustments...")
+    logger.info("\n📊 2. Calculating matchup advantages...")
     
     # Opponent defense rating (simple: avg opponent PTS allowed to this player type)
     opponent_avg = df.groupby('opponent')[['PTS_actual', 'AST_actual', 'REB_actual', 'STL_actual', 'BLK_actual']].mean()

@@ -1,11 +1,10 @@
-"""Game data fetcher with caching and scheduling.
+"""Fetch game data (scores, schedules, etc.) and cache it.
 
-Fetches:
+Gets:
 - Today's games
-- Live scores
-- Game details
-- Historical games
-- Season schedule
+- Games on specific dates
+- Historical game results
+- Full season schedules
 """
 
 import logging
@@ -25,15 +24,15 @@ RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class GameFetcher:
-    """Fetch NBA game data with caching."""
+    """Pull NBA game data and cache it to avoid repeated API calls."""
     
     def __init__(self):
-        """Initialize game fetcher."""
+        """Set up the game fetcher with API client and cache."""
         self.client = get_nba_client()
         self.cache = get_cache_manager()
         logger.info("🏀 Game fetcher initialized")
     
-    @cached(cache_type="live_scores", ttl=300)  # 5 minutes
+    @cached(cache_type="games", ttl=300)  # 5 minutes
     def get_today_games(self) -> List[Dict]:
         """
         Get today's NBA games.
@@ -48,27 +47,6 @@ class GameFetcher:
         logger.info(f"✅ Found {len(games)} games today")
         
         return games
-    
-    @cached(cache_type="live_scores", ttl=180)  # 3 minutes
-    def get_live_scores(self) -> List[Dict]:
-        """
-        Get live game scores for games in progress.
-        
-        Returns:
-            List of live game dictionaries
-        """
-        logger.info("⚡ Fetching live scores")
-        
-        today_games = self.get_today_games()
-        
-        # Filter for live games (status contains "in progress" or similar)
-        live_games = [
-            game for game in today_games
-            if game.get("status", "").lower() in ["live", "in progress", "halftime", "q1", "q2", "q3", "q4"]
-        ]
-        
-        logger.info(f"⚡ {len(live_games)} games live right now")
-        return live_games
     
     @cached(cache_type="historical_games", ttl=86400)  # 24 hours
     def get_games_by_date(self, date_str: str) -> List[Dict]:
@@ -117,11 +95,10 @@ class GameFetcher:
         return all_games
     
     def get_upcoming_games(self, days: int = 7) -> List[Dict]:
-        """
-        Get upcoming games for the next N days.
+        """Get games coming up in the next week (or however many days you want).
         
         Args:
-            days: Number of days ahead to fetch
+            days: Number of days to look ahead
         
         Returns:
             List of upcoming games

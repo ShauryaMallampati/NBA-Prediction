@@ -1,4 +1,4 @@
-"""Reproducibility utilities."""
+"""Tools to make experiments reproducible (same random seed = same results)."""
 
 import random
 
@@ -7,7 +7,7 @@ import torch
 
 
 def set_seed(seed: int = 42) -> None:
-    """Set random seeds for reproducibility."""
+    """Lock down all randomness to get repeatable results."""
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)

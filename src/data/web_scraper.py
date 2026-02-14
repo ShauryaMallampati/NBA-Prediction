@@ -1,6 +1,8 @@
 """
-Web Scraper for Injury Reports and News
-Scrapes public sources (no API key needed!)
+"""Scrape injury reports and news from public websites.
+
+No API keys needed - we just parse publicly available data.
+Just remember to be respectful and check robots.txt!
 """
 import requests
 from bs4 import BeautifulSoup
@@ -12,7 +14,7 @@ from typing import List, Dict
 logger = logging.getLogger(__name__)
 
 class InjuryScraper:
-    """Scrape injury reports from public sources"""
+    """Pull injury reports from public sports sites."""
     
     def __init__(self):
         self.cache_dir = Path("data/injuries")
@@ -20,8 +22,9 @@ class InjuryScraper:
         
     def scrape_espn_injuries(self) -> pd.DataFrame:
         """
-        Scrape injury data from ESPN (public, no login required)
-        Note: This is for educational purposes. Check ESPN's robots.txt
+        """Scrape ESPN's public injury page.
+        
+        Note: This is for educational use. Always check robots.txt and be respectful.
         """
         url = "https://www.espn.com/nba/injuries"
         
@@ -66,7 +69,7 @@ class InjuryScraper:
             return pd.DataFrame()
     
     def get_cached_injuries(self) -> pd.DataFrame:
-        """Load cached injury data"""
+        """Load cached injury data if we have it."""
         cache_file = self.cache_dir / "espn_injuries.parquet"
         if cache_file.exists():
             return pd.read_parquet(cache_file)

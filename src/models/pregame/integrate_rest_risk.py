@@ -1,8 +1,8 @@
 """
-Task #16: Integrate Rest Risk Predictor
+"""Add rest risk calculations to our prediction API.
 
-Adds rest risk calculation to API predictions.
-Adjusts model probabilities based on rest/fatigue factors.
+We adjust model probabilities when players are likely to sit due to
+blowouts, fatigue, or back-to-back scheduling.
 """
 
 # This script demonstrates how to integrate rest risk into the API
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def integrate_rest_risk():
-    """Demonstrate rest risk integration into API."""
+    """Show how rest risk gets integrated into the API."""
     
     print("\n" + "="*80)
     print("TASK #16: INTEGRATE REST RISK PREDICTOR")

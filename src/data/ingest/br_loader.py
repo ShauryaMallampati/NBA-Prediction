@@ -1,14 +1,13 @@
-"""Basketball-Reference scraper for player load management and validation data.
+"""Scraper for Basketball-Reference stats.
 
-This module scrapes Basketball-Reference to:
-1. Get player season stats (games played, minutes, trends)
-2. Detect load management patterns (11, 14, 25+ game cycles)
-3. Track recent form (hot vs cold stretches)
-4. Provide validation data for model predictions
+This pulls data from Basketball-Reference to:
+1. Track player workload (games played, minutes trends)
+2. Spot load management patterns (like 11 games on, 14 off cycles)
+3. Monitor recent form (hot or cold streaks)
+4. Validate our model predictions
 
-Key insight from expert bettors:
-"If a player is averaging 11 games on, 14 games off..."
-This scraper detects exactly that pattern for rest risk adjustment.
+The key insight from pro bettors: players often follow cycles like "11 games on, 
+14 games off" - we detect those patterns to adjust our predictions.
 """
 
 import time
@@ -24,13 +23,13 @@ logger = setup_logger(__name__)
 
 
 class BasketballReferenceLoader:
-    """Polite scraper for Basketball-Reference data."""
+    """Respectful web scraper for Basketball-Reference (we wait 3 seconds between requests)."""
 
     BASE_URL = "https://www.basketball-reference.com"
-    RATE_LIMIT_DELAY = 3.0  # seconds between requests (polite scraping)
+    RATE_LIMIT_DELAY = 3.0  # Wait 3 seconds between requests (be nice to their servers)
 
     def __init__(self) -> None:
-        """Initialize scraper with rate limiting."""
+        """Set up the scraper with rate limiting to be respectful."""
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -38,14 +37,14 @@ class BasketballReferenceLoader:
         self.last_request_time = 0.0
 
     def _rate_limit(self) -> None:
-        """Enforce polite rate limiting."""
+        """Wait between requests so we don't hammer their server."""
         elapsed = time.time() - self.last_request_time
         if elapsed < self.RATE_LIMIT_DELAY:
             time.sleep(self.RATE_LIMIT_DELAY - elapsed)
         self.last_request_time = time.time()
 
     def _safe_get(self, url: str) -> Optional[str]:
-        """Make a safe GET request with error handling."""
+        """Request a page with error handling so we don't crash on failures."""
         try:
             self._rate_limit()
             logger.debug(f"GET {url}")
@@ -57,13 +56,13 @@ class BasketballReferenceLoader:
             return None
 
     def get_season_schedule(self, season: int) -> pd.DataFrame:
-        """Scrape season schedule from Basketball-Reference.
+        """Grab the full game schedule for a season.
         
         Args:
-            season: Season year (e.g., 2023)
+            season: Year the season ends (e.g., 2023 for 2022-23 season)
             
         Returns:
-            DataFrame with game information
+            DataFrame with all the games
         """
         url = f"{self.BASE_URL}/leagues/NBA_{season}_games.html"
         html = self._safe_get(url)

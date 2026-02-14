@@ -69,28 +69,6 @@ services:
       - ./configs:/app/configs:ro
       - ./artifacts:/app/artifacts:ro
 
-  # Next.js Frontend
-  web:
-    build:
-      context: ./nba-intel-platform
-      dockerfile: Dockerfile
-    container_name: nba_intel_web
-    ports:
-      - "3000:3000"
-    environment:
-      NEXT_PUBLIC_BACKEND_URL: http://api:8000
-      NODE_ENV: production
-    depends_on:
-      - api
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    networks:
-      - nba_network
-
 networks:
   nba_network:
     driver: bridge

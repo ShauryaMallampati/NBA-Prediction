@@ -39,30 +39,7 @@ jobs:
         pip install poetry
         poetry install
 
-    # === NEW: Fetch 14-Day Schedule ===
-    - name: Fetch Schedule (14 Days)
-      env:
-        ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-      run: |
-        if [ -f "scripts/fetch_schedule.py" ]; then
-          poetry run python scripts/fetch_schedule.py --days 14
-        else
-          echo "scripts/fetch_schedule.py not found, skipping"
-        fi
-
-    # === NEW: Refresh Chemistry Data ===
-    - name: Refresh Chemistry Data
-      run: |
-        if [ -f "scripts/fetch_lineup_data.py" ]; then
-          poetry run python scripts/fetch_lineup_data.py || echo "Chemistry fetch skipped (optional)"
-        else
-          echo "scripts/fetch_lineup_data.py not found, skipping"
-        fi
-
     - name: Run Daily Predictions
-      env:
-        RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
-        ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
       run: |
         # Generate predictions for today
         if [ -f "scripts/run_daily_predictions.py" ]; then
@@ -81,39 +58,6 @@ jobs:
           echo "scripts/run_daily_evaluation.py not found, skipping"
         fi
 
-    # === NEW: Daily Agent Loop (Vision + Analysis) ===
-    - name: Run Daily Vision Agent
-      run: |
-        # Find highlights and simulate vision training
-        if [ -f "scripts/daily_vision_agent.py" ]; then
-          poetry run python scripts/daily_vision_agent.py
-        else
-          echo "scripts/daily_vision_agent.py not found, skipping"
-        fi
-
-    - name: Run Post-Game Analysis (Gemini AI)
-      env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      run: |
-        # Explain why predictions were wrong using Gemini AI
-        if [ -f "scripts/analyze_wrong_predictions.py" ]; then
-          poetry run python scripts/analyze_wrong_predictions.py
-        else
-          echo "scripts/analyze_wrong_predictions.py not found, skipping"
-        fi
-
-    # === NEW: Sync to Supabase ===
-    - name: Sync to Supabase
-      env:
-        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      run: |
-        if [ -f "scripts/sync_to_supabase.py" ]; then
-          poetry run python scripts/sync_to_supabase.py
-        else
-          echo "scripts/sync_to_supabase.py not found, skipping"
-        fi
-
     - name: Commit and Push Data
       run: |
         git config --global user.name "NBA Intel Bot"
@@ -122,18 +66,6 @@ jobs:
         # Add ALL generated data files
         if [ -d "data/predictions" ]; then
           git add -f data/predictions/ 2>/dev/null || echo "No new predictions"
-        fi
-        
-        if [ -d "data/schedules" ]; then
-          git add -f data/schedules/ 2>/dev/null || echo "No new schedules"
-        fi
-        
-        if [ -d "data/chemistry" ]; then
-          git add -f data/chemistry/ 2>/dev/null || echo "No new chemistry"
-        fi
-
-        if [ -d "data/analysis" ]; then
-          git add -f data/analysis/ 2>/dev/null || echo "No new analysis"
         fi
         
         if [ -f "data/metrics/daily_accuracy.csv" ]; then

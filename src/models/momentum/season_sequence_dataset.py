@@ -1,8 +1,11 @@
 """
-Season Sequence Dataset for Momentum Transformer.
+"""Dataset that turns game histories into sequences for the Transformer.
 
-Converts team game histories into tokenized sequences for Transformer training.
-Each "token" represents a single game with features like Win/Loss, Margin, etc.
+Each game becomes a token with features like Win/Loss, margin, rest, etc.
+The Transformer learns patterns across sequences of games.
+
+Why this matters: Standard ML uses rolling averages, but a Transformer can
+learn more subtle patterns like "after 2 bad losses, teams often rally".
 """
 
 import pandas as pd
@@ -18,13 +21,12 @@ logger = logging.getLogger(__name__)
 
 class SeasonSequenceDataset(Dataset):
     """
-    Dataset that creates sequences of games for each team.
+    """Create sequences of games for training the Transformer.
     
-    Research Motivation:
-    Unlike standard ML features (rolling averages), a Transformer can learn
-    complex patterns like "after 2 losses, this team usually bounces back strongly".
+    Research idea: Instead of just averaging stats, let the model learn
+    complex momentum patterns like "team bounces back after 2 losses".
     
-    Each sequence is: [Game_t-N, Game_t-N+1, ..., Game_t-1] -> Predict Game_t
+    Each sequence: [Game_t-N, Game_t-N+1, ..., Game_t-1] -> Predict Game_t
     """
     
     def __init__(
@@ -94,7 +96,7 @@ class SeasonSequenceDataset(Dataset):
         logger.info(f"SeasonSequenceDataset ({split}): {len(self.sequences)} sequences")
     
     def _create_synthetic_data(self) -> pd.DataFrame:
-        """Create synthetic game data for development/testing."""
+        """Generate fake game data for testing when we don't have real data yet."""
         np.random.seed(42)
         
         teams = ["LAL", "GSW", "BOS", "MIA", "PHX", "DEN", "MIL", "PHI"]

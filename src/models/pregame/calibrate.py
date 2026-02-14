@@ -1,11 +1,12 @@
 """
-Advanced Calibration for NBA Game Predictions
+"""Make our probability predictions more accurate.
 
-Upgrades from Sigmoid to Platt + Isotonic Regression:
-- Platt scaling (sigmoid calibration)
-- Isotonic regression (non-parametric calibration)
-- Combined approach (CalibratedClassifierCV)
-- Confidence intervals
+We use two fancy calibration methods:
+- Platt scaling: Fits a sigmoid curve to adjust probabilities
+- Isotonic regression: Non-parametric, just learns the right mapping
+- Combined approach: Uses both together (CalibratedClassifierCV)
+
+The goal? When we say 70%, we want it to actually be 70%.
 """
 
 import pandas as pd
@@ -26,10 +27,10 @@ logger = logging.getLogger(__name__)
 
 
 class AdvancedCalibrator:
-    """Advanced calibration using Platt + Isotonic Regression."""
+    """Calibrate using Platt scaling and/or Isotonic regression."""
     
     def __init__(self, output_dir: str = "artifacts/models/pregame"):
-        """Initialize calibrator."""
+        """Set up the calibrator."""
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
@@ -45,16 +46,16 @@ class AdvancedCalibrator:
     
     def calibrate_model(self, model, X: pd.DataFrame, y: pd.Series, method: str = 'isotonic') -> object:
         """
-        Calibrate a model.
+        """Take a raw model and calibrate its probabilities.
         
         Args:
-            model: Uncalibrated model
-            X: Features
-            y: Target
-            method: Calibration method ('sigmoid', 'isotonic', or 'auto')
+            model: The uncalibrated model
+            X: Feature data
+            y: True outcomes
+            method: Which calibration method to use ('sigmoid', 'isotonic', or 'auto')
         
         Returns:
-            Calibrated model
+            A calibrated version of the model
         """
         logger.info(f"📊 Calibrating model using {method}...")
         

@@ -1,11 +1,12 @@
-"""Cache manager for NBA data with Redis and file-based fallback.
+"""Smart caching system for NBA data.
+
+We try Redis first (fast in-memory cache), but if that's not available we fall back
+to saving JSON files on disk. Either way, we avoid hitting the API too often.
 
 Features:
-- Redis caching with automatic fallback
-- Configurable TTL per data type
-- JSON serialization
-- Cache invalidation
-- File-based cache for persistence
+- Redis for speed (with JSON file backup)
+- Different cache lengths for different data types
+- Easy cache clearing when needed
 """
 
 import os
@@ -19,22 +20,23 @@ import hashlib
 
 logger = logging.getLogger(__name__)
 
-# Cache configuration
+# Where we store cached files
 CACHE_DIR = Path(__file__).parent.parent.parent.parent / "data" / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-# TTL configuration (in seconds)
+# How long different types of data stay cached (seconds)
 CACHE_TTL = {
-    "live_scores": 300,          # 5 minutes
+    "predictions": 300,          # 5 minutes
+    "games": 300,                # 5 minutes
     "player_stats": 3600,        # 1 hour
     "team_stats": 3600,          # 1 hour
     "historical_games": 86400,   # 24 hours
     "season_averages": 86400,    # 24 hours
-    "odds": 1800,                # 30 minutes
     "players_list": 86400,       # 24 hours
     "teams_list": 604800,        # 7 days
 }
 
+# Try to connect to Redis (it's okay if this fails)
 try:
     import redis
     REDIS_AVAILABLE = True
@@ -44,7 +46,7 @@ try:
         db=int(os.getenv("REDIS_DB", "0")),
         decode_responses=True
     )
-    # Test connection
+    # Test the connection to make sure it's working
     redis_client.ping()
     logger.info("✅ Redis cache connected")
 except Exception as e:
@@ -54,25 +56,25 @@ except Exception as e:
 
 
 class CacheManager:
-    """Manage caching with Redis and file-based fallback."""
+    """Handles caching with Redis or files as backup."""
     
     def __init__(self):
-        """Initialize cache manager."""
+        """Set up the cache system."""
         self.redis_available = REDIS_AVAILABLE
         self.redis = redis_client
         logger.info(f"💾 Cache manager initialized (Redis: {self.redis_available})")
     
     def _make_key(self, prefix: str, *args, **kwargs) -> str:
         """
-        Create a cache key from prefix and arguments.
+    """Build a unique cache key from whatever we're requesting.
         
         Args:
-            prefix: Cache key prefix (e.g., 'games', 'stats')
-            *args: Positional arguments
-            **kwargs: Keyword arguments
+            prefix: Type of data (like 'games' or 'player_stats')
+            *args: Other identifiers
+            **kwargs: Named parameters
         
         Returns:
-            Cache key string
+            A unique string we can use to cache and retrieve this data
         """
         # Combine all arguments into a string
         key_parts = [prefix]
@@ -87,13 +89,13 @@ class CacheManager:
     
     def get(self, key: str) -> Optional[Any]:
         """
-        Get value from cache.
+        """Fetch from cache if it exists and hasn't expired.
         
         Args:
-            key: Cache key
+            key: The cache key
         
         Returns:
-            Cached value or None if not found/expired
+            Cached data or None if not found/expired
         """
         # Try Redis first
         if self.redis_available:

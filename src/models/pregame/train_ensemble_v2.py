@@ -1,17 +1,14 @@
 """
-Enhanced Ensemble Model Trainer v2 — FiveThirtyEight-Inspired
+"""Ensemble Model Trainer v2 - Inspired by FiveThirtyEight's approach
 
-Key improvements over v1:
-1. Stacking meta-learner (Logistic Regression on top of base model predictions)
-2. 4 diverse base models: XGBoost, LightGBM, CatBoost, ExtraTrees
-3. Better hyperparameters with more estimators & regularization
-4. Train/test feature consistency via RunningWorldState
-5. 55+ features including MOV Elo, Pythagorean, SOS, rolling stats
-6. Proper time-series CV with gap
-7. Feature importance-based selection
-8. Platt scaling calibration
+What we're doing here:
+1. Training 4 different models (XGBoost, LightGBM, CatBoost, ExtraTrees)
+2. Then training a "meta-model" that learns how to best combine them
+3. Using smart features like Elo ratings, recent form, strength of schedule
+4. Proper time-based validation (no peeking into the future!)
+5. Calibrating probabilities so when we say 70%, it really means 70%
 
-Target: 65%+ out-of-sample accuracy (vs ~60% for v1)
+Expected accuracy: 65%+ (that's really good for NBA - Vegas hits around 67%)
 """
 
 import pandas as pd
@@ -41,41 +38,34 @@ logger = logging.getLogger(__name__)
 
 class EnsembleTrainerV2:
     """
-    Enhanced stacking ensemble with 4 base models + meta-learner.
+    """Our ensemble prediction system with stacked models.
     
-    Architecture:
-        Layer 1 (Base Models):
-            - XGBoost (gradient boosting, deep trees)
-            - LightGBM (gradient boosting, leaf-wise)
-            - CatBoost (gradient boosting, ordered boosting)
-            - ExtraTrees (bagging, extremely randomized)
-        
-        Layer 2 (Meta-Learner):
-            - Logistic Regression on base model out-of-fold predictions
-            - Provides optimal weighting and nonlinear combination
+    Think of it like getting opinions from 4 different experts (XGBoost, LightGBM, 
+    CatBoost, ExtraTrees), then having a 5th expert (meta-learner) figure out which 
+    experts to trust more for each type of game.
     """
     
     def __init__(self, output_dir: str = "artifacts/models/pregame"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Base models
+        # Our 4 base models (before probability calibration)
         self.xgb_model = None
         self.lgb_model = None
         self.cat_model = None
         self.et_model = None
         
-        # Calibrated base models (for final prediction)
+        # Same models, but with calibrated probabilities (more accurate)
         self.xgb_calibrated = None
         self.lgb_calibrated = None
         self.cat_calibrated = None
         self.et_calibrated = None
         
-        # Meta-learner
+        # The "expert" that combines our 4 base models
         self.meta_learner = None
         self.meta_scaler = None
         
-        # Legacy weights (for backward compat with predict_ensemble)
+        # Keeping these for backward compatibility with old code
         self.weights = {'xgb': 0.30, 'lgb': 0.30, 'cat': 0.30, 'et': 0.10}
         
         # Feature info
@@ -91,13 +81,13 @@ class EnsembleTrainerV2:
                                      cutoff_date: str = '2024-10-01',
                                      start_date: str = None) -> Tuple[pd.DataFrame, np.ndarray]:
         """
-        Generate training features using RunningWorldState.
-        This ensures EXACT same features at train and test time.
+        """Build training features using our game state tracker.
+        This is important - we simulate "forward-only" state so the model never sees future data.
         
         Args:
-            games_df: Full games dataframe (all history)
-            cutoff_date: Only train on games BEFORE this date
-            start_date: Only TRAIN on games AFTER this date, but still use
+            games_df: All the games we have
+            cutoff_date: Don't train on anything after this (for validation)
+            start_date: Don't train on anything before this (optional)
                         earlier games for warmup/state building
         """
         from src.common.features import RunningWorldState

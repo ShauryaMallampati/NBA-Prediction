@@ -1,4 +1,4 @@
-"""Data validation and fail-fast checks."""
+"""Validation helpers that fail early if something's wrong."""
 
 from pathlib import Path
 from typing import List, Optional
@@ -10,26 +10,19 @@ logger = setup_logger(__name__)
 
 
 class ValidationError(Exception):
-    """Raised when validation fails."""
+    """Thrown when something doesn't pass validation."""
 
     pass
 
 
 def validate_api_keys(required_keys: Optional[List[str]] = None) -> None:
-    """Validate that required API keys are present."""
+    """Check that all the API keys we need are actually set."""
     if not settings.require_real_data:
         logger.warning("REQUIRE_REAL_DATA=false, skipping key validation")
         return
 
     if required_keys is None:
-        required_keys = [
-            "nba_stats_api_key",
-            "ors_api_key",
-        ]
-        if settings.enable_sentiment:
-            required_keys.extend(
-                ["x_bearer_token", "reddit_client_id", "reddit_client_secret", "youtube_api_key"]
-            )
+        required_keys = []
 
     missing_keys = []
     for key in required_keys:
@@ -50,7 +43,6 @@ The following API keys are required but not set:
 To fix this:
 1. Copy .env.example to .env
 2. Fill in the missing keys (see KEYS.md for instructions)
-3. Run 'make key-audit' to verify
 
 Or set REQUIRE_REAL_DATA=false in .env to skip validation (not recommended).
 """
@@ -60,7 +52,7 @@ Or set REQUIRE_REAL_DATA=false in .env to skip validation (not recommended).
 
 
 def validate_data_exists(data_path: Path, min_rows: int = 100) -> None:
-    """Validate that required data files exist and are non-empty."""
+    """Make sure a data file exists and has enough rows to be useful."""
     if not settings.require_real_data:
         return
 
@@ -80,6 +72,6 @@ def validate_data_exists(data_path: Path, min_rows: int = 100) -> None:
 
 
 def guard_mock_allowed() -> None:
-    """Ensure mock data is allowed by configuration."""
+    """Prevent using fake data when we're supposed to use real data."""
     if settings.require_real_data:
         raise ValidationError("Mock data requested but REQUIRE_REAL_DATA=true")

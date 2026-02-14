@@ -1,12 +1,12 @@
 """
-Hyperparameter Optimization using Optuna
+"""Find the best hyperparameters for our models using Optuna.
 
-Optimizes hyperparameters for:
-- XGBoost
-- LightGBM
-- CatBoost
+We optimize:
+- XGBoost settings
+- LightGBM parameters
+- CatBoost configuration
 
-Uses time-series cross-validation to prevent overfitting.
+We use time-series cross-validation to make sure we're not overfitting.
 """
 
 import pandas as pd
@@ -27,10 +27,10 @@ logger = logging.getLogger(__name__)
 
 
 class HyperparameterOptimizer:
-    """Optimize hyperparameters using Optuna."""
+    """Use Optuna to find the best hyperparameters for each model."""
     
     def __init__(self, output_dir: str = "artifacts/models/pregame"):
-        """Initialize optimizer."""
+        """Set up the optimizer."""
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
@@ -43,15 +43,15 @@ class HyperparameterOptimizer:
     
     def optimize_xgboost(self, X: pd.DataFrame, y: pd.Series, n_trials: int = 50) -> Dict:
         """
-        Optimize XGBoost hyperparameters.
+        """Find the best XGBoost settings.
         
         Args:
-            X: Features
-            y: Target
-            n_trials: Number of Optuna trials
+            X: Training features
+            y: Target labels
+            n_trials: How many combinations to try
         
         Returns:
-            Best hyperparameters
+            Best hyperparameters we found
         """
         logger.info("🔧 Optimizing XGBoost hyperparameters...")
         

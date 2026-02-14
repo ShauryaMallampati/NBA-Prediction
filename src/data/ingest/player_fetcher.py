@@ -1,10 +1,10 @@
-"""Player data fetcher with caching and statistics.
+"""Fetch player data with smart caching.
 
-Fetches:
-- Player profiles
-- Player statistics
-- Season averages
-- Recent performance
+We grab:
+- Player profiles and basic info
+- Season stats and averages
+- Recent game performance
+- Career statistics
 """
 
 import logging
@@ -24,10 +24,10 @@ RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class PlayerFetcher:
-    """Fetch NBA player data with caching."""
+    """Grab player data and cache it so we're not fetching repeatedly."""
     
     def __init__(self):
-        """Initialize player fetcher."""
+        """Set up the player data fetcher."""
         self.client = get_nba_client()
         self.cache = get_cache_manager()
         logger.info("👤 Player fetcher initialized")

@@ -1,7 +1,8 @@
 """
-Accuracy Tracker Service
+"""Track how well our predictions actually do.
 
-Tracks predictions vs actual outcomes and calculates accuracy metrics.
+We save every prediction, record the actual outcomes, then calculate
+accuracy stats so we know if we're improving or not.
 """
 
 import sqlite3
@@ -17,10 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 class AccuracyTracker:
-    """Track prediction accuracy over time."""
+    """Keep a running log of predictions vs. reality."""
     
     def __init__(self, db_path: str = "betting_performance.db"):
-        """Initialize accuracy tracker."""
+        """Set up the accuracy tracking database."""
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_database()

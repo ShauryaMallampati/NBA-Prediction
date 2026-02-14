@@ -1,13 +1,12 @@
 """
-Temporal Feature Engineering for NBA Game Predictions
+"""Time-based features that capture when games happen and recent momentum.
 
-Adds temporal features:
-- Recency weighting (exponential decay)
-- Seasonal adjustments
-- Month-based win percentages
-- Day-of-week effects
-- Time-of-season indicators
-- Momentum indicators
+We track things like:
+- Recent form: What have you done for me lately?
+- Season timing: Early season rust vs. playoff push
+- Calendar effects: Monday games? End of month?
+- Day-of-week patterns: Teams play differently on different nights
+- Momentum: Are they hot right now or slumping?
 """
 
 import pandas as pd
@@ -21,15 +20,16 @@ logger = logging.getLogger(__name__)
 
 def add_recency_weighting(df: pd.DataFrame, decay_factor: float = 0.95) -> pd.DataFrame:
     """
-    Add recency weighting features (exponential decay).
+    """Weight recent games more heavily than old ones.
     
-    More recent games are weighted more heavily.
+    What happened last week matters more than what happened two months ago.
+    We use exponential decay so each game fades gradually over time.
     
     Features:
-    - home_recent_weighted_form: Home team's form with exponential decay
-    - away_recent_weighted_form: Away team's form with exponential decay
-    - home_recent_weighted_pts: Home team's points with exponential decay
-    - away_recent_weighted_pts: Away team's points with exponential decay
+    - home_recent_weighted_form: Home team's recent record with emphasis on latest games
+    - away_recent_weighted_form: Away team's recent record, same deal
+    - home_recent_weighted_pts: How many points they've been scoring lately
+    - away_recent_weighted_pts: Same for the away team
     """
     logger.info("⏰ Adding recency weighting features...")
     

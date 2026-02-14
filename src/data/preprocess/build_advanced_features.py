@@ -1,22 +1,22 @@
 """
-Advanced Feature Engineering for NBA Game Predictions
+"""The really sophisticated features that capture matchup dynamics.
 
-Adds 15+ advanced features:
-- Player injury/availability
-- Opponent-adjusted team metrics
-- Home/away splits by month/season
-- Recent form with exponential decay
-- Head-to-head matchup history
-- Rest differential
-- Back-to-back impact by team
-- Playoff indicator
-- Streak indicators
-- Team strength rankings
-- Player minutes-weighted team stats
-- Clutch performance metrics
-- Fatigue indicators
-- Pace-adjusted metrics
-- Offensive/defensive rating differentials
+We're adding 15+ advanced features like:
+- Injury tracking: Who's hurt, who's back
+- Opponent adjustments: How do these specific teams match up?
+- Home/away splits: Some teams are way better at home
+- Recent momentum: Are they on a hot streak?
+- Head-to-head history: How have these two teams done against each other?
+- Rest differences: Is one team more tired?
+- Back-to-back impact: Every team struggles on the second night
+- Playoff indicator: Is this a playoff-type game?
+- Win/loss streaks: Riding high or desperate to snap a losing skid
+- Team rankings: Who's actually good right now
+- Minutes-weighted stats: Accounting for who actually plays
+- Clutch performance: Do they deliver when it matters?
+- Fatigue levels: Travel, schedule, all that grind
+- Pace adjustments: Fast vs. slow teams
+- Rating differentials: Net offense vs. defense
 """
 
 import pandas as pd
@@ -46,13 +46,13 @@ logger = logging.getLogger(__name__)
 
 def add_injury_availability_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Add player injury/availability features.
+    """Track who's available and who's sitting out.
     
-    Features:
-    - home_injury_count: Number of injured players on home team
-    - away_injury_count: Number of injured players on away team
-    - home_key_player_injured: Flag if key player is injured
-    - away_key_player_injured: Flag if key player is injured
+    Features we're building:
+    - home_injury_count: How many guys are hurt or out
+    - away_injury_count: Same for the away team
+    - home_key_player_injured: Is a star missing?
+    - away_key_player_injured: Same deal for the visitors
     """
     logger.info("📋 Adding injury/availability features...")
     
@@ -72,13 +72,16 @@ def add_injury_availability_features(df: pd.DataFrame) -> pd.DataFrame:
 
 def add_opponent_adjusted_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Add opponent-adjusted team metrics (OAPOW-style).
+    """Adjust team stats for opponent strength (like OAPOW does it).
+    
+    Scoring 120 points matters more if you did it against a great defense.
+    These features capture that matchup context.
     
     Features:
-    - home_opp_adjusted_off_rating: Home team offense adjusted for opponent defense
-    - away_opp_adjusted_off_rating: Away team offense adjusted for opponent defense
-    - home_opp_adjusted_def_rating: Home team defense adjusted for opponent offense
-    - away_opp_adjusted_def_rating: Away team defense adjusted for opponent offense
+    - home_opp_adjusted_off_rating: Home offense adjusted for this opponent's defense
+    - away_opp_adjusted_off_rating: Away offense adjusted for this opponent's defense
+    - home_opp_adjusted_def_rating: Home defense adjusted for this opponent's offense
+    - away_opp_adjusted_def_rating: Away defense adjusted for this opponent's offense
     """
     logger.info("📊 Adding opponent-adjusted metrics...")
     
@@ -122,13 +125,16 @@ def add_opponent_adjusted_metrics(df: pd.DataFrame) -> pd.DataFrame:
 
 def add_home_away_splits(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Add home/away splits by month/season.
+    """Track how teams perform at home vs. on the road.
+    
+    Some teams dominate at home but struggle away. We capture that with
+    both season-long and recent monthly splits.
     
     Features:
-    - home_home_win_pct: Home team's home win percentage this season
-    - away_away_win_pct: Away team's away win percentage this season
-    - home_home_win_pct_month: Home team's home win percentage this month
-    - away_away_win_pct_month: Away team's away win percentage this month
+    - home_home_win_pct: How often does the home team win at home?
+    - away_away_win_pct: How often does the away team win on the road?
+    - home_home_win_pct_month: Same but just for this month
+    - away_away_win_pct_month: Recent road performance
     """
     logger.info("🏠 Adding home/away splits...")
     

@@ -1,7 +1,8 @@
 """
-SHAP Explainability Service for NBA Predictions
+"""Explain why the model makes each prediction using SHAP.
 
-Provides feature importance and explanation for each prediction.
+Instead of just saying "Lakers 65% to win", we can show you exactly
+why - which features pushed the prediction that way.
 """
 
 import shap
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class SHAPExplainer:
-    """Generate SHAP explanations for NBA predictions."""
+    """Break down predictions so you understand what's driving them."""
     
     def __init__(self, model_dir: str = "artifacts/models/pregame"):
         self.model_dir = Path(model_dir)

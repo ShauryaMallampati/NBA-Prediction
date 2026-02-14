@@ -1,14 +1,14 @@
 """
-Comprehensive Pregame Feature Engineering Pipeline
+"""Build all the features we need to predict games before they start.
 
-Integrates:
-- Elo ratings (basic)
-- Advanced features (15+ features)
-- Temporal features (19 features)
-- Injury/availability features
-- Lineup features
+We're pulling together a bunch of different angles:
+- Elo ratings: How strong is each team right now?
+- Advanced stats: Efficiency, pace, all the good stuff
+- Time patterns: Are they rested? Playing back-to-back?
+- Injury tracking: When we have the data, we'll use it
+- Lineup chemistry: How well do these guys play together?
 
-Total: 50+ features for game predictions
+In total, we end up with 50+ features that capture everything important.
 """
 
 from __future__ import annotations
@@ -36,13 +36,16 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 def compute_elo(df_games: pd.DataFrame) -> pd.DataFrame:
     """
-    Compute Elo ratings with decaying K factor.
+    """Calculate Elo ratings for all teams over time.
+    
+    Elo is like a living scoreboard of team strength. Win and it goes up,
+    lose and it drops. Big upsets cause dramatic swings, blowouts matter too.
     
     Args:
-        df_games: DataFrame with games (home, away, date, home_pts, away_pts)
+        df_games: Game results with teams and scores
     
     Returns:
-        DataFrame with Elo ratings
+        Same data but with Elo ratings added for each team
     """
     logger.info("📊 Computing Elo ratings...")
     
@@ -211,24 +214,12 @@ def build_comprehensive_features(df_games: pd.DataFrame) -> pd.DataFrame:
         logger.error(f"Error adding temporal features: {e}")
         logger.warning("Continuing without temporal features...")
     
-    # 5. Add injury/availability features (if available)
+    # 5. Add injury/availability placeholders (not used in pregame-only pipeline)
     logger.info("\n📊 Step 4: Adding injury/availability features...")
-    try:
-        from src.data.ingest.injury_fetcher import get_injury_fetcher
-        injury_fetcher = get_injury_fetcher()
-        
-        # Add placeholder injury features (will be populated when injury data is available)
-        df['home_injury_count'] = 0
-        df['away_injury_count'] = 0
-        df['home_key_player_injured'] = 0
-        df['away_key_player_injured'] = 0
-        
-    except Exception as e:
-        logger.warning(f"Injury features not available: {e}")
-        df['home_injury_count'] = 0
-        df['away_injury_count'] = 0
-        df['home_key_player_injured'] = 0
-        df['away_key_player_injured'] = 0
+    df['home_injury_count'] = 0
+    df['away_injury_count'] = 0
+    df['home_key_player_injured'] = 0
+    df['away_key_player_injured'] = 0
     
     # 6. Fill NaN values
     logger.info("\n📊 Step 5: Filling NaN values...")

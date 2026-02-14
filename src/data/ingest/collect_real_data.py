@@ -1,20 +1,10 @@
 """
-Collect Real NBA Player Stats Data (2017-2022)
+"""Pull actual NBA player stats from the official NBA API.
 
-Uses NBA Stats API to fetch actual historical player performance data.
-Saves to data/raw/player_stats.csv with targets for model training.
+We fetch real historical data from 2017-2022 and save it for training.
+This gets us the key stats: points, assists, rebounds, steals, blocks.
 
-Key Stats:
-  - PTS (Points)
-  - AST (Assists)
-  - REB (Rebounds)
-  - STL (Steals)
-  - BLK (Blocks)
-
-Output: player_stats.csv with columns:
-  date, season, player_id, player_name, team, opponent, 
-  PTS_actual, AST_actual, REB_actual, STL_actual, BLK_actual,
-  FG%, 3P%, FT%, usage_rate, pace
+Output: player_stats.csv with everything we need to train models on
 """
 
 import pandas as pd

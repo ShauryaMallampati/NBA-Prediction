@@ -1,10 +1,10 @@
 """
-Lineup Fetcher using nba_api (FREE, no API key needed)
+"""Get lineup data using the nba_api package (free, no key needed).
 
-Fetches:
-- Starting lineups
-- Player rotations
-- Lineup performance metrics
+We fetch:
+- Starting lineups for each game
+- Player rotations during the game
+- How different lineup combos performed
 """
 
 import logging
@@ -28,10 +28,10 @@ logger = logging.getLogger(__name__)
 
 
 class LineupFetcher:
-    """Fetch NBA lineups and rotations."""
+    """Pull lineup and rotation data from the NBA API."""
     
     def __init__(self):
-        """Initialize lineup fetcher."""
+        """Set up the lineup fetcher."""
         self.client = get_nba_client()
         self.cache = get_cache_manager()
         self.nba_api_available = NBA_API_AVAILABLE

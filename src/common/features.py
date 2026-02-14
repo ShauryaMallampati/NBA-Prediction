@@ -10,16 +10,16 @@ logger = logging.getLogger(__name__)
 
 def _mov_multiplier(margin: float) -> float:
     """
-    FiveThirtyEight-style margin-of-victory multiplier.
-    Compresses blowouts so a 20-pt win isn't 2x a 10-pt win.
-    Formula: ln(abs(margin) + 1) * (2.2 / (elo_diff * 0.001 + 2.2))
-    Simplified version without elo_diff dependency for use in update.
+    Adjust Elo changes based on margin of victory (FiveThirtyEight style).
+    
+    A 20-point win shouldn't count as twice as important as a 10-point win,
+    so we compress the impact of blowouts using logarithms.
     """
     return np.log1p(abs(margin)) * 0.8
 
 
 def calculate_elo(df: pd.DataFrame, k: int = 20, home_advantage: float = 100) -> pd.DataFrame:
-    """Calculate ELO ratings for all teams across all games."""
+    """Calculate Elo ratings for every team as the season progresses."""
     elo_ratings = {}
     default_elo = 1500
     elo_home_list, elo_away_list, elo_diff_list, elo_win_prob_list = [], [], [], []
@@ -54,7 +54,7 @@ def calculate_elo(df: pd.DataFrame, k: int = 20, home_advantage: float = 100) ->
     return df
 
 def add_rest_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Add rest day features."""
+    """Add features about how many days of rest each team has."""
     df = df.sort_values('date').reset_index(drop=True)
     last_game = {}
     home_rest, away_rest = [], []

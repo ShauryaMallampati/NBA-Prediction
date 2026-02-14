@@ -1,16 +1,14 @@
-"""Unified NBA API Client with multiple data source support.
+"""One unified client for NBA data from multiple sources.
 
-Supports:
-- nba_api Python package (FREE - stats.nba.com official data)
-- The Odds API (betting odds)
-- BallDontLie API (backup, requires key)
-- RapidAPI NBA-API (backup, requires key)
+We support:
+- nba_api Python package (FREE - official stats.nba.com data)
+- BallDontLie API (backup option, needs API key)
 
-Features:
-- Automatic failover between sources
-- Rate limiting and backoff
-- Response caching
-- Error handling and logging
+Key features:
+- Automatic fallback if one source fails
+- Rate limiting so we don't get blocked
+- Caching to avoid repeat requests
+- Smart error handling and logging
 """
 
 import os
@@ -44,19 +42,16 @@ logger = logging.getLogger(__name__)
 # API Keys from environment
 BALLDONTLIE_API_KEY = os.getenv("BALLDONTLIE_API_KEY", "")
 SPORTSDATA_API_KEY = os.getenv("SPORTSDATA_API_KEY", "")
-RAPIDAPI_KEY = os.getenv("NBA_STATS_API_KEY", "")
-ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
 
 # Rate limiting configuration
 RATE_LIMITS = {
     "balldontlie": {"requests_per_minute": 60, "last_request": 0, "request_count": 0},
     "sportsdata": {"requests_per_minute": 100, "last_request": 0, "request_count": 0},
-    "rapidapi": {"requests_per_minute": 50, "last_request": 0, "request_count": 0},
 }
 
 
 def rate_limit(source: str):
-    """Decorator to enforce rate limiting per API source."""
+    """Rate limit decorator to avoid hammering the APIs too hard."""
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -84,14 +79,14 @@ def rate_limit(source: str):
 
 
 class NBAAPIClient:
-    """Unified NBA API client with multi-source support."""
+    """One client to rule them all - pulls from multiple NBA data sources."""
     
     def __init__(self, preferred_source: str = "nba_api"):
         """
-        Initialize NBA API client.
+        """Set up the client and choose which API to use first.
         
         Args:
-            preferred_source: Primary data source ('nba_api', 'balldontlie', 'rapidapi')
+            preferred_source: Which API to try first ('nba_api' or 'balldontlie')
         """
         self.preferred_source = preferred_source
         self.session = requests.Session()
@@ -160,7 +155,7 @@ class NBAAPIClient:
             except Exception as e:
                 logger.warning(f"nba_api failed: {e}")
         
-        # Fallback to BallDontLie or RapidAPI
+        # Fallback to BallDontLie
         return self._get_games_fallback(date_str)
     
     def get_teams(self) -> List[Dict]:
@@ -353,44 +348,6 @@ class NBAAPIClient:
         logger.warning(f"Using fallback for games on {date_str}")
         return []
     
-    # ============================================================================
-    # ODDS API (THE-ODDS-API.COM)
-    # ============================================================================
-    
-    def get_odds(self, sport: str = "basketball_nba") -> List[Dict]:
-        """
-        Get current betting odds from The Odds API.
-        
-        Args:
-            sport: Sport key (default: basketball_nba)
-        
-        Returns:
-            List of odds dictionaries
-        """
-        logger.info(f"💰 Fetching odds for {sport}")
-        
-        base_url = "https://api.the-odds-api.com/v4/sports"
-        url = f"{base_url}/{sport}/odds"
-        
-        params = {
-            "apiKey": ODDS_API_KEY,
-            "regions": "us",
-            "markets": "h2h,spreads,totals",
-            "oddsFormat": "american"
-        }
-        
-        try:
-            response = self.session.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            odds_data = response.json()
-            
-            logger.info(f"✅ Found odds for {len(odds_data)} games")
-            return odds_data
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Odds API error: {e}")
-            return []
-
-
 # Singleton instance
 _api_client: Optional[NBAAPIClient] = None
 

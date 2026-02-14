@@ -1,12 +1,12 @@
 """
-Ensemble Model Trainer for NBA Game Predictions
+"""Train our ensemble of models for game predictions.
 
-Trains three models and combines them with weighted voting:
-- XGBoost (current best: 63.83%)
-- LightGBM (often beats XGBoost on tabular data)
-- CatBoost (handles categoricals better)
+We use three different models and blend their predictions:
+- XGBoost (currently hitting 63.83% accuracy)
+- LightGBM (often does well on structured data like ours)
+- CatBoost (great at handling team names and categorical features)
 
-Target: 70%+ accuracy
+Goal: Get to 70%+ accuracy by combining their strengths.
 """
 
 import pandas as pd
@@ -34,35 +34,35 @@ logger = logging.getLogger(__name__)
 
 
 class EnsembleTrainer:
-    """Train ensemble model with XGBoost, LightGBM, and CatBoost."""
+    """Our main ensemble system - trains and combines three models."""
     
     def __init__(self, output_dir: str = "artifacts/models/pregame"):
-        """Initialize ensemble trainer."""
+        """Set up the trainer with paths and empty model slots."""
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Models
+        # The raw models (before probability calibration)
         self.xgb_model = None
         self.lgb_model = None
         self.cat_model = None
         
-        # Calibrated models
+        # Calibrated versions (probabilities are more reliable)
         self.xgb_calibrated = None
         self.lgb_calibrated = None
         self.cat_calibrated = None
         
-        # v2 models (optional)
+        # Optional v2 components (if using stacking approach)
         self.et_calibrated = None
         self.meta_learner = None
         self.meta_scaler = None
         
-        # Weights for ensemble
+        # How much we trust each model (roughly equal)
         self.weights = {'xgb': 0.33, 'lgb': 0.33, 'cat': 0.34}
         
-        # Feature names
+        # What features we're using
         self.feature_names = None
         
-        # Performance metrics
+        # Track how well we're doing
         self.metrics = {}
         
         # Version
@@ -72,8 +72,10 @@ class EnsembleTrainer:
     
     def _add_rolling_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Add rolling window features (points avg, win%, etc.) 
-        computed ONLY from PAST games (no data leakage).
+        """Build rolling statistics from past games only.
+        
+        This is critical - we only look backwards in time so the model doesn't "cheat"
+        by seeing future data during training.
         """
         df = df.sort_values('date').reset_index(drop=True)
         

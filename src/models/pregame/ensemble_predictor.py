@@ -1,7 +1,8 @@
 """
-Ensemble Predictor for NBA Game Predictions
+"""Use our trained ensemble to predict NBA games.
 
-Loads trained ensemble model and makes predictions.
+Loads the three models (XGBoost, LightGBM, CatBoost) and combines
+their predictions with optimal weights.
 """
 
 import pickle
@@ -19,10 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 class EnsemblePredictor:
-    """Predictor using trained ensemble model."""
+    """Make predictions using the full ensemble."""
     
     def __init__(self, model_dir: str = "artifacts/models/pregame"):
-        """Initialize ensemble predictor."""
+        """Set up the ensemble predictor."""
         self.model_dir = Path(model_dir)
         self.trainer = EnsembleTrainer(output_dir=str(self.model_dir))
         self.loaded = False

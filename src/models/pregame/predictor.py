@@ -1,5 +1,5 @@
 """
-Ensemble predictor for loading and using trained models
+"""Load our trained models and use them to predict games.
 """
 import json
 import pickle
@@ -11,14 +11,14 @@ import numpy as np
 
 
 class EnsemblePredictor:
-    """Load and use trained ensemble models for prediction"""
+    """Load and use our trained ensemble to predict games."""
     
     def __init__(self, model_dir: str = "artifacts/models/pregame"):
         """
-        Initialize predictor by loading models
+        """Set up the predictor by loading all our saved models.
         
         Args:
-            model_dir: Directory containing saved model files
+            model_dir: Where we saved the trained models
         """
         self.model_dir = Path(model_dir)
         self.xgb_model = None
@@ -31,7 +31,7 @@ class EnsemblePredictor:
         self._load_models()
     
     async def load_async(self):
-        """Async version of model loading"""
+        """Load models asynchronously so we don't block."""
         import asyncio
         metadata_path = self.model_dir / "ensemble_metadata.json"
         
@@ -52,7 +52,7 @@ class EnsemblePredictor:
         self.cat_model = await asyncio.to_thread(read_pickle, self.model_dir / "cat_model.pkl")
 
     def _load_models(self):
-        """Load all model files (sync version)"""
+        """Load all our saved model files from disk."""
         # Load metadata
         metadata_path = self.model_dir / "ensemble_metadata.json"
         if not metadata_path.exists():

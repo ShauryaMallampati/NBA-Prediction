@@ -1,4 +1,4 @@
-"""Logging configuration."""
+"""Simple logging setup for the app."""
 
 import logging
 import sys
@@ -9,11 +9,11 @@ from src.common.config import settings
 
 
 def setup_logger(name: str, log_file: Optional[str] = None) -> logging.Logger:
-    """Set up logger with console and optional file handlers."""
+    """Create a logger that prints to console (and optionally to a file)."""
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, settings.log_level.upper()))
 
-    # Avoid duplicate handlers
+    # Don't add handlers twice
     if logger.handlers:
         return logger
 
@@ -22,12 +22,12 @@ def setup_logger(name: str, log_file: Optional[str] = None) -> logging.Logger:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # Console handler
+    # Print to console
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    # File handler
+    # Also save to file if requested
     if log_file:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)

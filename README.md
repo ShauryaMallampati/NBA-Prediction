@@ -1,60 +1,36 @@
-# NBA Prediction System v5
+# NBA Game Predictor
 
-**Multi-Modal Deep Learning for NBA Game Prediction**
+**Machine learning system that predicts NBA game outcomes**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Overview
+## What This Does
 
-Advanced NBA prediction system combining multiple deep learning modalities through an expert-weighted fusion architecture. The system processes pregame stats, player chemistry graphs, momentum sequences, video highlights, and audio commentary to generate accurate game predictions.
+This system predicts who'll win NBA games before they happen. It uses three different machine learning models (XGBoost, LightGBM, and CatBoost) and combines their predictions for better accuracy.
 
-## Key Features
+## What Makes It Work
 
-- **Multi-Modal World Model**: Combines 6+ data sources for comprehensive game analysis
-- **Expert Fusion**: Expert-weighted mechanism prioritizes high-signal modalities like Vision and Momentum
-- **Real-Time Predictions**: Live game predictions with uncertainty quantification
-- **Chemistry Analysis**: GNN-based team chemistry and lineup synergy modeling
-- **Momentum Tracking**: Transformer-based temporal momentum analysis
-- **Vision Processing**: CNN analysis of game highlights and player movements
-- **Interactive Dashboard**: Next.js web app with real-time updates
+- **Three Models Working Together**: XGBoost, LightGBM, and CatBoost vote on each game
+- **Smart Features**: Elo ratings, rest days, recent form, winning streaks
+- **Fast Predictions**: Processes all games in a day in seconds
 
-## Architecture
+## How It's Built
 
-![NBA World Model v5 Architecture](docs/assets/architecture_v5.png)
+The system is focused on pregame predictions. It looks at historical game results and team performance patterns to make predictions.
 
-The system uses a hierarchical World Model architecture:
-
-1. **Base Ensemble**: XGBoost + LightGBM on pregame features
-2. **Modality Modules**:
-   - Vision CNN: Video highlight analysis
-   - Audio Transformer: Commentary sentiment
-   - Optical Flow: Player movement patterns
-   - Chemistry GNN: Team synergy graphs
-   - Momentum Transformer: Temporal sequences
-3. **Weighted Consensus**: Expert-weighted mixing combines all modalities
-4. **Uncertainty Quantification**: Bayesian MC Dropout
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed system design.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full technical breakdown.
 
 ## Project Structure
 
 ```
 NBA-Prediction/
 ├── src/
-│   ├── models/          # Deep learning models
-│   │   ├── fusion/      # Expert fusion module
-│   │   ├── chemistry/   # GNN models
-│   │   ├── momentum/    # Transformer models
-│   │   ├── vision/      # CNN models
+│   ├── models/          # Model code
 │   │   └── pregame/     # Ensemble models
 │   ├── data/            # Data ingestion & preprocessing
-│   ├── services/        # API services
-│   └── api/             # FastAPI endpoints
-├── app/                 # Next.js frontend
+│   └── services/        # API services
 ├── scripts/             # Training & evaluation scripts
-├── tests/               # Unit tests
 └── docs/                # Documentation
 ```
 
@@ -63,7 +39,6 @@ NBA-Prediction/
 ### Prerequisites
 
 - Python 3.10+
-- Node.js 18+
 - Poetry (Python package manager)
 - CUDA-capable GPU (recommended)
 
@@ -77,148 +52,75 @@ cd NBA-Prediction
 # Install Python dependencies
 poetry install
 
-# Install Node.js dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your API keys
+# Set any required environment variables for optional data providers
 ```
 
-### Environment Variables
+Security tip: Never commit API keys or secrets. If you accidentally expose one, rotate it immediately through the provider's dashboard.
 
-Create a `.env` file with (see `.env.example` and `KEYS.md` for the full list):
+### Documentation & Citation
 
-```bash
-# API Keys (optional unless you enable live ingestion)
-NBA_STATS_API_KEY=your_key_here
-ODDS_API_KEY=your_key_here
-RAPIDAPI_KEY=your_key_here
+- Want to reproduce our results? Check `REPRODUCIBILITY.md`
+- Using this in a paper? See `CITATION.cff` for how to cite us
+- Found a security issue? Open a GitHub issue (no public exploits please)
 
-# Optional data providers
-BALLDONTLIE_API_KEY=your_key_here
-SPORTSDATA_API_KEY=your_key_here
-HIGHLIGHTS_API_KEY=your_key_here
+## Getting Started
 
-# Social + sentiment (optional)
-X_BEARER_TOKEN=your_key_here
-REDDIT_CLIENT_ID=your_key_here
-REDDIT_CLIENT_SECRET=your_key_here
-YOUTUBE_API_KEY=your_key_here
-
-# Travel model (optional)
-ORS_API_KEY=your_key_here
-
-# Supabase (optional)
-SUPABASE_URL=your_url_here
-SUPABASE_KEY=your_key_here
-
-# Frontend → backend bridge (optional)
-NEXT_PUBLIC_API_URL=http://localhost:8000
-
-# Model Paths
-MODEL_DIR=artifacts/models
-DATA_DIR=data
-```
-
-Security note: never commit real keys. If a key was ever exposed, rotate it immediately.
-For a quick reference on optional integrations, see `KEYS.md`.
-
-### Reproducibility & Citation
-
-- Reproducibility checklist and exact run order: `REPRODUCIBILITY.md`
-- How to cite this project in a paper: `CITATION.cff`
-- Responsible disclosure guidance: `SECURITY.md`
-
-## Quick Start
-
-### Train Models
+### Train the Models
 
 ```bash
 # Train base ensemble
-poetry run python scripts/train/train_ensemble.py
+poetry run python scripts/train_ensemble_fixed.py
 
-# Train chemistry GNN
-poetry run python scripts/train/train_chemistry.py
+# Train ensemble v2 (alt)
+poetry run python scripts/training/train_ensemble_v2.py
 
-# Train momentum transformer
-poetry run python scripts/train/train_momentum.py
+# Build pregame features
+poetry run python -m src.data.preprocess.build_pregame_features
 
-# Note: Fusion weights are now expert-defined (no training needed)
-# poetry run python scripts/train/train_fusion.py
+# Train ensemble
+poetry run python -m src.models.pregame.train_ensemble
 ```
 
-### Run Predictions
+### Make Predictions
 
 ```bash
 # Get today's predictions
-poetry run python scripts/predict/daily_predictions.py
-
-# Run web dashboard
-npm run dev
+poetry run python scripts/run_daily_predictions.py
 ```
 
 ### Run Tests
 
-```bash
-# Python tests
-poetry run pytest tests/ -v
+If you add tests, place them under `tests/` and run:
 
-# Check code quality
-poetry run black src/
-poetry run isort src/
+```bash
+poetry run pytest -v
 ```
 
-## Usage
+## Using It in Your Code
 
 ### Python API
 
 ```python
-from src.models.fusion.learnable_fusion import FusionModule # Expert Fusion Module
-from src.services.prediction_service import PredictionService
+from src.models.pregame.predictor import EnsemblePredictor
 
-# Initialize prediction service
-service = PredictionService()
+# Load trained ensemble
+predictor = EnsemblePredictor("artifacts/models/pregame")
 
-# Get predictions for today's games
-predictions = service.get_daily_predictions()
-
-for pred in predictions:
-    print(f"{pred.away_team} @ {pred.home_team}")
-    print(f"Winner: {pred.predicted_winner} ({pred.probability:.1%})")
-    print(f"Confidence: {pred.confidence}")
+# Predict on a pre-built feature set
+df = ...  # pandas DataFrame aligned to feature schema
+probs = predictor.predict(df)
+print(probs)
 ```
-
-### Web Dashboard
-
-```bash
-# Start development server
-npm run dev
-
-# Open browser to http://localhost:3000
-```
-
-Features:
-- Live game predictions
-- Team chemistry analysis
-- Historical accuracy metrics
-- Momentum tracking
-
-The Next.js app can read from local data in `data/` out of the box. To use the FastAPI backend instead, set `NEXT_PUBLIC_API_URL` in `.env`.
 
 ## Model Performance
 
-- **Game Winner Accuracy**: ~71% (Target with v5 Expert Fusion)
-- **Against Spread**: ~56% (Target)
-- **Calibration Error**: < 3% (Bayesian Confidence)
+- **Game Winner Accuracy**: ~63-66% baseline (varies by season)
+- **Calibration**: Isotonic regression on ensemble outputs
 
 ## Data Sources
 
 - NBA Stats API (official stats)
 - Basketball Reference (historical data)
-- RapidAPI Sports (live odds)
-- YouTube (highlight videos)
-- Custom scrapers (commentary, social media)
 
 See [DATASET_ACKNOWLEDGMENTS.md](DATASET_ACKNOWLEDGMENTS.md) for full attribution.
 
@@ -240,8 +142,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - NBA Stats API for official game data
 - Basketball Reference for historical statistics
-- PyTorch and scikit-learn communities
-- Next.js and React ecosystems
+- scikit-learn, XGBoost, LightGBM, CatBoost communities
 
 ## Citation
 

@@ -1,16 +1,16 @@
 """
-Train LightGBM Models on Real NBA Data
+"""Train our models on actual NBA data from Basketball-Reference.
 
-Loads real player stats from Basketball-Reference archive files,
-engineers features, and trains 5 separate LightGBM models for:
+We load real player stats from archive files and train separate LightGBM
+models to predict:
   - Points (PTS)
-  - Assists (AST)  
+  - Assists (AST)
   - Rebounds (REB)
   - Steals (STL)
   - Blocks (BLK)
 
-Uses 2017-2020 as train, 2021 as val, 2022 as test.
-Saves models to artifacts/models/pregame/
+We split the data: 2017-2020 for training, 2021 for validation, 2022 for testing.
+Trained models get saved to artifacts/models/pregame/
 """
 
 import pandas as pd
@@ -29,7 +29,7 @@ from src.models.pregame.train_props_model import PlayerPropsLightGBMTrainer
 
 
 def load_real_player_stats() -> pd.DataFrame:
-    """Load real player stats from Basketball-Reference archives."""
+    """Pull in real player stats from our Basketball-Reference archive files."""
     logger.info("\n" + "="*80)
     logger.info("LOADING REAL NBA DATA FROM ARCHIVES")
     logger.info("="*80)
@@ -72,7 +72,7 @@ def load_real_player_stats() -> pd.DataFrame:
 
 
 def engineer_training_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Engineer features for model training."""
+    """Build the features we need for training our models."""
     logger.info("\n📊 Engineering features...")
     
     df = df.copy()
