@@ -3,28 +3,18 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-# lib/
-lib64/
-parts/
 sdist/
-var/
 wheels/
 *.egg-info/
-.installed.cfg
 *.egg
 
 # Virtual environments
+.venv/
 venv/
 env/
 ENV/
-.venv
 
 # IDEs
 .vscode/
@@ -37,102 +27,53 @@ ENV/
 .env
 .env.local
 
-# Data
-/data/*
-!data/.gitkeep
-artifacts/
-!artifacts/.gitkeep
+# Data — the repository ships no game data; see DATASET_ACKNOWLEDGMENTS.md
+/data/
 
-# Generated data files (dynamic, not source control)
-data/schedules/*.json
-data/metrics/**
-data/chemistry/
-data/processed/
-data/engineered_features/
-data/cache/
+# Trained model artifacts — regenerate with scripts/training/train_ensemble_v2.py
+/artifacts/
+*.pkl
+*.pth
+*.pt
+*.h5
+*.parquet
+
+# Training logs written by CatBoost next to the working directory
+catboost_info/
 
 # Logs
 logs/
 *.log
-
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb
-
-# macOS
-.DS_Store
-
-# Node
-node_modules/
-.next/
-out/
-dist/
-build/
-tsconfig.tsbuildinfo
-*.tsbuildinfo
-.turbo/
 
 # Testing
 .coverage
 htmlcov/
 .pytest_cache/
 
-# Misc
-*.parquet
-*.pkl
-*.h5
-*.pth
-# Old/duplicate architecture diagrams (keep only in docs/)
-System_Architecture.jpeg
-System_Architecture.png
-/System_Architecture_v*.jpeg
-# Kaggle credentials
-**/.kaggle/
-.kaggle/
-archive.zip
-cookies.json
-cookies.txt
-simulation_log.txt
-temp_auth_cookies.txt
-temp_selenium_cookies.txt
-download_log.txt
-simulation_debug.log
+# Notebooks
+.ipynb_checkpoints/
+*.ipynb
 
-# Training logs (saved as JSON in artifacts, but don't need in git)
-**/training_log.json
+# macOS
+.DS_Store
 
-# Aggressive test files (local testing only)
-scripts/eval/test_run_aggressive.py
-scripts/eval/aggressive_fusion.py
-data/temp_video_aggressive/
-analyze_trends.py
-
-# Video downloads / archives
+# Removed from this release, kept out of accidental commits.
+# The multimodal experiment (video, audio, chemistry, fusion) and the web
+# frontend are in the git history, not in the working tree.
+/lib/
+/supabase/
+node_modules/
+package-lock.json
 *.mp4
 *.mkv
 *.webm
 *.mov
-*.m4v
 *.avi
-*.flv
-*.ts
-*.m3u8
-*.part
-*.ytdl
-.downloaded.txt
 
-# Common Drive mount or sync paths (if accidentally placed in repo)
-/mnt/gdrive/
-/drive/
-/drive/My Drive/
-/drive/My Drive/nba videos/
-/Users/*/Google Drive/
-/Users/*/My Drive/
-
-# Google Drive OAuth & Cache
+# Credentials — nothing here needs any, but keep the guard
+.kaggle/
+**/.kaggle/
 credentials.json
-drive_credentials.json
 token.json
-/.config/nba_drive/
-.gdrive_cache_index.json
-simulation_gdrive.log
+cookies.json
+cookies.txt

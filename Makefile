@@ -1,47 +1,39 @@
-.PHONY: help setup up down data train-pregame serve test clean
+.PHONY: help install data train predict eval test check clean
 
 help:
-	@echo "NBA Intelligence Platform - Make targets:"
-	@echo "  setup            - Install Python deps; install pre-commit"
-	@echo "  up               - Start Postgres + Redis via Docker"
-	@echo "  down             - Stop services"
-	@echo "  data             - Build pregame features from raw data"
-	@echo "  train-pregame    - Train ensemble + calibration; save artifacts"
-	@echo "  serve            - Start FastAPI"
-	@echo "  test             - Run pytest suite"
-	@echo "  clean            - Remove artifacts and caches"
+	@echo "NBA Game Predictor - make targets:"
+	@echo "  install  - Install Python dependencies with Poetry"
+	@echo "  data     - Build data/nba_games_enhanced.csv from the Kaggle dataset"
+	@echo "  train    - Train the ensemble and save artifacts/models/pregame/"
+	@echo "  predict  - Predict one example game (see scripts/predict.py --help)"
+	@echo "  eval     - Walk-forward holdout evaluation of the trained ensemble"
+	@echo "  test     - Run the test suite"
+	@echo "  check    - Byte-compile everything, then run the test suite"
+	@echo "  clean    - Remove __pycache__ and build caches"
 
-setup:
-	@echo "Installing Python dependencies..."
+install:
 	poetry install
-	@echo "Installing pre-commit hooks..."
-	poetry run pre-commit install
-	@echo "Setup complete!"
-
-up:
-	docker-compose up -d
-	@echo "Waiting for services to be healthy..."
-	@sleep 5
-	docker-compose ps
-
-down:
-	docker-compose down
 
 data:
-	poetry run python -m src.data.preprocess.build_pregame_features
+	poetry run python scripts/data_prep/process_kaggle_games.py
 
-train-pregame:
-	poetry run python -m src.models.pregame.train_ensemble
+train:
+	poetry run python scripts/training/train_ensemble_v2.py
 
+predict:
+	poetry run python scripts/predict.py --home Lakers --away Celtics --date 2025-01-15
 
-serve:
-	poetry run uvicorn src.services.api.main:app --reload --host 0.0.0.0 --port 8000
+eval:
+	poetry run python scripts/eval/evaluate_holdout.py
 
 test:
-	poetry run pytest -v
+	poetry run pytest -q
+
+check:
+	poetry run python -m compileall -q src scripts
+	poetry run pytest -q
 
 clean:
-	rm -rf artifacts/*.pkl artifacts/*.json
-	rm -rf data/cache/*
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
+	rm -rf .pytest_cache
