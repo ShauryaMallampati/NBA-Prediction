@@ -1,34 +1,50 @@
 # Contributing
 
-Thanks for checking this out — contributions are welcome.
+Contributions welcome.
 
-## Quick setup
+## Setup
 
 ```bash
 poetry install
 ```
 
-## What to run before a PR
+That is the whole setup. There is no frontend, no `.env`, no database, and no
+services to start. The test suite needs no data and no trained model artifacts.
+
+## Before opening a PR
 
 ```bash
+poetry run python -m compileall src scripts
 poetry run pytest -q
 ```
 
-If you changed data or model code, include a short note about the dataset snapshot
-and any new artifacts you generated (paths + sizes).
+Both run in CI on every push and pull request.
 
-## Code style
+## Ground rules
 
-- Match the existing style - keep things clean and easy to follow
-- Write comments that actually help (imagine you're explaining to a friend)
-- Don't hide problems with made-up defaults - surface issues clearly
+The point of this repository is that its claims hold up, so:
 
-## Secrets & data
+- **Don't add a number you can't point at.** Every accuracy figure in the docs
+  names the script that produced it and says what it measured. If you add a
+  result, say whether it is cross-validation, in-sample, or holdout, and over
+  which games.
+- **Don't let a future game into a feature.** Read state before you update it,
+  filter warm-up windows with a strict `<`, and keep outcome columns out of the
+  schema. `assert_no_leakage()` exists for this; `tests/test_chronology.py`
+  guards it.
+- **Don't paper over a failure.** No bare `except:` to keep a script running, no
+  placeholder constants standing in for real values, no defaults that invent
+  data. If something is missing, raise and say what is missing.
+- **Tests should be able to fail.** Don't mock the thing under test, and don't
+  compute an expected value by calling the function you are testing.
 
-- Never commit real API keys. Use local environment variables.
-- Big data stays out of git. If needed, describe how to reproduce it.
+## Style
 
-## Pull requests
+Match the surrounding code. Comments should explain why, not restate the line
+below them.
 
-- Explain the problem and the solution in a few sentences.
-- Call out any breaking changes or data migrations.
+## Data and secrets
+
+- Never commit API keys. Nothing in this repository needs one.
+- Game logs and model artifacts stay out of git — they are gitignored. Describe
+  how to regenerate them instead.

@@ -1,162 +1,206 @@
 # NBA Game Predictor
 
-**Machine learning system that predicts NBA game outcomes**
+A chronological pregame NBA winner-prediction pipeline using tabular
+team-performance features and an ensemble of tree-based models.
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What This Does
+Given two teams and a date, it returns the home team's win probability using only
+information available before tip-off.
 
-This system predicts who'll win NBA games before they happen. It uses three different machine learning models (XGBoost, LightGBM, and CatBoost) and combines their predictions for better accuracy.
+## What's in this release
 
-## What Makes It Work
+**Models** — four base models trained on the same 80 features, stacked by a
+logistic-regression meta-learner:
 
-- **Three Models Working Together**: XGBoost, LightGBM, and CatBoost vote on each game
-- **Smart Features**: Elo ratings, rest days, recent form, winning streaks
-- **Fast Predictions**: Processes all games in a day in seconds
+| Model | Why it's in there |
+| --- | --- |
+| XGBoost | gradient boosting |
+| LightGBM | leaf-wise boosting |
+| CatBoost | ordered boosting |
+| ExtraTrees | randomised bagging, to decorrelate the three boosters |
 
-## How It's Built
+**Features** — 80 columns, all derived from past games by a single incremental
+state machine (`RunningWorldState`): Elo and margin-adjusted Elo, rolling win
+percentages and scoring over 5/10/20-game windows, Pythagorean expectation,
+strength of schedule, recent-form trends, rest and back-to-backs, streaks,
+head-to-head history, calendar context, and head-to-head differentials.
 
-The system is focused on pregame predictions. It looks at historical game results and team performance patterns to make predictions.
+**Evaluation** — chronological throughout. `TimeSeriesSplit` for cross-validation,
+a fixed date cutoff separating training from holdout seasons, and a walk-forward
+holdout evaluation that predicts each game before folding in its result.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full technical breakdown.
+**Calibration** — isotonic regression (`CalibratedClassifierCV`, fitted with a
+chronological CV) on every base model before it is saved.
 
-## Project Structure
+The same feature function runs at training time and at prediction time, so there
+is no separate serving path that can drift.
 
-```
-NBA-Prediction/
-├── src/
-│   ├── models/          # Model code
-│   │   └── pregame/     # Ensemble models
-│   ├── data/            # Data ingestion & preprocessing
-│   └── services/        # API services
-├── scripts/             # Training & evaluation scripts
-└── docs/                # Documentation
-```
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full breakdown, including
+what stops future information from entering a feature.
+
+## A note on earlier versions
+
+Earlier versions of this project experimented with highlight video, crowd audio, a
+momentum sequence model, player-relationship features, and multimodal fusion.
+Those components were removed from the public release: evaluated against the
+tabular baseline, they did not change enough decisions to justify their
+complexity. They remain in the git history. Nothing in this release depends on
+them, and no claim here rests on measurements of them.
+
+## Performance
+
+Walk-forward evaluation on the 2024-25 season, which is after the `2024-10-01`
+training cutoff and was never trained on:
+
+| Metric | Value |
+| --- | --- |
+| Games | 1,383 |
+| Accuracy | **65.2%** |
+| AUC | 0.708 |
+| Log loss | 0.621 |
+| Brier score | 0.216 |
+| Always-pick-the-home-team baseline | 54.9% |
+
+This was produced by `scripts/eval/evaluate_holdout.py` in this repository, on
+trained artifacts and a full game log that are **not** included here (see
+[REPRODUCIBILITY.md](REPRODUCIBILITY.md)). Historical evaluation placed the system
+in the mid-60% range, but trained model artifacts and full datasets are not
+included in this repository, so you cannot reproduce that exact number from a
+fresh clone. You can reproduce the *method*: download the public dataset, retrain,
+and evaluate on your own holdout. Your number will differ.
+
+The training run also reports training-period cross-validation accuracies
+(64.4%–65.9% per base model). Those are in-training-period numbers and are not
+comparable to the holdout figure above.
 
 ## Installation
 
-### Prerequisites
-
-- Python 3.10+
-- Poetry (Python package manager)
-- CUDA-capable GPU (recommended)
-
-### Setup
+Requires Python 3.10+. No GPU.
 
 ```bash
-# Clone repository
 git clone https://github.com/ShauryaMallampati/NBA-Prediction.git
 cd NBA-Prediction
-
-# Install Python dependencies
 poetry install
-
-# Set any required environment variables for optional data providers
 ```
 
-Security tip: Never commit API keys or secrets. If you accidentally expose one, rotate it immediately through the provider's dashboard.
-
-### Documentation & Citation
-
-- Want to reproduce our results? Check `REPRODUCIBILITY.md`
-- Using this in a paper? See `CITATION.cff` for how to cite us
-- Found a security issue? Open a GitHub issue (no public exploits please)
-
-## Getting Started
-
-### Train the Models
+Or without Poetry:
 
 ```bash
-# Train base ensemble
-poetry run python scripts/train_ensemble_fixed.py
+pip install numpy pandas scikit-learn xgboost lightgbm catboost pytest
+```
 
-# Train ensemble v2 (alt)
+## Getting the data
+
+The repository ships no game data. Training needs a game log at
+`data/nba_games_enhanced.csv`.
+
+1. Download the [Kaggle basketball dataset](https://www.kaggle.com/datasets/wyattowalsh/basketball)
+   and put `Games.csv` in `data/kaggle_nba/`.
+2. Convert it:
+
+```bash
+poetry run python scripts/data_prep/process_kaggle_games.py
+```
+
+Any CSV with the columns `date, game_id, home, away, home_pts, away_pts, home_win`
+works, so you can substitute your own source.
+
+## Training
+
+```bash
 poetry run python scripts/training/train_ensemble_v2.py
-
-# Build pregame features
-poetry run python -m src.data.preprocess.build_pregame_features
-
-# Train ensemble
-poetry run python -m src.models.pregame.train_ensemble
 ```
 
-### Make Predictions
+Trains the four base models with chronological cross-validation, calibrates them,
+fits the meta-learner, and writes seven artifacts to `artifacts/models/pregame/`.
+Expect this to take a while on a full historical log, and expect the ExtraTrees
+artifact to be a few hundred MB.
+
+## Prediction
+
+Prediction requires trained artifacts — they are not distributed with this
+repository, so run the training step first. Without them the predictor raises
+`MissingArtifactsError` naming each missing file.
 
 ```bash
-# Get today's predictions
-poetry run python scripts/run_daily_predictions.py
+# one game
+poetry run python scripts/predict.py --home Lakers --away Celtics --date 2025-01-15
+
+# a slate, from a CSV with columns date,home,away
+poetry run python scripts/predict.py --games upcoming.csv --out predictions.jsonl
 ```
 
-### Run Tests
+Output is JSON Lines:
 
-If you add tests, place them under `tests/` and run:
-
-```bash
-poetry run pytest -v
+```json
+{"game_id": "2025-01-15_Celtics_at_Lakers", "date": "2025-01-15", "home": "Lakers", "away": "Celtics", "home_win_prob": 0.3935, "away_win_prob": 0.6065, "predicted_winner": "Celtics"}
 ```
 
-## Using It in Your Code
+Team names must match the names in your game log.
 
-### Python API
+From Python:
 
 ```python
 from src.models.pregame.predictor import EnsemblePredictor
 
-# Load trained ensemble
 predictor = EnsemblePredictor("artifacts/models/pregame")
-
-# Predict on a pre-built feature set
-df = ...  # pandas DataFrame aligned to feature schema
-probs = predictor.predict(df)
-print(probs)
+probabilities = predictor.predict(features_df)  # features_df from RunningWorldState
 ```
 
-## Model Performance
+## Evaluation
 
-- **Game Winner Accuracy**: ~63-66% baseline (varies by season)
-- **Calibration**: Isotonic regression on ensemble outputs
+```bash
+poetry run python scripts/eval/evaluate_holdout.py
+```
 
-## Data Sources
+Walks the holdout period in date order, predicting each game before its result is
+folded into team state. Reports accuracy, AUC, log loss, Brier score, and the
+home-team baseline.
 
-- NBA Stats API (official stats)
-- Basketball Reference (historical data)
+`scripts/eval/era_comparison.py` retrains on several start years to check whether
+older seasons still help. It trains one model per era, so it is slow.
 
-See [DATASET_ACKNOWLEDGMENTS.md](DATASET_ACKNOWLEDGMENTS.md) for full attribution.
+## Testing
+
+```bash
+poetry run pytest -q
+```
+
+The suite needs no data and no trained artifacts — it trains a small real ensemble
+on a synthetic game log. It covers the leakage guard, chronological ordering,
+deterministic replay, artifact validation, and the prediction interface end to end.
+
+## Project structure
+
+```
+src/common/features.py                  RunningWorldState + leakage guard
+src/models/pregame/train_ensemble_v2.py trainer
+src/models/pregame/predictor.py         inference
+scripts/data_prep/                      Kaggle → game log
+scripts/training/                       training entry point
+scripts/eval/                           holdout + era evaluation
+scripts/predict.py                      prediction CLI
+tests/                                  test suite
+```
+
+## Data sources
+
+- [Kaggle basketball dataset](https://www.kaggle.com/datasets/wyattowalsh/basketball) by Wyatt Walsh — historical game results.
+
+See [DATASET_ACKNOWLEDGMENTS.md](DATASET_ACKNOWLEDGMENTS.md) for licensing.
 
 ## Contributing
 
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-- NBA Stats API for official game data
-- Basketball Reference for historical statistics
-- scikit-learn, XGBoost, LightGBM, CatBoost communities
-
-## Citation
-
-If you use this code in your research, please cite:
-
-```bibtex
-@software{mallampati2025nba,
-  title={Multi-Modal Deep Learning for NBA Game Prediction},
-  author={Mallampati, Shaurya},
-  year={2025},
-  url={https://github.com/ShauryaMallampati/NBA-Prediction}
-}
-```
-
-## Contact
-
-For questions or collaboration: [GitHub Issues](https://github.com/ShauryaMallampati/NBA-Prediction/issues)
+Built on scikit-learn, XGBoost, LightGBM and CatBoost. The Elo and Pythagorean
+formulations follow the approaches popularised by FiveThirtyEight and
+Basketball-Reference.
