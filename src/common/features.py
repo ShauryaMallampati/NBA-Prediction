@@ -2,10 +2,72 @@ import pandas as pd
 import numpy as np
 import logging
 from datetime import datetime
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, Iterable, List, Tuple, Optional
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
+
+
+# Columns that describe how a game actually finished. None of these are known
+# before tip-off, so none of them may ever appear in a pregame feature vector.
+# Both the trainer and the predictor check incoming schemas against this set.
+LEAKAGE_COLUMNS = frozenset({
+    "home_score",
+    "away_score",
+    "home_pts",
+    "away_pts",
+    "score_diff",
+    "point_diff",
+    "margin",
+    "margin_of_victory",
+    "total_pts",
+    "total_points",
+    "home_win",
+    "away_win",
+    "winner",
+    "outcome",
+    "result",
+    "final_score",
+})
+
+
+class LeakageError(ValueError):
+    """Raised when a feature schema contains a post-game outcome column."""
+
+
+def sort_games_chronologically(df: pd.DataFrame) -> pd.DataFrame:
+    """Order a game log by date, deterministically.
+
+    A plain `sort_values('date')` uses an unstable sort, so the ~10 games that
+    share a calendar date can come out in a different order depending on how the
+    frame was filtered beforehand. Since state is updated game by game, that
+    changes the features of later same-day games and makes training runs
+    irreproducible. Sorting on (date, game_id) with a stable sort pins the order.
+
+    Note that same-day games are still replayed in sequence, so a game inherits
+    the results of earlier games on its own date. The log has date granularity,
+    not tip-off times, so this ordering is a convention rather than true
+    chronology; see docs/ARCHITECTURE.md.
+    """
+    keys = ["date"] + (["game_id"] if "game_id" in df.columns else [])
+    return df.sort_values(keys, kind="stable").reset_index(drop=True)
+
+
+def assert_no_leakage(columns: Iterable[str]) -> None:
+    """Fail loudly if a feature schema contains any post-game outcome column.
+
+    Args:
+        columns: The feature names about to be used for training or inference.
+
+    Raises:
+        LeakageError: If any column is a known target/outcome column.
+    """
+    offending = sorted(LEAKAGE_COLUMNS.intersection(columns))
+    if offending:
+        raise LeakageError(
+            "Post-game outcome columns are not valid pregame features: "
+            + ", ".join(offending)
+        )
 
 
 def _mov_multiplier(margin: float) -> float:

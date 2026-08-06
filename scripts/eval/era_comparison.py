@@ -72,11 +72,8 @@ def evaluate_with_era(df, era_start, cutoff='2024-10-01'):
         features = world_state2.get_team_features(row['home'], row['away'], row['date'])
         X_pred = pd.DataFrame([features]).reindex(columns=trainer.feature_names, fill_value=0.0)
         
-        try:
-            prob = trainer.predict_ensemble(X_pred)[0]
-        except:
-            prob = features.get('elo_win_prob', 0.5)
-        
+        prob = trainer.predict_ensemble(X_pred)[0]
+
         pred = 1 if prob > 0.5 else 0
         if pred == row['home_win']:
             correct += 1
@@ -91,18 +88,25 @@ def evaluate_with_era(df, era_start, cutoff='2024-10-01'):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv("data/nba_games_enhanced.csv")
+    games_path = Path("data/nba_games_enhanced.csv")
+    if not games_path.exists():
+        raise FileNotFoundError(
+            f"No game log at {games_path}. Run scripts/data_prep/process_kaggle_games.py first."
+        )
+
+    df = pd.read_csv(games_path)
     df['date'] = pd.to_datetime(df['date'])
-    
+
     results = {}
     for era in ['1996-10-01', '2004-10-01', '2014-10-01']:
         acc, _ = evaluate_with_era(df, era)
         results[era] = acc
-    
+
     print("\n" + "=" * 60)
-    print("📊 ERA COMPARISON RESULTS")
+    print("📊 ERA COMPARISON RESULTS (2024-25 holdout accuracy)")
     print("=" * 60)
     for era, acc in results.items():
-        print(f"  {era}: {acc:.2f}%")
-    print(f"  Full history: 64.92% (from main v2 training)")
+        print(f"  trained from {era}: {acc:.2f}%")
+    print("\n  Note: each row trains a separate model, so this run overwrites")
+    print("  artifacts/models/pregame_era_* and takes a long time.")
     print("=" * 60)

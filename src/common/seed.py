@@ -3,15 +3,13 @@
 import random
 
 import numpy as np
-import torch
 
 
 def set_seed(seed: int = 42) -> None:
-    """Lock down all randomness to get repeatable results."""
+    """Lock down all randomness to get repeatable results.
+
+    The tree models take their own `random_state`/`random_seed` parameters (set in
+    `EnsembleTrainerV2`), so this only covers the stdlib and NumPy generators.
+    """
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-    if torch.backends.mps.is_available():
-        torch.mps.manual_seed(seed)

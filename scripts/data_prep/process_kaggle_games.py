@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""
-Process Kaggle NBA Games data for Momentum Transformer training.
+"""Turn the Kaggle NBA dataset into the flat game log the trainer reads.
 
-This script converts the comprehensive historical dataset (72,000+ games)
-into the format needed for training.
+Input:  data/kaggle_nba/Games.csv  (from kaggle.com/datasets/wyattowalsh/basketball)
+Output: data/nba_games_enhanced.csv
+
+The output has one row per completed game with the columns every downstream step
+expects: date, game_id, home, away, home_pts, away_pts, home_win, margin.
+Note that home_pts/away_pts/home_win/margin are outcome columns — they are used to
+build the training target and to update team state after a game, never as features.
 """
 
 import pandas as pd
@@ -20,6 +24,12 @@ def main():
     print("=" * 60)
     
     # Load data
+    if not INPUT_FILE.exists():
+        raise FileNotFoundError(
+            f"{INPUT_FILE} not found. Download the Kaggle dataset "
+            "'wyattowalsh/basketball' and place Games.csv there."
+        )
+
     print(f"\n📂 Loading data from {INPUT_FILE}...")
     df = pd.read_csv(INPUT_FILE)
     print(f"   Found {len(df)} total games")

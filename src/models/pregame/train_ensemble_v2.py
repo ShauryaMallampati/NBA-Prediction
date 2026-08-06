@@ -1,14 +1,18 @@
-"""
-"""Ensemble Model Trainer v2 - Inspired by FiveThirtyEight's approach
+"""Ensemble trainer for the pregame model.
 
-What we're doing here:
-1. Training 4 different models (XGBoost, LightGBM, CatBoost, ExtraTrees)
-2. Then training a "meta-model" that learns how to best combine them
-3. Using smart features like Elo ratings, recent form, strength of schedule
-4. Proper time-based validation (no peeking into the future!)
-5. Calibrating probabilities so when we say 70%, it really means 70%
+What this does:
+1. Trains 4 base models (XGBoost, LightGBM, CatBoost, ExtraTrees)
+2. Trains a logistic-regression meta-learner to combine their probabilities
+3. Builds features with RunningWorldState (Elo, recent form, strength of schedule)
+4. Validates chronologically with TimeSeriesSplit — no fold trains on a later game
+5. Calibrates each base model with isotonic regression
 
-Expected accuracy: 65%+ (that's really good for NBA - Vegas hits around 67%)
+A note on the numbers this prints: the four base-model accuracies are means over
+out-of-fold predictions, so they are honest held-out estimates. The meta-learner
+accuracy is measured on the same out-of-fold rows the meta-learner was fitted on,
+which makes it optimistic — treat it as a training-set diagnostic, not as an
+out-of-sample result. For a clean estimate, evaluate on seasons after the training
+cutoff with `scripts/eval/evaluate_holdout.py`.
 """
 
 import pandas as pd
@@ -31,13 +35,14 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import accuracy_score, roc_auc_score, log_loss, brier_score_loss
 from sklearn.preprocessing import StandardScaler
 
+from src.common.features import assert_no_leakage
+
 warnings.filterwarnings('ignore')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class EnsembleTrainerV2:
-    """
     """Our ensemble prediction system with stacked models.
     
     Think of it like getting opinions from 4 different experts (XGBoost, LightGBM, 
@@ -80,7 +85,6 @@ class EnsembleTrainerV2:
     def prepare_features_from_games(self, games_df: pd.DataFrame, 
                                      cutoff_date: str = '2024-10-01',
                                      start_date: str = None) -> Tuple[pd.DataFrame, np.ndarray]:
-        """
         """Build training features using our game state tracker.
         This is important - we simulate "forward-only" state so the model never sees future data.
         
@@ -90,12 +94,13 @@ class EnsembleTrainerV2:
             start_date: Don't train on anything before this (optional)
                         earlier games for warmup/state building
         """
-        from src.common.features import RunningWorldState
-        
+        from src.common.features import RunningWorldState, sort_games_chronologically
+
         logger.info("🔧 Computing features via RunningWorldState (zero train/test mismatch)...")
-        
-        games_df = games_df.sort_values('date').reset_index(drop=True)
+
+        games_df = games_df.copy()
         games_df['date'] = pd.to_datetime(games_df['date'])
+        games_df = sort_games_chronologically(games_df)
         
         # Filter to training period
         train_games = games_df[games_df['date'] < cutoff_date].copy()
@@ -150,7 +155,10 @@ class EnsembleTrainerV2:
         X = X.replace([np.inf, -np.inf], np.nan).fillna(0)
         
         self.feature_names = list(X.columns)
-        
+
+        # Refuse to train on anything that encodes the final score or the winner.
+        assert_no_leakage(self.feature_names)
+
         logger.info(f"✅ Prepared {len(X)} training samples with {len(self.feature_names)} features")
         logger.info(f"  Date range: {dates[0]} to {dates[-1]}")
         logger.info(f"  Home win rate: {y.mean():.3f}")
@@ -398,17 +406,17 @@ class EnsembleTrainerV2:
         )
         self.meta_learner.fit(meta_X_scaled, meta_y)
         
-        # Evaluate meta-learner
+        # Evaluate meta-learner. NOTE: this is scored on the same rows it was just
+        # fitted on, so it is an in-sample diagnostic, not a held-out estimate.
         meta_pred = self.meta_learner.predict_proba(meta_X_scaled)[:, 1]
         meta_acc = accuracy_score(meta_y, (meta_pred > 0.5).astype(int))
         meta_auc = roc_auc_score(meta_y, meta_pred)
-        logger.info(f"  ✅ Meta-learner: Acc={meta_acc:.4f}, AUC={meta_auc:.4f}")
-        
-        # Compare with simple average
+        logger.info(f"  ✅ Meta-learner (in-sample): Acc={meta_acc:.4f}, AUC={meta_auc:.4f}")
+
+        # Simple average of the same out-of-fold predictions — this one IS held out.
         avg_pred = np.mean(meta_X, axis=1)
         avg_acc = accuracy_score(meta_y, (avg_pred > 0.5).astype(int))
-        logger.info(f"  📊 Simple average: Acc={avg_acc:.4f}")
-        logger.info(f"  📈 Stacking gain: +{(meta_acc - avg_acc)*100:.2f}%")
+        logger.info(f"  📊 Simple average (out-of-fold): Acc={avg_acc:.4f}")
         
         # === STEP 3: Train final base models on ALL data ===
         logger.info("\n🏋️ Step 3: Training final base models on full data...")
@@ -470,13 +478,15 @@ class EnsembleTrainerV2:
         logger.info("\n" + "=" * 80)
         logger.info("🏆 ENSEMBLE v2 TRAINING COMPLETE")
         logger.info("=" * 80)
-        logger.info(f"  XGBoost:      CV Acc={xgb_mean:.4f}")
-        logger.info(f"  LightGBM:     CV Acc={lgb_mean:.4f}")
-        logger.info(f"  CatBoost:     CV Acc={cat_mean:.4f}")
-        logger.info(f"  ExtraTrees:   CV Acc={et_mean:.4f}")
-        logger.info(f"  Simple Avg:   Acc={avg_acc:.4f}")
-        logger.info(f"  Meta-Learner: Acc={meta_acc:.4f} (Stacking)")
-        logger.info(f"  Stacking Gain: +{(meta_acc - avg_acc)*100:.2f}%")
+        logger.info(f"  XGBoost:      out-of-fold Acc={xgb_mean:.4f}")
+        logger.info(f"  LightGBM:     out-of-fold Acc={lgb_mean:.4f}")
+        logger.info(f"  CatBoost:     out-of-fold Acc={cat_mean:.4f}")
+        logger.info(f"  ExtraTrees:   out-of-fold Acc={et_mean:.4f}")
+        logger.info(f"  Simple Avg:   out-of-fold Acc={avg_acc:.4f}")
+        logger.info(f"  Meta-Learner: in-sample   Acc={meta_acc:.4f} (optimistic)")
+        logger.info("")
+        logger.info("  These are training-period numbers. For a held-out estimate run:")
+        logger.info("    python scripts/eval/evaluate_holdout.py")
         logger.info("=" * 80)
         
         return self.metrics
@@ -546,6 +556,13 @@ class EnsembleTrainerV2:
             'architecture': 'stacking_4base_meta',
             'base_models': ['XGBoost', 'LightGBM', 'CatBoost', 'ExtraTrees'],
             'meta_learner': 'LogisticRegression',
+            'metric_definitions': {
+                'xgb/lgb/cat/et': 'mean accuracy over TimeSeriesSplit out-of-fold predictions',
+                'simple_avg': 'accuracy of the unweighted mean of the four out-of-fold predictions',
+                'meta': 'accuracy on the same out-of-fold rows the meta-learner was fitted on '
+                        '(in-sample; optimistic, not a held-out estimate)',
+                'scope': 'training period only, i.e. games before cutoff_date',
+            },
         }
         
         with open(self.output_dir / "ensemble_metadata.json", 'w') as f:
@@ -596,9 +613,15 @@ def main(start_date: str = None):
                 start_date = sys.argv[i + 1]
     
     # Load raw games data
-    games_path = "data/nba_games_enhanced.csv"
+    games_path = Path("data/nba_games_enhanced.csv")
+    if not games_path.exists():
+        raise FileNotFoundError(
+            f"No game log at {games_path}. Build one first:\n"
+            "  1. download the Kaggle 'wyattowalsh/basketball' dataset into data/kaggle_nba/\n"
+            "  2. python scripts/data_prep/process_kaggle_games.py"
+        )
     logger.info(f"📊 Loading games from {games_path}")
-    
+
     df = pd.read_csv(games_path)
     df['date'] = pd.to_datetime(df['date'])
     logger.info(f"  Loaded {len(df)} games ({df['date'].min()} to {df['date'].max()})")
@@ -626,12 +649,12 @@ def main(start_date: str = None):
         print(f"Training Era: games after {start_date}")
     print(f"Features: {len(trainer.feature_names)}")
     print(f"Training samples: {len(X)}")
-    print(f"\nBase Model CV Accuracy:")
+    print(f"\nBase model accuracy (out-of-fold, training period):")
     for model in ['xgb', 'lgb', 'cat', 'et']:
         print(f"  {model}: {metrics[model]['accuracy']:.4f}")
-    print(f"\nSimple Average: {metrics['simple_avg']['accuracy']:.4f}")
-    print(f"Meta-Learner (Stacking): {metrics['meta']['accuracy']:.4f}")
-    print(f"Stacking Gain: +{(metrics['meta']['accuracy'] - metrics['simple_avg']['accuracy'])*100:.2f}%")
+    print(f"\nSimple average (out-of-fold): {metrics['simple_avg']['accuracy']:.4f}")
+    print(f"Meta-learner (in-sample, optimistic): {metrics['meta']['accuracy']:.4f}")
+    print("\nFor a held-out estimate: python scripts/eval/evaluate_holdout.py")
     print("=" * 80)
     
     return trainer

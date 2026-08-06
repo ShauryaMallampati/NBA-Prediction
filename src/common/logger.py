@@ -1,17 +1,19 @@
 """Simple logging setup for the app."""
 
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Optional
 
-from src.common.config import settings
-
 
 def setup_logger(name: str, log_file: Optional[str] = None) -> logging.Logger:
-    """Create a logger that prints to console (and optionally to a file)."""
+    """Create a logger that prints to console (and optionally to a file).
+
+    Level comes from the LOG_LEVEL environment variable, defaulting to INFO.
+    """
     logger = logging.getLogger(name)
-    logger.setLevel(getattr(logging, settings.log_level.upper()))
+    logger.setLevel(getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO))
 
     # Don't add handlers twice
     if logger.handlers:
