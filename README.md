@@ -50,7 +50,7 @@ No trained model or scored held-out NBA dataset is bundled, so this repository d
 Prepare a local CSV or Parquet snapshot with `game_id`, `date`, `home`, `away`, and completed-game `home_pts`/`away_pts` (or binary `home_win`). Use consistent team identifiers and include chronological history before the evaluation period. The supported trainer keeps the existing exclusive training cutoff of **2024-10-01**.
 
 ```bash
-poetry run python -m src.models.pregame.train_ensemble data/raw/games.csv
+poetry run python scripts/train_ensemble_fixed.py --games data/raw/games.csv
 poetry run python scripts/evaluate_release.py \
   --games data/raw/games.csv \
   --model-dir artifacts/models/pregame \

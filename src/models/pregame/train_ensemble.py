@@ -10,7 +10,7 @@ import pickle
 import json
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Tuple
 import logging
 
 import xgboost as xgb
@@ -19,10 +19,7 @@ import catboost as cb
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import accuracy_score, roc_auc_score, log_loss, brier_score_loss
-import optuna
-
-# Import feature engineering functions
-from src.common.features import calculate_elo, add_rest_features, add_streak_features
+from src.common.features import add_rest_features, add_streak_features, calculate_elo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -65,22 +62,9 @@ class EnsembleTrainer:
         self.lgb_calibrated = None
         self.cat_calibrated = None
         
-        # Optional v2 components (if using stacking approach)
-        self.et_calibrated = None
-        self.meta_learner = None
-        self.meta_scaler = None
-        
-        # How much we trust each model (roughly equal)
         self.weights = {'xgb': 0.33, 'lgb': 0.33, 'cat': 0.34}
-        
-        # What features we're using
         self.feature_names = None
-        
-        # Track how well we're doing
         self.metrics = {}
-        
-        # Version
-        self.version = 1
         
         logger.info("Ensemble trainer initialized")
     
@@ -630,16 +614,7 @@ class EnsembleTrainer:
         return weights
     
     def predict_ensemble(self, X: pd.DataFrame) -> np.ndarray:
-        """
-        Make ensemble prediction.
-        Supports v2 stacking (meta-learner + ExtraTrees) if available.
-        
-        Args:
-            X: Features
-        
-        Returns:
-            Ensemble predictions (probabilities)
-        """
+        """Return weighted home-win probabilities from the calibrated ensemble."""
         if self.xgb_calibrated is None or self.lgb_calibrated is None or self.cat_calibrated is None:
             raise ValueError("Models not trained. Call train_all() first.")
         
@@ -648,25 +623,7 @@ class EnsembleTrainer:
         lgb_pred = self.lgb_calibrated.predict_proba(X)[:, 1]
         cat_pred = self.cat_calibrated.predict_proba(X)[:, 1]
         
-        # v2 stacking path
-        if self.meta_learner is not None and self.et_calibrated is not None:
-            et_pred = self.et_calibrated.predict_proba(X)[:, 1]
-            base_preds = np.column_stack([xgb_pred, lgb_pred, cat_pred, et_pred])
-            
-            meta_features = np.column_stack([
-                base_preds,
-                base_preds[:, 0] * base_preds[:, 1],
-                base_preds[:, 2] * base_preds[:, 3],
-                np.mean(base_preds, axis=1),
-                np.std(base_preds, axis=1),
-                np.max(base_preds, axis=1),
-                np.min(base_preds, axis=1),
-            ])
-            
-            meta_scaled = self.meta_scaler.transform(meta_features)
-            return self.meta_learner.predict_proba(meta_scaled)[:, 1]
-        
-        # v1 fallback: weighted average (renormalize if needed)
+        # Renormalize defensively in case metadata was written with rounded weights.
         w_xgb = self.weights.get('xgb', 0.33)
         w_lgb = self.weights.get('lgb', 0.33)
         w_cat = self.weights.get('cat', 0.34)
@@ -787,7 +744,7 @@ class EnsembleTrainer:
     async def load_models_async(self):
         """Async version of model loading."""
         import asyncio
-        logger.info("📂 Loading models async...")
+        logger.info("Loading models asynchronously")
         
         xgb_path = self.output_dir / "xgb_model.pkl"
         lgb_path = self.output_dir / "lgb_model.pkl"
@@ -821,96 +778,4 @@ class EnsembleTrainer:
             self.feature_names = metadata.get('feature_names', [])
         
         logger.info("Models loaded asynchronously")
-
-    def load_models(self):
-        """Load models from disk (sync). Supports v1 and v2 models."""
-        logger.info("📂 Loading models...")
-        
-        # Load individual models
-        xgb_path = self.output_dir / "xgb_model.pkl"
-        lgb_path = self.output_dir / "lgb_model.pkl"
-        cat_path = self.output_dir / "cat_model.pkl"
-        et_path = self.output_dir / "et_model.pkl"
-        meta_path = self.output_dir / "meta_learner.pkl"
-        scaler_path = self.output_dir / "meta_scaler.pkl"
-        metadata_path = self.output_dir / "ensemble_metadata.json"
-        for path in (xgb_path, lgb_path, cat_path, metadata_path):
-            if not path.is_file():
-                raise FileNotFoundError(f"Missing ensemble artifact: {path}")
-
-        if xgb_path.exists():
-            with open(xgb_path, 'rb') as f:
-                self.xgb_calibrated = pickle.load(f)
-        
-        if lgb_path.exists():
-            with open(lgb_path, 'rb') as f:
-                self.lgb_calibrated = pickle.load(f)
-        
-        if cat_path.exists():
-            with open(cat_path, 'rb') as f:
-                self.cat_calibrated = pickle.load(f)
-        
-        # v2 models
-        if et_path.exists():
-            with open(et_path, 'rb') as f:
-                self.et_calibrated = pickle.load(f)
-        
-        if meta_path.exists():
-            with open(meta_path, 'rb') as f:
-                self.meta_learner = pickle.load(f)
-        
-        if scaler_path.exists():
-            with open(scaler_path, 'rb') as f:
-                self.meta_scaler = pickle.load(f)
-        
-        if metadata_path.exists():
-            with open(metadata_path, 'r') as f:
-                metadata = json.load(f)
-                self.weights = metadata.get('weights', self.weights)
-                self.metrics = metadata.get('metrics', {})
-                self.feature_names = metadata.get('feature_names', [])
-                self.version = metadata.get('version', 1)
-        
-        v2_str = " (v2 stacking)" if self.meta_learner is not None else " (v1 weighted avg)"
-        logger.info("Models loaded%s", v2_str)
-
-
-def main():
-    """Main training function."""
-    import sys
-    from pathlib import Path
-    
-    # Get features path
-    if len(sys.argv) > 1:
-        features_path = sys.argv[1]
-    else:
-        features_path = "artifacts/features/pregame.parquet"
-    
-    # Initialize trainer
-    trainer = EnsembleTrainer()
-    
-    # Load data
-    X, y = trainer.load_data(features_path)
-    
-    # Train ensemble
-    metrics = trainer.train_all(X, y, cv_folds=5)
-    
-    # Save models
-    trainer.save_models()
-    
-    # Print results
-    print("\n" + "=" * 80)
-    print("ENSEMBLE TRAINING RESULTS")
-    print("=" * 80)
-    print(f"XGBoost:     Accuracy={metrics['xgb']['accuracy']:.3f}, AUC={metrics['xgb']['auc']:.3f}")
-    print(f"LightGBM:    Accuracy={metrics['lgb']['accuracy']:.3f}, AUC={metrics['lgb']['auc']:.3f}")
-    print(f"CatBoost:    Accuracy={metrics['cat']['accuracy']:.3f}, AUC={metrics['cat']['auc']:.3f}")
-    print(f"Ensemble:    Accuracy={metrics['ensemble']['accuracy']:.3f}, AUC={metrics['ensemble']['auc']:.3f}")
-    print("=" * 80)
-    
-    return trainer
-
-
-if __name__ == "__main__":
-    trainer = main()
 

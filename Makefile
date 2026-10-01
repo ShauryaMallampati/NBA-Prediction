@@ -24,7 +24,7 @@ serve:
 
 train-pregame:
 	@test -n "$(GAMES)" || (echo "Set GAMES to a completed-game CSV or Parquet snapshot"; exit 1)
-	poetry run python -m src.models.pregame.train_ensemble "$(GAMES)"
+	poetry run python scripts/train_ensemble_fixed.py --games "$(GAMES)"
 
 up:
 	docker compose up --build -d
