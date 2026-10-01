@@ -1,47 +1,33 @@
-.PHONY: help setup up down data train-pregame serve test clean
+.PHONY: help setup test lint build serve train-pregame up down
 
 help:
-	@echo "NBA Intelligence Platform - Make targets:"
-	@echo "  setup            - Install Python deps; install pre-commit"
-	@echo "  up               - Start Postgres + Redis via Docker"
-	@echo "  down             - Stop services"
-	@echo "  data             - Build pregame features from raw data"
-	@echo "  train-pregame    - Train ensemble + calibration; save artifacts"
-	@echo "  serve            - Start FastAPI"
-	@echo "  test             - Run pytest suite"
-	@echo "  clean            - Remove artifacts and caches"
+	@echo "setup: install dependencies; test: run offline tests; lint: check code"
+	@echo "build: build distributions; serve: start the local API"
+	@echo "train-pregame GAMES=path/to/games.csv: train on your completed-game snapshot"
+	@echo "up/down: start/stop the optional Docker API"
 
 setup:
-	@echo "Installing Python dependencies..."
-	poetry install
-	@echo "Installing pre-commit hooks..."
-	poetry run pre-commit install
-	@echo "Setup complete!"
-
-up:
-	docker-compose up -d
-	@echo "Waiting for services to be healthy..."
-	@sleep 5
-	docker-compose ps
-
-down:
-	docker-compose down
-
-data:
-	poetry run python -m src.data.preprocess.build_pregame_features
-
-train-pregame:
-	poetry run python -m src.models.pregame.train_ensemble
-
-
-serve:
-	poetry run uvicorn src.services.api.main:app --reload --host 0.0.0.0 --port 8000
+	poetry install --only main,dev
 
 test:
-	poetry run pytest -v
+	poetry run pytest -q
 
-clean:
-	rm -rf artifacts/*.pkl artifacts/*.json
-	rm -rf data/cache/*
-	find . -type d -name __pycache__ -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
+lint:
+	poetry run ruff check src scripts tests
+	poetry run python -m compileall -q src scripts tests
+
+build:
+	poetry build
+
+serve:
+	poetry run uvicorn src.services.api.main:app --host 127.0.0.1 --port 8000
+
+train-pregame:
+	@test -n "$(GAMES)" || (echo "Set GAMES to a completed-game CSV or Parquet snapshot"; exit 1)
+	poetry run python -m src.models.pregame.train_ensemble "$(GAMES)"
+
+up:
+	docker compose up --build -d
+
+down:
+	docker compose down
