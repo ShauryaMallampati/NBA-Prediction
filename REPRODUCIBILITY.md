@@ -2,7 +2,7 @@
 
 ## What is available
 
-The repository contains code and offline software tests, but no frozen trained NBA ensemble or scored held-out dataset. The bundled schedule contains no final scores and is not evaluation evidence. Synthetic test fixtures must not be reported as NBA performance.
+The repository contains code and offline software tests, but no frozen trained NBA ensemble, schedule feed, or scored held-out dataset. Synthetic test fixtures must not be reported as NBA performance.
 
 ## Input contract
 
@@ -18,7 +18,7 @@ Use one immutable CSV or Parquet snapshot containing both the earlier training h
 
 The contract supports one game per team per date. It rejects duplicates, missing teams/dates, invalid scores, and inconsistent labels. When scores are absent, scoring-history features retain their documented initial value; a score-complete snapshot is preferable.
 
-Obtain the data from a provider you are permitted to use. Record its name, exact dataset version/download date, original file hash, licensing terms, and any filtering/conversion steps. Historical scripts reference external data sources, but no pinned provider release has been recovered here; those source links alone do not reproduce an older result.
+Obtain the data from a provider you are permitted to use. Record its name, exact dataset version/download date, original file hash, licensing terms, and any filtering/conversion steps. Provider-specific ingestion prototypes are intentionally omitted from this release because no pinned provider snapshot was recovered; source links alone would not reproduce an older result.
 
 ## Fixed training/evaluation boundary
 

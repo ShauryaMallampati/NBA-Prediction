@@ -1,1 +1,1 @@
-"""Common utilities for NBA Intelligence Platform."""
+"""Shared utilities for the verified NBA pregame prediction pipeline."""

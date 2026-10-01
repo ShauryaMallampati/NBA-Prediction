@@ -82,7 +82,7 @@ class EnsembleTrainer:
         # Version
         self.version = 1
         
-        logger.info("🎯 Ensemble trainer initialized")
+        logger.info("Ensemble trainer initialized")
     
     @staticmethod
     def _add_rolling_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -242,7 +242,7 @@ class EnsembleTrainer:
         Returns:
             (X, y) tuple
         """
-        logger.info(f"📊 Loading data from {features_path}")
+        logger.info("Loading data from %s", features_path)
         
         features_path = Path(features_path)
         if not features_path.exists():
@@ -256,7 +256,7 @@ class EnsembleTrainer:
         
         df = self.engineer_game_rows(df)
         
-        logger.info(f"✅ Feature engineering complete: {len(df.columns)} total columns")
+        logger.info("Feature engineering complete: %d total columns", len(df.columns))
             
         # ENSURE PURE HOLDOUT: Exclude 2024-25 and 2025-26 seasons from TRAINING
         # Training cutoff: October 1st, 2024
@@ -297,11 +297,11 @@ class EnsembleTrainer:
         critical_features = ['elo_diff', 'rest_differential', 'elo_win_prob']
         for feat in critical_features:
             if feat not in X.columns:
-                logger.warning(f"⚠️ Critical feature missing: {feat}")
+                logger.warning("Critical feature missing: %s", feat)
             else:
-                logger.info(f"✅ Critical feature verified: {feat}")
+                logger.info("Critical feature verified: %s", feat)
         
-        logger.info(f"✅ Prepared {len(feature_cols)} features for {len(X)} games")
+        logger.info("Prepared %d features for %d games", len(feature_cols), len(X))
         logger.info(f"  Target distribution: {y.mean():.1%} home wins")
         
         return X, y
@@ -395,7 +395,7 @@ class EnsembleTrainer:
         self.xgb_model = final_model
         self.xgb_calibrated = calibrated_model
         
-        logger.info(f"✅ XGBoost trained: CV Accuracy={mean_cv_acc:.3f}, CV AUC={mean_cv_auc:.3f} (In-sample: {accuracy:.3f})")
+        logger.info("XGBoost trained: CV accuracy=%.3f, CV AUC=%.3f, in-sample accuracy=%.3f", mean_cv_acc, mean_cv_auc, accuracy)
         
         return metrics
     
@@ -497,7 +497,7 @@ class EnsembleTrainer:
         self.lgb_model = final_model
         self.lgb_calibrated = calibrated_model
         
-        logger.info(f"✅ LightGBM trained: CV Accuracy={mean_cv_acc:.3f}, CV AUC={mean_cv_auc:.3f} (In-sample: {accuracy:.3f})")
+        logger.info("LightGBM trained: CV accuracy=%.3f, CV AUC=%.3f, in-sample accuracy=%.3f", mean_cv_acc, mean_cv_auc, accuracy)
         
         return metrics
     
@@ -589,7 +589,7 @@ class EnsembleTrainer:
         self.cat_model = final_model
         self.cat_calibrated = calibrated_model
         
-        logger.info(f"✅ CatBoost trained: CV Accuracy={mean_cv_acc:.3f}, CV AUC={mean_cv_auc:.3f} (In-sample: {accuracy:.3f})")
+        logger.info("CatBoost trained: CV accuracy=%.3f, CV AUC=%.3f, in-sample accuracy=%.3f", mean_cv_acc, mean_cv_auc, accuracy)
         
         return metrics
     
@@ -605,7 +605,7 @@ class EnsembleTrainer:
         Returns:
             Dictionary with weights
         """
-        logger.info("⚖️ Calculating ensemble weights...")
+        logger.info("Calculating ensemble weights")
         
         # Calculate average CV accuracy for each model
         xgb_avg_acc = np.mean([s['accuracy'] for s in xgb_metrics['cv_scores']])
@@ -622,7 +622,7 @@ class EnsembleTrainer:
         
         self.weights = weights
         
-        logger.info(f"✅ Ensemble weights calculated:")
+        logger.info("Ensemble weights calculated:")
         logger.info(f"  XGBoost: {weights['xgb']:.3f} (CV acc: {xgb_avg_acc:.3f})")
         logger.info(f"  LightGBM: {weights['lgb']:.3f} (CV acc: {lgb_avg_acc:.3f})")
         logger.info(f"  CatBoost: {weights['cat']:.3f} (CV acc: {cat_avg_acc:.3f})")
@@ -745,7 +745,7 @@ class EnsembleTrainer:
     
     def save_models(self):
         """Save all models to disk."""
-        logger.info("💾 Saving models...")
+        logger.info("Saving models")
         
         if self.feature_names is None or any(model is None for model in (
                 self.xgb_calibrated, self.lgb_calibrated, self.cat_calibrated)):
@@ -782,7 +782,7 @@ class EnsembleTrainer:
         with open(self.output_dir / "ensemble_metadata.json", 'w') as f:
             json.dump(metadata, f, indent=2)
         
-        logger.info(f"✅ Models saved to {self.output_dir}")
+        logger.info("Models saved to %s", self.output_dir)
     
     async def load_models_async(self):
         """Async version of model loading."""
@@ -820,7 +820,7 @@ class EnsembleTrainer:
             self.metrics = metadata.get('metrics', {})
             self.feature_names = metadata.get('feature_names', [])
         
-        logger.info("✅ Models loaded async")
+        logger.info("Models loaded asynchronously")
 
     def load_models(self):
         """Load models from disk (sync). Supports v1 and v2 models."""
@@ -872,7 +872,7 @@ class EnsembleTrainer:
                 self.version = metadata.get('version', 1)
         
         v2_str = " (v2 stacking)" if self.meta_learner is not None else " (v1 weighted avg)"
-        logger.info(f"✅ Models loaded{v2_str}")
+        logger.info("Models loaded%s", v2_str)
 
 
 def main():

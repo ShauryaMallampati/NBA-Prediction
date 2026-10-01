@@ -19,7 +19,14 @@ Completed game history -> pregame features -> three calibrated classifiers
 
 Features are recorded before each game's result updates the history. The supported trainer selects an explicit feature list instead of admitting arbitrary box-score columns. Cross-validation diagnostics and training-set ensemble metrics are labeled separately; they are not interchangeable.
 
-The supported path is `src/models/pregame/train_ensemble.py` -> `predictor.py` -> `src/services/prediction_service.py`. Older momentum, player-prop, video, and alternate-ensemble experiments are not part of this verified path. Their optional dependencies are separated into Poetry's `legacy` group; installing that group does not imply those experiments have been validated.
+The supported path is `src/models/pregame/train_ensemble.py` -> `predictor.py` -> `src/services/prediction_service.py`. The release is intentionally scoped to that pregame path; evaluation uses a caller-supplied historical snapshot rather than bundling an unverifiable benchmark.
+
+## Engineering decisions
+
+- **Prevent leakage by construction:** feature history is updated only after each completed game, and temporal validation keeps whole game dates together.
+- **Persist the inference contract:** saved metadata records the exact feature order and ensemble weights; inference rejects missing columns, invalid class labels, and malformed probabilities.
+- **Fail closed:** missing or incompatible model artifacts return explicit errors/HTTP 503 instead of silently substituting placeholder predictions.
+- **Separate software correctness from model quality:** synthetic integration tests exercise real XGBoost, LightGBM, and CatBoost serialization without presenting those fixtures as NBA accuracy evidence.
 
 ## Quick start
 
