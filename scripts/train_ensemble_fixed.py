@@ -1,93 +1,31 @@
 #!/usr/bin/env python3
-"""
-🎯 TRAIN FIXED ENSEMBLE (with proper feature engineering)
-=========================================================
+"""Train the supported pregame ensemble using games before 2024-10-01."""
 
-This script trains the ensemble model WITH proper feature engineering:
-- Elo ratings (computed progressively, no leakage)
-- Rest features (days since last game)
-- Win/loss streaks
-- Rolling averages (last 5/10 games)
-
-All features are computed from PAST data only (no data leakage).
-
-Usage:
-    poetry run python scripts/train_ensemble_fixed.py
-
-Output:
-    artifacts/models/pregame_fixed/
-        - xgb_model.pkl
-        - lgb_model.pkl
-        - cat_model.pkl
-        - ensemble_metadata.json
-"""
-
+import argparse
 import sys
 from pathlib import Path
 
-# Add project root
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.models.pregame.train_ensemble import EnsembleTrainer
-import logging
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 
 def main():
-    logger.info("=" * 70)
-    logger.info("🎯 TRAINING FIXED ENSEMBLE (with feature engineering)")
-    logger.info("=" * 70)
-    
-    # Create output directory for fixed model
-    output_dir = "artifacts/models/pregame_fixed"
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
-    
-    # Initialize trainer
-    trainer = EnsembleTrainer(output_dir=output_dir)
-    
-    # Load and prepare data (this now computes features!)
-    logger.info("\n📊 Loading data and computing features...")
-    X, y = trainer.load_data("data/nba_games_enhanced.csv")
-    
-    logger.info(f"\n✅ Features computed:")
-    logger.info(f"   Total features: {len(trainer.feature_names)}")
-    logger.info(f"   Feature names: {trainer.feature_names[:20]}...")
-    
-    # Train models
-    logger.info("\n🌳 Training XGBoost...")
-    xgb_metrics = trainer.train_xgboost(X, y)
-    
-    logger.info("\n🌲 Training LightGBM...")
-    lgb_metrics = trainer.train_lightgbm(X, y)
-    
-    logger.info("\n🐱 Training CatBoost...")
-    cat_metrics = trainer.train_catboost(X, y)
-    
-    # Save models
-    logger.info("\n💾 Saving models...")
-    trainer.save_models()
-    
-    # Print summary
-    logger.info("\n" + "=" * 70)
-    logger.info("✅ FIXED ENSEMBLE TRAINING COMPLETE")
-    logger.info("=" * 70)
-    logger.info(f"   Output dir: {output_dir}")
-    logger.info(f"   Features:   {len(trainer.feature_names)}")
-    logger.info(f"   XGBoost CV: {xgb_metrics.get('accuracy', 0):.1%}")
-    logger.info(f"   LightGBM CV: {lgb_metrics.get('accuracy', 0):.1%}")
-    logger.info(f"   CatBoost CV: {cat_metrics.get('accuracy', 0):.1%}")
-    logger.info("=" * 70)
-    
-    # Compare to baseline
-    logger.info("\n📈 Expected improvement:")
-    logger.info("   Old (no features): ~58%")
-    logger.info("   New (with features): ~65%+ (should match Elo baseline)")
-    logger.info("   Full model (+ modalities): ~71%+ target")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--games", type=Path, required=True, help="Completed-game CSV/Parquet")
+    parser.add_argument("--output-dir", type=Path, default=Path("artifacts/models/pregame"))
+    parser.add_argument("--estimators", type=int, default=300)
+    parser.add_argument("--threads", type=int, default=1)
+    parser.add_argument("--folds", type=int, default=5)
+    args = parser.parse_args()
+    try:
+        trainer = EnsembleTrainer(args.output_dir, n_estimators=args.estimators, threads=args.threads)
+        features, labels = trainer.load_data(args.games)
+        trainer.train_all(features, labels, cv_folds=args.folds)
+        trainer.save_models()
+    except (OSError, ValueError, RuntimeError) as exc:
+        parser.exit(2, f"Training failed: {exc}\n")
+    print(f"Saved models to {args.output_dir}. Training diagnostics are not held-out results.")
 
 
 if __name__ == "__main__":

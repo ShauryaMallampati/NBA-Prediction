@@ -35,7 +35,8 @@ ENV/
 
 # Environment
 .env
-.env.local
+.env.*
+!.env.example
 
 # Data
 /data/*
@@ -72,10 +73,12 @@ tsconfig.tsbuildinfo
 *.tsbuildinfo
 .turbo/
 
-# Testing
+# Testing and generated training diagnostics
 .coverage
 htmlcov/
 .pytest_cache/
+.ruff_cache/
+catboost_info/
 
 # Misc
 *.parquet

@@ -1,4 +1,3 @@
-"""
 """Merge all our Basketball-Reference archive data into one big dataset.
 
 We pull from multiple data files:

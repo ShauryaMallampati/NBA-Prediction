@@ -1,12 +1,7 @@
-"""
-"""Train our ensemble of models for game predictions.
+"""Train a calibrated XGBoost, LightGBM, and CatBoost pregame ensemble.
 
-We use three different models and blend their predictions:
-- XGBoost (currently hitting 63.83% accuracy)
-- LightGBM (often does well on structured data like ours)
-- CatBoost (great at handling team names and categorical features)
-
-Goal: Get to 70%+ accuracy by combining their strengths.
+Cross-validation metrics and training-set diagnostics are reported separately.
+Neither is a substitute for evaluating the frozen ensemble on later games.
 """
 
 import pandas as pd
@@ -34,10 +29,29 @@ logger = logging.getLogger(__name__)
 
 
 class EnsembleTrainer:
-    """Our main ensemble system - trains and combines three models."""
+    """Train and persist the supported three-model pregame ensemble."""
+
+    FEATURE_NAMES = [
+        'elo_home', 'elo_away', 'elo_diff', 'elo_win_prob', 'elo_p_home',
+        'home_adv_flag', 'home_court_adv', 'home_rest_days', 'away_rest_days',
+        'rest_differential', 'home_rest_advantage', 'away_rest_advantage',
+        'home_back_to_back', 'away_back_to_back', 'home_win_streak',
+        'away_win_streak', 'home_loss_streak', 'away_loss_streak',
+        'home_pts_avg_l10', 'away_pts_avg_l10', 'home_win_pct_l10',
+        'away_win_pct_l10', 'home_win_pct_l5', 'away_win_pct_l5',
+        'pts_avg_diff', 'win_pct_diff_l10', 'win_pct_diff_l5',
+    ]
     
-    def __init__(self, output_dir: str = "artifacts/models/pregame"):
+    def __init__(self, output_dir: str = "artifacts/models/pregame", *,
+                 n_estimators: int = 300, threads: int = 1):
         """Set up the trainer with paths and empty model slots."""
+        if any(isinstance(value, bool) or not isinstance(value, int) or value < 1
+               for value in (n_estimators, threads)):
+            raise ValueError("n_estimators and threads must be positive integers")
+        self.n_estimators = n_estimators
+        self.threads = threads
+        self.training_data = None
+        self.training_dates = None
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
@@ -70,8 +84,8 @@ class EnsembleTrainer:
         
         logger.info("🎯 Ensemble trainer initialized")
     
-    def _add_rolling_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
+    @staticmethod
+    def _add_rolling_features(df: pd.DataFrame) -> pd.DataFrame:
         """Build rolling statistics from past games only.
         
         This is critical - we only look backwards in time so the model doesn't "cheat"
@@ -85,7 +99,6 @@ class EnsembleTrainer:
         
         # Output columns
         home_pts_avg_l10, away_pts_avg_l10 = [], []
-        home_pts_allowed_avg_l10, away_pts_allowed_avg_l10 = [], []
         home_win_pct_l10, away_win_pct_l10 = [], []
         home_win_pct_l5, away_win_pct_l5 = [], []
         
@@ -109,11 +122,6 @@ class EnsembleTrainer:
             a_wins_5 = team_wins_history.get(away, [])[-5:] or [0.5]
             home_win_pct_l5.append(np.mean(h_wins_5))
             away_win_pct_l5.append(np.mean(a_wins_5))
-            
-            # Points allowed (need opponent scoring)
-            # We'll compute this as a secondary pass or skip for now
-            home_pts_allowed_avg_l10.append(100)  # Placeholder
-            away_pts_allowed_avg_l10.append(100)  # Placeholder
             
             # UPDATE history AFTER using it (so no leakage)
             if pd.notna(row.get('home_pts')) and pd.notna(row.get('away_pts')):
@@ -142,6 +150,88 @@ class EnsembleTrainer:
         
         return df
     
+    @staticmethod
+    def prepare_game_rows(frame: pd.DataFrame) -> pd.DataFrame:
+        """Validate completed games before outcome-dependent state updates."""
+        frame = frame.copy()
+        for team in ('home', 'away'):
+            if team not in frame and f'{team}_team' in frame:
+                frame = frame.rename(columns={f'{team}_team': team})
+        required = {'date', 'home', 'away'}
+        if not required.issubset(frame.columns):
+            raise ValueError(f"Missing game columns: {sorted(required - set(frame.columns))}")
+        frame['date'] = pd.to_datetime(frame['date'], errors='raise')
+        if frame[list(required)].isna().any().any():
+            raise ValueError("Game dates and teams cannot be missing")
+        if frame['date'].dt.tz is not None:
+            raise ValueError("Use timezone-free game dates, not timestamps")
+        frame['date'] = frame['date'].dt.normalize()
+        for column in ('home', 'away'):
+            if not frame[column].map(lambda value: isinstance(value, str) and bool(value.strip())).all():
+                raise ValueError("Team names must be nonempty strings")
+            frame[column] = frame[column].str.strip()
+        if (frame['home'] == frame['away']).any():
+            raise ValueError("A team cannot play itself")
+        if frame.duplicated(['date', 'home', 'away']).any():
+            raise ValueError("Duplicate games are not allowed")
+        team_days = pd.concat([
+            pd.DataFrame({'day': frame['date'].dt.normalize(), 'team': frame[team]})
+            for team in ('home', 'away')
+        ], ignore_index=True)
+        if team_days.duplicated(['day', 'team']).any():
+            raise ValueError("The daily feature contract supports one game per team per day")
+        if 'home_pts' in frame and 'away_pts' in frame:
+            scores = frame[['home_pts', 'away_pts']].apply(pd.to_numeric, errors='raise')
+            if not np.isfinite(scores.to_numpy()).all() or (scores < 0).any().any():
+                raise ValueError("Completed-game scores must be finite and nonnegative")
+            if (scores['home_pts'] == scores['away_pts']).any():
+                raise ValueError("Completed NBA games cannot have tied final scores")
+            target = (scores['home_pts'] > scores['away_pts']).astype(int)
+            if 'home_win' in frame:
+                supplied = pd.to_numeric(frame['home_win'], errors='raise')
+                if not (supplied == target).all():
+                    raise ValueError("home_win disagrees with final scores")
+            frame[['home_pts', 'away_pts']] = scores
+            frame['home_win'] = target
+        elif 'home_win' not in frame:
+            raise ValueError("Completed games require home_win or both final scores")
+        if not frame['home_win'].isin([0, 1]).all():
+            raise ValueError("home_win must contain only 0 or 1")
+        return frame.sort_values('date', kind='stable').reset_index(drop=True)
+
+    @classmethod
+    def engineer_game_rows(cls, frame: pd.DataFrame) -> pd.DataFrame:
+        """Build the same causal features for both training and later evaluation.
+
+        Outcome-dependent state is updated after each game's features are read.
+        No team may appear twice on a date, so same-date row order is immaterial.
+        """
+        frame = cls.prepare_game_rows(frame)
+        frame = calculate_elo(frame, k=20, home_advantage=100)
+        frame = add_rest_features(frame)
+        frame = add_streak_features(frame)
+        return cls._add_rolling_features(frame)
+
+    def _temporal_splits(self, X, y, n_splits):
+        """Keep entire game dates together in expanding-window validation."""
+        dates = self.training_dates
+        if dates is None:
+            # Preserve direct feature-matrix training for callers that supply
+            # chronological rows. Without dates, no calendar provenance is
+            # recorded and the later-game evaluation command will reject it.
+            return list(TimeSeriesSplit(n_splits=n_splits).split(X))
+        if len(dates) != len(X):
+            raise ValueError("Training dates must align with the supplied feature rows")
+        unique_dates = np.unique(dates)
+        splits = []
+        for train_days, validation_days in TimeSeriesSplit(n_splits=n_splits).split(unique_dates):
+            train = np.flatnonzero(np.isin(dates, unique_dates[train_days]))
+            validation = np.flatnonzero(np.isin(dates, unique_dates[validation_days]))
+            if set(y.iloc[train].unique()) != {0, 1} or set(y.iloc[validation].unique()) != {0, 1}:
+                raise ValueError("Each temporal training and validation fold needs both outcomes")
+            splits.append((train, validation))
+        return splits
+
     def load_data(self, features_path: str) -> Tuple[pd.DataFrame, np.ndarray]:
         """
         Load features and prepare for training.
@@ -164,29 +254,7 @@ class EnsembleTrainer:
         else:
             df = pd.read_csv(features_path)
         
-        df['date'] = pd.to_datetime(df['date'])
-        
-        # ============================================================
-        # FEATURE ENGINEERING (Compute features from raw data)
-        # All features computed from PAST data only (no leakage)
-        # ============================================================
-        logger.info("🔧 Computing engineered features...")
-        
-        # 1. Elo ratings (computed progressively - each game uses only past data)
-        logger.info("  Computing Elo ratings...")
-        df = calculate_elo(df, k=20, home_advantage=100)
-        
-        # 2. Rest features (days since last game - known before game)
-        logger.info("  Computing rest features...")
-        df = add_rest_features(df)
-        
-        # 3. Win/loss streaks (computed from past games only)
-        logger.info("  Computing streak features...")
-        df = add_streak_features(df)
-        
-        # 4. Rolling averages (last N games - all from past)
-        logger.info("  Computing rolling features...")
-        df = self._add_rolling_features(df)
+        df = self.engineer_game_rows(df)
         
         logger.info(f"✅ Feature engineering complete: {len(df.columns)} total columns")
             
@@ -196,17 +264,23 @@ class EnsembleTrainer:
         df = df[df['date'] < '2024-10-01'].copy()
         holdout_count = full_count - len(df)
         
-        logger.info(f"✅ Loaded {len(df)} games for training (Held out {holdout_count} games for future audit)")
+        if df.empty:
+            raise ValueError("No completed training games before 2024-10-01")
+        import hashlib
+        self.training_data = {
+            'source_sha256': hashlib.sha256(features_path.read_bytes()).hexdigest(),
+            'start_date': df['date'].min().date().isoformat(),
+            'end_date': df['date'].max().date().isoformat(),
+            'cutoff_exclusive': '2024-10-01',
+            'games': len(df),
+            'home_win_rate': float(df['home_win'].mean()),
+        }
+        logger.info(f"Loaded {len(df)} training games; excluded {holdout_count} later games.")
         
-        # Extract features and target
-        # Exclude non-feature columns (identifiers, dates, and ACTUAL GAME OUTCOMES to prevent data leakage)
-        exclude_cols = ['game_id', 'date', 'home_team', 'away_team', 'home', 'away',
-                       'home_pts', 'away_pts', 'home_score', 'away_score',
-                       'home_win', 'away_win', 'score_diff', 'margin', 'total_pts',
-                       'season', 'year', 'month', 'day_of_week']
-        
-        feature_cols = [col for col in df.columns if col not in exclude_cols]
+        # Never select arbitrary raw box-score columns as pregame features.
+        feature_cols = list(self.FEATURE_NAMES)
         self.feature_names = feature_cols
+        self.training_dates = df['date'].to_numpy()
         
         # Target: home team wins
         if 'home_pts' in df.columns and 'away_pts' in df.columns:
@@ -259,14 +333,12 @@ class EnsembleTrainer:
             'lambda': 1.0,
             'alpha': 0.1,
             'random_state': 42,
-            'n_estimators': 300,
+            'n_jobs': self.threads,
+            'n_estimators': self.n_estimators,
         }
-        
-        # Time-series cross-validation
-        tscv = TimeSeriesSplit(n_splits=cv_folds)
+
         cv_scores = []
-        
-        for fold, (train_idx, val_idx) in enumerate(tscv.split(X)):
+        for fold, (train_idx, val_idx) in enumerate(self._temporal_splits(X, y, cv_folds)):
             X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
             y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
             
@@ -292,9 +364,9 @@ class EnsembleTrainer:
         # Train final model on all data
         final_model = xgb.XGBClassifier(**params)
         final_model.fit(X, y)
-        
-        # Calibrate
-        ts_cv = TimeSeriesSplit(n_splits=3)
+
+        # Calibration also uses complete, chronologically separated game dates.
+        ts_cv = self._temporal_splits(X, y, 3)
         calibrated_model = CalibratedClassifierCV(final_model, method='isotonic', cv=ts_cv)
         calibrated_model.fit(X, y)
         
@@ -355,15 +427,13 @@ class EnsembleTrainer:
             'lambda_l1': 0.1,
             'lambda_l2': 1.0,
             'random_state': 42,
-            'n_estimators': 300,
+            'num_threads': self.threads,
+            'n_estimators': self.n_estimators,
             'verbose': -1,
         }
-        
-        # Time-series cross-validation
-        tscv = TimeSeriesSplit(n_splits=cv_folds)
+
         cv_scores = []
-        
-        for fold, (train_idx, val_idx) in enumerate(tscv.split(X)):
+        for fold, (train_idx, val_idx) in enumerate(self._temporal_splits(X, y, cv_folds)):
             X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
             y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
             
@@ -375,7 +445,7 @@ class EnsembleTrainer:
                 params,
                 train_data,
                 valid_sets=[val_data],
-                num_boost_round=300,
+                num_boost_round=self.n_estimators,
                 callbacks=[lgb.early_stopping(20), lgb.log_evaluation(0)]
             )
             
@@ -392,13 +462,13 @@ class EnsembleTrainer:
         
         # Train final model on all data
         train_data = lgb.Dataset(X, label=y)
-        final_model = lgb.train(params, train_data, num_boost_round=300)
+        final_model = lgb.train(params, train_data, num_boost_round=self.n_estimators)
         
         # Calibrate (convert to sklearn interface)
         from lightgbm import LGBMClassifier
         sklearn_model = LGBMClassifier(**params)
         sklearn_model.fit(X, y)
-        ts_cv = TimeSeriesSplit(n_splits=3)
+        ts_cv = self._temporal_splits(X, y, 3)
         calibrated_model = CalibratedClassifierCV(sklearn_model, method='isotonic', cv=ts_cv)
         calibrated_model.fit(X, y)
         
@@ -451,18 +521,17 @@ class EnsembleTrainer:
             'eval_metric': 'Logloss',
             'depth': 6,
             'learning_rate': 0.05,
-            'iterations': 300,
+            'iterations': self.n_estimators,
+            'thread_count': self.threads,
+            'allow_writing_files': False,
             'l2_leaf_reg': 3,
             'bootstrap_type': 'Bayesian',
             'random_seed': 42,
             'verbose': False,
         }
-        
-        # Time-series cross-validation
-        tscv = TimeSeriesSplit(n_splits=cv_folds)
+
         cv_scores = []
-        
-        for fold, (train_idx, val_idx) in enumerate(tscv.split(X)):
+        for fold, (train_idx, val_idx) in enumerate(self._temporal_splits(X, y, cv_folds)):
             X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
             y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
             
@@ -489,9 +558,9 @@ class EnsembleTrainer:
         # Train final model on all data
         final_model = cb.CatBoostClassifier(**params)
         final_model.fit(X, y, verbose=False)
-        
-        # Calibrate
-        ts_cv = TimeSeriesSplit(n_splits=3)
+
+        # Calibration also uses complete, chronologically separated game dates.
+        ts_cv = self._temporal_splits(X, y, 3)
         calibrated_model = CalibratedClassifierCV(final_model, method='isotonic', cv=ts_cv)
         calibrated_model.fit(X, y)
         
@@ -646,6 +715,7 @@ class EnsembleTrainer:
         ensemble_brier = brier_score_loss(y, ensemble_pred)
         
         ensemble_metrics = {
+            'evaluation_scope': 'in_sample_training_diagnostic',
             'accuracy': ensemble_accuracy,
             'auc': ensemble_auc,
             'logloss': ensemble_logloss,
@@ -667,8 +737,8 @@ class EnsembleTrainer:
         logger.info(f"XGBoost:     Accuracy={xgb_metrics['accuracy']:.3f}, AUC={xgb_metrics['auc']:.3f}")
         logger.info(f"LightGBM:    Accuracy={lgb_metrics['accuracy']:.3f}, AUC={lgb_metrics['auc']:.3f}")
         logger.info(f"CatBoost:    Accuracy={cat_metrics['accuracy']:.3f}, AUC={cat_metrics['auc']:.3f}")
-        logger.info(f"Ensemble:    Accuracy={ensemble_accuracy:.3f}, AUC={ensemble_auc:.3f}")
-        logger.info(f"Improvement: +{(ensemble_accuracy - xgb_metrics['accuracy']) * 100:.1f}% vs XGBoost")
+        logger.info(f"Training-set ensemble: Accuracy={ensemble_accuracy:.3f}, AUC={ensemble_auc:.3f}")
+        logger.info("Training-set ensemble metrics are not held-out performance or a CV comparison.")
         logger.info("=" * 80)
         
         return self.metrics
@@ -677,6 +747,10 @@ class EnsembleTrainer:
         """Save all models to disk."""
         logger.info("💾 Saving models...")
         
+        if self.feature_names is None or any(model is None for model in (
+                self.xgb_calibrated, self.lgb_calibrated, self.cat_calibrated)):
+            raise ValueError("Cannot save an incomplete ensemble")
+
         # Save individual models
         if self.xgb_calibrated is not None:
             with open(self.output_dir / "xgb_model.pkl", 'wb') as f:
@@ -696,6 +770,13 @@ class EnsembleTrainer:
             'metrics': self.metrics,
             'feature_names': self.feature_names,
             'timestamp': datetime.now().isoformat(),
+            'training_data': self.training_data,
+            'parameters': {'n_estimators': self.n_estimators, 'threads': self.threads},
+            'metric_scope': {
+                'base_accuracy_auc': 'uncalibrated_time_series_cross_validation',
+                'base_logloss_brier': 'in_sample_calibrated_diagnostic',
+                'ensemble': 'in_sample_training_diagnostic',
+            },
         }
         
         with open(self.output_dir / "ensemble_metadata.json", 'w') as f:
@@ -712,12 +793,15 @@ class EnsembleTrainer:
         lgb_path = self.output_dir / "lgb_model.pkl"
         cat_path = self.output_dir / "cat_model.pkl"
         metadata_path = self.output_dir / "ensemble_metadata.json"
-        
-        async def read_pickle(path):
+        for path in (xgb_path, lgb_path, cat_path, metadata_path):
+            if not path.is_file():
+                raise FileNotFoundError(f"Missing ensemble artifact: {path}")
+
+        def read_pickle(path):
             with open(path, 'rb') as f:
                 return pickle.load(f)
         
-        async def read_json(path):
+        def read_json(path):
             with open(path, 'r') as f:
                 return json.load(f)
 
@@ -750,7 +834,10 @@ class EnsembleTrainer:
         meta_path = self.output_dir / "meta_learner.pkl"
         scaler_path = self.output_dir / "meta_scaler.pkl"
         metadata_path = self.output_dir / "ensemble_metadata.json"
-        
+        for path in (xgb_path, lgb_path, cat_path, metadata_path):
+            if not path.is_file():
+                raise FileNotFoundError(f"Missing ensemble artifact: {path}")
+
         if xgb_path.exists():
             with open(xgb_path, 'rb') as f:
                 self.xgb_calibrated = pickle.load(f)

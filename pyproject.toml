@@ -1,45 +1,66 @@
 [tool.poetry]
 name = "nba-prediction"
 version = "5.0.0"
-description = "Pregame NBA game prediction"
-authors = ["Shaurya Mallampati <shaurya@example.com>"]
+description = "Pregame NBA ensemble prediction and evaluation tools"
+authors = ["Shaurya Mallampati"]
+license = "MIT"
 readme = "README.md"
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
-torch = ">=2.0.0"
-torchvision = ">=0.15.0"
-numpy = ">=1.24.0"
-pandas = ">=2.0.0"
-scikit-learn = ">=1.0.0"
-xgboost = ">=2.0.0"
-catboost = ">=1.0.0"
-nba-api = ">=1.4.0"
-yt-dlp = ">=2024.0.0"
-opencv-python = ">=4.7.0"
-librosa = ">=0.10.0"
-moviepy = ">=1.0.3"
-tqdm = ">=4.65.0"
-python-dotenv = ">=1.0.0"
-requests = ">=2.31.0"
-matplotlib = ">=3.7.0"
-seaborn = ">=0.12.0"
-joblib = ">=1.3.0"
-lightgbm = "^4.6.0"
-optuna = "^4.6.0"
-pyarrow = "^23.0.0"
-pydantic = ">=2.0.0"
-pydantic-settings = ">=2.0.0"
-fastapi = "^0.128.0"
-uvicorn = "^0.40.0"
-
+python = ">=3.10,<3.14"
+numpy = ">=1.26,<3"
+pandas = ">=2.2,<3"
+scikit-learn = ">=1.4,<1.8"
+# macOS ships a CPU wheel under xgboost; Linux/Windows use the CPU-only distribution.
+xgboost = {version = "3.1.3", markers = "sys_platform == 'darwin'"}
+xgboost-cpu = {version = "3.1.3", markers = "sys_platform != 'darwin'"}
+lightgbm = ">=4.5,<5"
+catboost = ">=1.2,<2"
+optuna = ">=4,<5"
+pyarrow = ">=15,<24"
+joblib = ">=1.3,<2"
+tqdm = ">=4.65,<5"
+requests = ">=2.31,<3"
+beautifulsoup4 = ">=4.12,<5"
+nba-api = ">=1.4,<2"
+python-dotenv = ">=1,<2"
+matplotlib = ">=3.7,<4"
+pydantic = ">=2,<3"
+pydantic-settings = ">=2,<3"
+fastapi = ">=0.115,<0.130"
+uvicorn = ">=0.30,<0.41"
 
 [tool.poetry.group.dev.dependencies]
-pytest = ">=7.0.0"
-jupyter = ">=1.0.0"
-ipykernel = ">=6.0.0"
+pytest = ">=8,<10"
+ruff = ">=0.6,<1"
+httpx = ">=0.27,<1"
+
+# Retained experimental modules are not needed for the supported pregame path.
+[tool.poetry.group.legacy]
+optional = true
+
+[tool.poetry.group.legacy.dependencies]
+torch = ">=2.2,<3"
+torchvision = ">=0.17,<1"
+yt-dlp = ">=2024"
+shap = ">=0.46,<1"
+redis = ">=5,<7"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+# Catch invalid syntax, undefined names, and other likely runtime errors across
+# the retained code without introducing a repository-wide formatting rewrite.
+select = ["E9", "F63", "F7", "F82"]
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2,<3"]
 build-backend = "poetry.core.masonry.api"

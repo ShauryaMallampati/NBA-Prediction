@@ -1,4 +1,3 @@
-"""
 """Generate scouting reports that read like a real analyst wrote them.
 
 We take the model's predictions and SHAP explanations and turn them into

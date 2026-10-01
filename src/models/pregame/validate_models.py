@@ -1,4 +1,3 @@
-"""
 """Quick check that our models actually work.
 
 Loads the saved models and runs a few test predictions to make sure

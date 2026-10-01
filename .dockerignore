@@ -7,6 +7,10 @@ __pycache__
 env/
 venv/
 ENV/
+.venv/
+data/
+artifacts/
+catboost_info/
 build/
 develop-eggs/
 dist/
@@ -43,6 +47,6 @@ htmlcov/
 
 # Misc
 *.log
-.env.local
-.env.*.local
+.env
+.env.*
 .cache/

@@ -1,4 +1,3 @@
-"""
 """The really sophisticated features that capture matchup dynamics.
 
 We're adding 15+ advanced features like:
@@ -45,7 +44,6 @@ logger = logging.getLogger(__name__)
 
 
 def add_injury_availability_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
     """Track who's available and who's sitting out.
     
     Features we're building:
@@ -71,7 +69,6 @@ def add_injury_availability_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_opponent_adjusted_metrics(df: pd.DataFrame) -> pd.DataFrame:
-    """
     """Adjust team stats for opponent strength (like OAPOW does it).
     
     Scoring 120 points matters more if you did it against a great defense.
@@ -124,7 +121,6 @@ def add_opponent_adjusted_metrics(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_home_away_splits(df: pd.DataFrame) -> pd.DataFrame:
-    """
     """Track how teams perform at home vs. on the road.
     
     Some teams dominate at home but struggle away. We capture that with

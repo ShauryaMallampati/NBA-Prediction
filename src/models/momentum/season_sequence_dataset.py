@@ -1,4 +1,3 @@
-"""
 """Dataset that turns game histories into sequences for the Transformer.
 
 Each game becomes a token with features like Win/Loss, margin, rest, etc.
@@ -20,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 class SeasonSequenceDataset(Dataset):
-    """
     """Create sequences of games for training the Transformer.
     
     Research idea: Instead of just averaging stats, let the model learn

@@ -1,4 +1,3 @@
-"""
 """Make our probability predictions more accurate.
 
 We use two fancy calibration methods:
@@ -45,7 +44,6 @@ class AdvancedCalibrator:
         logger.info("📊 Advanced calibrator initialized")
     
     def calibrate_model(self, model, X: pd.DataFrame, y: pd.Series, method: str = 'isotonic') -> object:
-        """
         """Take a raw model and calibrate its probabilities.
         
         Args:

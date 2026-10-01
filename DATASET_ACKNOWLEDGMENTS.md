@@ -1,39 +1,9 @@
-# Dataset Acknowledgments
+# Data sources and provenance
 
-All datasets used in the NBA World Model project.
+Historical ingestion work in this repository references the [Wyatt O'Walsh basketball dataset](https://www.kaggle.com/datasets/wyattowalsh/basketball) and [NBA Stats](https://stats.nba.com/).
 
----
+These references do not establish which exact dataset version produced older experiments. No pinned training snapshot, associated download manifest, or frozen trained ensemble is distributed in this release. The `Games.csv` converter expects a particular column schema; it is not a universal converter for every NBA dataset on Kaggle.
 
-## Datasets Used
+For a reproducible run, retain the provider's exact version/download date, original file hash, applicable permissions/license, and the transformations used to produce the [completed-game input schema](REPRODUCIBILITY.md). Do not redistribute data simply because this repository's code is MIT-licensed: code licensing and data permissions are separate.
 
-### 1. NBA Games Historical Data
-- **Source:** Kaggle Wyattowalsh NBA Dataset
-- **Link:** [kaggle.com/datasets/wyattowalsh/basketball](https://www.kaggle.com/datasets/wyattowalsh/basketball)
-- **License:** CC BY-SA 4.0
--- **Usage:** Training pregame ensemble models
-
-### 2. NBA Stats API
-- **Source:** NBA Official
-- **Link:** [stats.nba.com](https://stats.nba.com)
--- **Usage:** Official game statistics
-
----
-
-## Key Research Papers
-
-| Paper | Year | Contribution |
-|-------|------|--------------|
-| FiveThirtyEight Elo | 2015 | Baseline rating system reference |
-
----
-
-## Citation Format
-
-```bibtex
-@misc{wyattowalsh_nba,
-  author = {Wyatt O'Walsh},
-  title = {Basketball Dataset},
-  year = {2024},
-  url = {https://www.kaggle.com/datasets/wyattowalsh/basketball}
-}
-```
+The test suite uses explicitly synthetic fixtures and small synthetic training runs. Those fixtures contain no NBA performance evidence.

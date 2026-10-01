@@ -3,15 +3,54 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  python-sanity:
+  test:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install poetry==2.2.1
+      - run: poetry install --only main,dev --no-interaction
+      - name: Syntax and runtime-error lint
+        run: |
+          poetry run python -m compileall -q src scripts tests
+          poetry run ruff check src scripts tests
+      - name: Unit, API, and real-estimator integration tests
+        run: poetry run pytest -q
+      - name: Build wheel and source distribution
+        run: poetry build
+      - name: Import installed wheel outside the checkout
+        if: matrix.python == '3.12'
+        run: |
+          python -m venv /tmp/nba-wheel
+          /tmp/nba-wheel/bin/python -m pip install dist/*.whl
+          cd /tmp
+          /tmp/nba-wheel/bin/python -c "from src.models.pregame.predictor import EnsemblePredictor; from src.services.api.main import app; print(app.title)"
+
+  container:
+    name: Container build and API liveness
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-      - name: Compile
-        run: python -m compileall src scripts
+      - uses: actions/checkout@v6
+      - run: docker build -t nba-prediction-ci .
+      - name: Start without external services or private data
+        run: |
+          trap 'docker logs nba-prediction-ci; docker rm -f nba-prediction-ci' EXIT
+          docker run -d --name nba-prediction-ci -p 127.0.0.1:8000:8000 nba-prediction-ci
+          curl --fail --retry 20 --retry-delay 1 --retry-all-errors --retry-max-time 45 --max-time 3 http://127.0.0.1:8000/health \
+            | python -c "import json,sys; result=json.load(sys.stdin); assert result['status']=='running'; assert result['models_loaded'] is False"

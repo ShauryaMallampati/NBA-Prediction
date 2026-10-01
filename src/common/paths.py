@@ -2,11 +2,13 @@
 
 from pathlib import Path
 
+from src.common.config import settings
+
 
 class Paths:
     """All the important file paths in one place."""
 
-    ROOT = Path(__file__).parent.parent.parent
+    ROOT = settings.project_root.expanduser().resolve()
     DATA = ROOT / "data"
     CACHE = DATA / "cache"
     RAW = DATA / "raw"
@@ -24,7 +26,3 @@ class Paths:
             attr = getattr(cls, attr_name)
             if isinstance(attr, Path) and not attr_name.startswith("_"):
                 attr.mkdir(parents=True, exist_ok=True)
-
-
-# Ensure directories exist on import
-Paths.ensure_dirs()

@@ -1,162 +1,86 @@
 # NBA Game Predictor
 
-**Machine learning system that predicts NBA game outcomes**
+Pregame NBA outcome modeling with a calibrated XGBoost, LightGBM, and CatBoost ensemble.
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+## What it does
 
-## What This Does
+- Builds 27 pregame features from chronological game history: Elo, rest, streaks, and rolling scoring/win rates.
+- Calibrates the three base classifiers with time-series splits and combines their probabilities with saved weights.
+- Loads a saved feature schema, validates model outputs, and serves predictions through a local FastAPI service or JSONL command-line workflow.
+- Evaluates frozen models on later games with accuracy, ROC-AUC, Brier score, log loss, baselines, and input/model hashes.
 
-This system predicts who'll win NBA games before they happen. It uses three different machine learning models (XGBoost, LightGBM, and CatBoost) and combines their predictions for better accuracy.
+## How it works
 
-## What Makes It Work
-
-- **Three Models Working Together**: XGBoost, LightGBM, and CatBoost vote on each game
-- **Smart Features**: Elo ratings, rest days, recent form, winning streaks
-- **Fast Predictions**: Processes all games in a day in seconds
-
-## How It's Built
-
-The system is focused on pregame predictions. It looks at historical game results and team performance patterns to make predictions.
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full technical breakdown.
-
-## Project Structure
-
-```
-NBA-Prediction/
-├── src/
-│   ├── models/          # Model code
-│   │   └── pregame/     # Ensemble models
-│   ├── data/            # Data ingestion & preprocessing
-│   └── services/        # API services
-├── scripts/             # Training & evaluation scripts
-└── docs/                # Documentation
+```text
+Completed game history -> pregame features -> three calibrated classifiers
+                                             -> weighted home-win probability
+                                             -> local API / JSONL / evaluation
 ```
 
-## Installation
+Features are recorded before each game's result updates the history. The supported trainer selects an explicit feature list instead of admitting arbitrary box-score columns. Cross-validation diagnostics and training-set ensemble metrics are labeled separately; they are not interchangeable.
 
-### Prerequisites
+The supported path is `src/models/pregame/train_ensemble.py` -> `predictor.py` -> `src/services/prediction_service.py`. Older momentum, player-prop, video, and alternate-ensemble experiments are not part of this verified path. Their optional dependencies are separated into Poetry's `legacy` group; installing that group does not imply those experiments have been validated.
 
-- Python 3.10+
-- Poetry (Python package manager)
-- CUDA-capable GPU (recommended)
+## Quick start
 
-### Setup
+Requires **Python 3.10–3.13** and **Poetry 2.2.1**. A GPU is not required. Run commands from the repository root:
 
 ```bash
-# Clone repository
 git clone https://github.com/ShauryaMallampati/NBA-Prediction.git
 cd NBA-Prediction
-
-# Install Python dependencies
-poetry install
-
-# Set any required environment variables for optional data providers
+poetry install --only main,dev
+poetry run pytest -q
+poetry run ruff check src scripts tests
+poetry build
 ```
 
-Security tip: Never commit API keys or secrets. If you accidentally expose one, rotate it immediately through the provider's dashboard.
+The tests require no live NBA service, credentials, or downloaded model weights. They include a small real-estimator training/serialization/CLI round trip using explicitly synthetic data. This verifies software behavior, **not NBA prediction accuracy**.
 
-### Documentation & Citation
+## Train and evaluate with your data
 
-- Want to reproduce our results? Check `REPRODUCIBILITY.md`
-- Using this in a paper? See `CITATION.cff` for how to cite us
-- Found a security issue? Open a GitHub issue (no public exploits please)
+No trained model or scored held-out NBA dataset is bundled, so this repository does not claim a held-out accuracy number. The old approximate accuracy claim has been removed because its frozen inputs and model provenance were not available in the release tree.
 
-## Getting Started
-
-### Train the Models
+Prepare a local CSV or Parquet snapshot with `game_id`, `date`, `home`, `away`, and completed-game `home_pts`/`away_pts` (or binary `home_win`). Use consistent team identifiers and include chronological history before the evaluation period. The supported trainer keeps the existing exclusive training cutoff of **2024-10-01**.
 
 ```bash
-# Train base ensemble
-poetry run python scripts/train_ensemble_fixed.py
-
-# Train ensemble v2 (alt)
-poetry run python scripts/training/train_ensemble_v2.py
-
-# Build pregame features
-poetry run python -m src.data.preprocess.build_pregame_features
-
-# Train ensemble
-poetry run python -m src.models.pregame.train_ensemble
+poetry run python -m src.models.pregame.train_ensemble data/raw/games.csv
+poetry run python scripts/evaluate_release.py \
+  --games data/raw/games.csv \
+  --model-dir artifacts/models/pregame \
+  --start 2024-10-01 --end 2025-06-30 \
+  --output artifacts/evaluation.json
 ```
 
-### Make Predictions
+These commands require your real snapshot; they do not download it or manufacture a benchmark. See [reproducibility](REPRODUCIBILITY.md) for the schema, provenance requirements, and interpretation of the evaluation. Data sources referenced by the original ingestion scripts are listed in [dataset acknowledgments](DATASET_ACKNOWLEDGMENTS.md).
+
+## Serve prepared predictions
+
+Place trusted model artifacts under `artifacts/models/pregame/` and a prepared feature table at `artifacts/features/pregame.parquet`. The table must contain `game_id`, `date`, `home_team`/`away_team` (or `home`/`away`), and every feature in the saved model metadata.
 
 ```bash
-# Get today's predictions
-poetry run python scripts/run_daily_predictions.py
+poetry run uvicorn src.services.api.main:app --host 127.0.0.1 --port 8000
+# In another terminal:
+poetry run python scripts/run_daily_predictions.py --date 2025-01-15
 ```
 
-### Run Tests
+The CLI also accepts `--features`, `--model-dir`, and `--output-dir`. Paths default to the working directory; `NBA_PROJECT_ROOT` can select another data workspace. Neither serving command fetches live data or builds tomorrow's feature snapshot. Restart the API after replacing model artifacts.
 
-If you add tests, place them under `tests/` and run:
+`GET /health` reports liveness and actual model-load state. `GET /predictions?date=YYYY-MM-DD` returns only matching prepared games; missing or incompatible artifacts return HTTP 503. Interactive API documentation is available at `/docs`. See [API details](docs/API.md).
+
+The optional Docker setup runs only the API, with read-only artifact access; PostgreSQL and Redis are not required:
 
 ```bash
-poetry run pytest -v
+docker compose up --build
 ```
 
-## Using It in Your Code
+## Limitations
 
-### Python API
+This is an experimental modeling project, not a live forecasting service. A schedule alone is insufficient to reproduce a scored evaluation. Training provenance, held-out data, provider permissions, and consistent feature snapshots remain the user's responsibility. The evaluation updates feature history with completed prior games but never retrains the frozen models.
 
-```python
-from src.models.pregame.predictor import EnsemblePredictor
+Displayed LightGBM importance is **global feature importance**, not a per-game causal explanation or SHAP attribution. Pickle model files can execute code: load only artifacts you created or otherwise trust. The local API has no authentication and should not be exposed directly to the public internet.
 
-# Load trained ensemble
-predictor = EnsemblePredictor("artifacts/models/pregame")
-
-# Predict on a pre-built feature set
-df = ...  # pandas DataFrame aligned to feature schema
-probs = predictor.predict(df)
-print(probs)
-```
-
-## Model Performance
-
-- **Game Winner Accuracy**: ~63-66% baseline (varies by season)
-- **Calibration**: Isotonic regression on ensemble outputs
-
-## Data Sources
-
-- NBA Stats API (official stats)
-- Basketball Reference (historical data)
-
-See [DATASET_ACKNOWLEDGMENTS.md](DATASET_ACKNOWLEDGMENTS.md) for full attribution.
-
-## Contributing
-
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+Prediction jobs are local and explicit. No scheduled workflow commits generated data into the repository.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- NBA Stats API for official game data
-- Basketball Reference for historical statistics
-- scikit-learn, XGBoost, LightGBM, CatBoost communities
-
-## Citation
-
-If you use this code in your research, please cite:
-
-```bibtex
-@software{mallampati2025nba,
-  title={Multi-Modal Deep Learning for NBA Game Prediction},
-  author={Mallampati, Shaurya},
-  year={2025},
-  url={https://github.com/ShauryaMallampati/NBA-Prediction}
-}
-```
-
-## Contact
-
-For questions or collaboration: [GitHub Issues](https://github.com/ShauryaMallampati/NBA-Prediction/issues)
+Code is released under the [MIT License](LICENSE). Dataset permissions and licenses are separate.

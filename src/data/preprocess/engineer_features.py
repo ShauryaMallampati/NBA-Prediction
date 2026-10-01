@@ -1,4 +1,3 @@
-"""
 """Build features for training player prop models.
 
 We take raw game logs and transform them into ML-ready features:
@@ -20,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
     """Turn raw stats into useful features that help predict player performance.
     
     Args:

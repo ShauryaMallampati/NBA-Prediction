@@ -1,4 +1,3 @@
-"""
 """Scrape injury reports and news from public websites.
 
 No API keys needed - we just parse publicly available data.
@@ -21,7 +20,6 @@ class InjuryScraper:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
     def scrape_espn_injuries(self) -> pd.DataFrame:
-        """
         """Scrape ESPN's public injury page.
         
         Note: This is for educational use. Always check robots.txt and be respectful.

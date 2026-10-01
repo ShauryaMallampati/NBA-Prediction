@@ -1,4 +1,3 @@
-"""
 """Get lineup data using the nba_api package (free, no key needed).
 
 We fetch:

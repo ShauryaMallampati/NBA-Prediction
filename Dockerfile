@@ -1,52 +1,26 @@
-# Multi-stage build for NBA Intelligence Platform
-
-# Stage 1: Builder
-FROM python:3.10-slim as builder
-
+FROM python:3.12-slim AS builder
 WORKDIR /app
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_NO_INTERACTION=1
+RUN pip install --no-cache-dir poetry==2.2.1
+COPY pyproject.toml poetry.lock README.md ./
+RUN poetry install --only main --no-root --no-ansi
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Poetry
-RUN pip install --no-cache-dir poetry
-
-# Copy poetry files
-COPY pyproject.toml poetry.lock ./
-
-# Install dependencies
-RUN poetry config virtualenvs.in-project true && \
-    poetry install --no-dev --no-interaction --no-ansi
-
-# Stage 2: Runtime
-FROM python:3.10-slim
-
+FROM python:3.12-slim
 WORKDIR /app
-
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
-
-# Copy virtual environment from builder
 COPY --from=builder /app/.venv /app/.venv
-
-# Copy application code
 COPY src/ ./src/
-COPY configs/ ./configs/
-COPY artifacts/ ./artifacts/
-
-# Set environment variables
+# Local editors can create owner-only files; the non-root runtime must read them.
+RUN chmod -R a+rX /app/src
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# Run FastAPI
+    PYTHONDONTWRITEBYTECODE=1 \
+    API_HOST=0.0.0.0 \
+    NBA_PROJECT_ROOT=/app
+USER 10001:10001
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
 CMD ["python", "-m", "src.services.api.main"]
