@@ -1,4 +1,3 @@
-"""
 """Pull game details out of YouTube video titles.
 
 When you have a video like "Lakers vs Warriors Full Highlights",
@@ -68,7 +67,6 @@ def normalize_team_name(name: str) -> str:
 # =============================================================================
 
 def extract_game_info_from_title(title: str) -> dict:
-    """
     """Parse out home vs. away teams from a YouTube video title.
     
     We handle all the common formats:

@@ -1,4 +1,3 @@
-"""
 """Explain why the model makes each prediction using SHAP.
 
 Instead of just saying "Lakers 65% to win", we can show you exactly

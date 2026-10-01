@@ -1,4 +1,3 @@
-"""
 """Build all the features we need to predict games before they start.
 
 We're pulling together a bunch of different angles:
@@ -35,7 +34,6 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 
 def compute_elo(df_games: pd.DataFrame) -> pd.DataFrame:
-    """
     """Calculate Elo ratings for all teams over time.
     
     Elo is like a living scoreboard of team strength. Win and it goes up,

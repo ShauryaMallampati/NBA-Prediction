@@ -82,7 +82,6 @@ class NBAAPIClient:
     """One client to rule them all - pulls from multiple NBA data sources."""
     
     def __init__(self, preferred_source: str = "nba_api"):
-        """
         """Set up the client and choose which API to use first.
         
         Args:

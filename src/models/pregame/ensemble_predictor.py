@@ -1,4 +1,3 @@
-"""
 """Use our trained ensemble to predict NBA games.
 
 Loads the three models (XGBoost, LightGBM, CatBoost) and combines

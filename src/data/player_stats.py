@@ -1,4 +1,3 @@
-"""
 """Fetch player and team stats using nba_api.
 
 The nba_api package is free and doesn't need any API keys - it just

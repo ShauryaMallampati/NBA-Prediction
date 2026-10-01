@@ -1,4 +1,3 @@
-"""
 """Time-based features that capture when games happen and recent momentum.
 
 We track things like:
@@ -19,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 def add_recency_weighting(df: pd.DataFrame, decay_factor: float = 0.95) -> pd.DataFrame:
-    """
     """Weight recent games more heavily than old ones.
     
     What happened last week matters more than what happened two months ago.

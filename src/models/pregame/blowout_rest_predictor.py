@@ -1,4 +1,3 @@
-"""
 """Predict when starters might sit due to blowouts or fatigue.
 
 This is a two-part system:
@@ -52,7 +51,6 @@ class RestRiskAssessment:
 
 
 class BlowoutRestPredictor:
-    """
     """Figure out when starters are likely to sit.
     
     Uses LightGBM plus rule-based logic to adjust player prop probabilities.
@@ -68,7 +66,6 @@ class BlowoutRestPredictor:
         self.fatigue_threshold = 70  # Fatigue score 0-100
         
     def assess_blowout_risk(self, context: GameContext) -> float:
-        """
         """How likely is this to turn into a blowout where starters sit?
         
         Rules based on real NBA patterns:

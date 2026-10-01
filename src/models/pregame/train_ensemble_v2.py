@@ -1,4 +1,3 @@
-"""
 """Ensemble Model Trainer v2 - Inspired by FiveThirtyEight's approach
 
 What we're doing here:
@@ -37,7 +36,6 @@ logger = logging.getLogger(__name__)
 
 
 class EnsembleTrainerV2:
-    """
     """Our ensemble prediction system with stacked models.
     
     Think of it like getting opinions from 4 different experts (XGBoost, LightGBM, 
@@ -80,7 +78,6 @@ class EnsembleTrainerV2:
     def prepare_features_from_games(self, games_df: pd.DataFrame, 
                                      cutoff_date: str = '2024-10-01',
                                      start_date: str = None) -> Tuple[pd.DataFrame, np.ndarray]:
-        """
         """Build training features using our game state tracker.
         This is important - we simulate "forward-only" state so the model never sees future data.
         

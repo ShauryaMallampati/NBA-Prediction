@@ -65,8 +65,7 @@ class CacheManager:
         logger.info(f"💾 Cache manager initialized (Redis: {self.redis_available})")
     
     def _make_key(self, prefix: str, *args, **kwargs) -> str:
-        """
-    """Build a unique cache key from whatever we're requesting.
+        """Build a unique cache key from whatever we're requesting.
         
         Args:
             prefix: Type of data (like 'games' or 'player_stats')
@@ -88,7 +87,6 @@ class CacheManager:
         return f"nba:{prefix}:{key_hash}"
     
     def get(self, key: str) -> Optional[Any]:
-        """
         """Fetch from cache if it exists and hasn't expired.
         
         Args:

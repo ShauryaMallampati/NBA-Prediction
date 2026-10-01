@@ -1,191 +1,157 @@
-"""
-"""Load our trained models and use them to predict games.
-"""
+"""Load trusted local ensemble artifacts and predict home-team win probabilities."""
+
+import asyncio
 import json
 import pickle
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 
 class EnsemblePredictor:
-    """Load and use our trained ensemble to predict games."""
-    
-    def __init__(self, model_dir: str = "artifacts/models/pregame"):
-        """
-        """Set up the predictor by loading all our saved models.
-        
-        Args:
-            model_dir: Where we saved the trained models
-        """
-        self.model_dir = Path(model_dir)
-        self.xgb_model = None
-        self.lgb_model = None
-        self.cat_model = None
-        self.weights = None
-        self.feature_names = None
-        self.metadata = None
-        
-        self._load_models()
-    
-    async def load_async(self):
-        """Load models asynchronously so we don't block."""
-        import asyncio
-        metadata_path = self.model_dir / "ensemble_metadata.json"
-        
-        async def read_json():
-            with open(metadata_path, 'r') as f:
-                return json.load(f)
-        
-        self.metadata = await asyncio.to_thread(read_json)
-        self.weights = self.metadata['weights']
-        self.feature_names = self.metadata['feature_names']
-        
-        async def read_pickle(path):
-            with open(path, 'rb') as f:
-                return pickle.load(f)
-        
-        self.xgb_model = await asyncio.to_thread(read_pickle, self.model_dir / "xgb_model.pkl")
-        self.lgb_model = await asyncio.to_thread(read_pickle, self.model_dir / "lgb_model.pkl")
-        self.cat_model = await asyncio.to_thread(read_pickle, self.model_dir / "cat_model.pkl")
+    """Inference for the three-model artifact format written by EnsembleTrainer.
 
-    def _load_models(self):
-        """Load all our saved model files from disk."""
-        # Load metadata
+    Pickle files can execute code. Only load artifacts you created or otherwise
+    trust; never accept uploaded model files from an untrusted caller.
+    """
+
+    MODEL_NAMES = ("xgb", "lgb", "cat")
+
+    def __init__(self, model_dir: str | Path = "artifacts/models/pregame", *, autoload=True):
+        self.model_dir = Path(model_dir)
+        self.xgb_model = self.lgb_model = self.cat_model = None
+        self.weights = self.feature_names = self.metadata = None
+        if autoload:
+            self._load_models()
+
+    async def load_async(self) -> None:
+        """Run blocking disk reads in a worker, not an async function in a worker."""
+        await asyncio.to_thread(self._load_models)
+
+    def _load_models(self) -> None:
         metadata_path = self.model_dir / "ensemble_metadata.json"
-        if not metadata_path.exists():
-            return # Silent fail for initialization, caller should check models
-        
-        with open(metadata_path, 'r') as f:
-            self.metadata = json.load(f)
-        
-        self.weights = self.metadata['weights']
-        self.feature_names = self.metadata['feature_names']
-        
-        # Load models
-        with open(self.model_dir / "xgb_model.pkl", 'rb') as f:
-            self.xgb_model = pickle.load(f)
-        
-        with open(self.model_dir / "lgb_model.pkl", 'rb') as f:
-            self.lgb_model = pickle.load(f)
-        
-        with open(self.model_dir / "cat_model.pkl", 'rb') as f:
-            self.cat_model = pickle.load(f)
-    
-    def predict(self, X: pd.DataFrame) -> np.ndarray:
-        """
-        Predict win probabilities using ensemble
-        
-        Args:
-            X: Feature DataFrame with shape (n_games, n_features)
-        
-        Returns:
-            Array of home team win probabilities (shape: n_games)
-        """
-        # Ensure we have the right features in the right order
-        if not all(col in X.columns for col in self.feature_names):
-            missing = set(self.feature_names) - set(X.columns)
-            raise ValueError(f"Missing features: {missing}")
-        
-        X_ordered = X[self.feature_names].fillna(0)
-        
-        # Get predictions from each model
-        xgb_proba = self.xgb_model.predict_proba(X_ordered)[:, 1]
-        lgb_proba = self.lgb_model.predict_proba(X_ordered)[:, 1]
-        cat_proba = self.cat_model.predict_proba(X_ordered)[:, 1]
-        
-        # Weighted ensemble
-        ensemble_proba = (
-            self.weights['xgb'] * xgb_proba +
-            self.weights['lgb'] * lgb_proba +
-            self.weights['cat'] * cat_proba
+        if not metadata_path.is_file():
+            raise FileNotFoundError(f"Missing ensemble metadata: {metadata_path}")
+        with metadata_path.open(encoding="utf-8") as handle:
+            metadata = json.load(handle)
+        if not isinstance(metadata, dict):
+            raise ValueError("Ensemble metadata must be a JSON object")
+
+        features = metadata.get("feature_names")
+        if (not isinstance(features, list) or not features
+                or not all(isinstance(name, str) and name for name in features)
+                or len(features) != len(set(features))):
+            raise ValueError("feature_names must be a nonempty list of unique strings")
+        weights = metadata.get("weights")
+        if not isinstance(weights, dict) or set(weights) != set(self.MODEL_NAMES):
+            raise ValueError("weights must contain exactly xgb, lgb, and cat")
+        if any(isinstance(value, bool) or not isinstance(value, (int, float))
+               or not np.isfinite(value) or value < 0 for value in weights.values()):
+            raise ValueError("Ensemble weights must be finite, nonnegative numbers")
+        if not np.isclose(sum(weights.values()), 1.0, rtol=0, atol=1e-8):
+            raise ValueError("Ensemble weights must sum to 1")
+
+        paths = {name: self.model_dir / f"{name}_model.pkl" for name in self.MODEL_NAMES}
+        for path in paths.values():
+            if not path.is_file():
+                raise FileNotFoundError(f"Missing model artifact: {path}")
+        models = {}
+        for name, path in paths.items():
+            with path.open("rb") as handle:
+                model = pickle.load(handle)
+            if not callable(getattr(model, "predict_proba", None)):
+                raise ValueError(f"{name} model does not implement predict_proba")
+            models[name] = model
+
+        # Do not replace a working ensemble with a partially loaded one.
+        self.__dict__.update(
+            metadata=metadata, weights=weights, feature_names=features,
+            xgb_model=models["xgb"], lgb_model=models["lgb"], cat_model=models["cat"],
         )
-        
-        return ensemble_proba
-    
-    def predict_with_features(
-        self, X: pd.DataFrame, top_n: int = 5
-    ) -> List[Dict]:
+
+    def _ordered_features(self, features: pd.DataFrame) -> pd.DataFrame:
+        if self.feature_names is None:
+            raise RuntimeError("Models are not loaded; call load_async or enable autoload")
+        if not isinstance(features, pd.DataFrame):
+            raise TypeError("Features must be a pandas DataFrame")
+        if not features.columns.is_unique:
+            raise ValueError("Feature columns must be unique")
+        missing = set(self.feature_names) - set(features.columns)
+        if missing:
+            raise ValueError(f"Missing features: {sorted(missing)}")
+        try:
+            ordered = features.loc[:, self.feature_names].astype(float).fillna(0)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Model features must be numeric") from exc
+        if not np.isfinite(ordered.to_numpy()).all():
+            raise ValueError("Model features cannot contain infinity")
+        return ordered
+
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
+        """Return one probability per row, preserving row order.
+
+        Columns are ordered by the saved schema. Missing values are filled with
+        zero, matching the original training path; missing columns are errors.
         """
-        Predict with feature importance explanation
-        
-        Args:
-            X: Feature DataFrame
-            top_n: Number of top features to return
-        
-        Returns:
-            List of predictions with feature importance
-        """
+        ordered = self._ordered_features(X)
+        if ordered.empty:
+            return np.empty(0, dtype=float)
+        result = np.zeros(len(ordered), dtype=float)
+        for name in self.MODEL_NAMES:
+            model = getattr(self, f"{name}_model")
+            classes = np.asarray(getattr(model, "classes_", []))
+            if classes.shape != (2,) or set(classes.tolist()) != {0, 1}:
+                raise ValueError(f"{name} model must have binary classes 0 and 1")
+            probabilities = np.asarray(model.predict_proba(ordered), dtype=float)
+            if (probabilities.shape != (len(ordered), 2)
+                    or not np.isfinite(probabilities).all()
+                    or (probabilities < 0).any() or (probabilities > 1).any()
+                    or not np.allclose(probabilities.sum(axis=1), 1.0, rtol=0, atol=1e-6)):
+                raise ValueError(f"{name} returned invalid probability rows")
+            positive_column = int(np.flatnonzero(classes == 1)[0])
+            result += self.weights[name] * probabilities[:, positive_column]
+        # Validated weights may differ from 1 only by floating-point roundoff.
+        return np.clip(result, 0, 1)
+
+    def predict_with_features(self, X: pd.DataFrame, top_n: int = 5) -> list[dict[str, Any]]:
+        """Return probabilities and global LightGBM importance, not local attribution."""
+        if isinstance(top_n, bool) or not isinstance(top_n, int) or top_n < 0:
+            raise ValueError("top_n must be a nonnegative integer")
         predictions = self.predict(X)
-        
-        # Get feature importance from LightGBM (usually most interpretable)
-        # Handle both calibrated and uncalibrated models
-        lgb_base = self.lgb_model
-        if hasattr(self.lgb_model, 'calibrated_classifiers_'):
-            # If calibrated, get the base estimator
-            lgb_base = self.lgb_model.calibrated_classifiers_[0].estimator
-        
-        feature_importance = lgb_base.feature_importances_
-        
-        # Sort features by importance
-        importance_df = pd.DataFrame({
-            'feature': self.feature_names,
-            'importance': feature_importance
-        }).sort_values('importance', ascending=False)
-        
-        results = []
-        for i, prob in enumerate(predictions):
-            # Get top features for this specific game
-            game_features = X.iloc[i][self.feature_names]
-            
-            # Calculate contribution (feature value * importance)
-            contributions = []
-            
-            # Use to_dict('records') instead of iterrows() for performance
-            importance_records = importance_df.head(top_n).to_dict('records')
-            
-            for row in importance_records:
-                feat = row['feature']
-                importance = row['importance']
-                value = game_features[feat]
-                contributions.append({
-                    'feature': feat,
-                    'importance': float(importance),
-                    'value': float(value)
-                })
-            
-            results.append({
-                'prediction': float(prob),
-                'top_features': contributions
-            })
-        
-        return results
-    
-    def get_model_info(self) -> Dict:
-        """Get metadata about the loaded models"""
+        ordered = self._ordered_features(X)
+        base = self.lgb_model
+        if hasattr(base, "calibrated_classifiers_"):
+            base = base.calibrated_classifiers_[0].estimator
+        importance = getattr(base, "feature_importances_", None)
+        if importance is None:
+            return [{"prediction": float(probability), "top_features": []}
+                    for probability in predictions]
+        importance = np.asarray(importance, dtype=float)
+        if importance.shape != (len(self.feature_names),) or not np.isfinite(importance).all():
+            raise ValueError("Feature importance does not match the saved schema")
+        indices = np.argsort(-importance, kind="stable")[:top_n]
+        return [
+            {
+                "prediction": float(probability),
+                "top_features": [
+                    {"feature": self.feature_names[index],
+                     "importance": float(importance[index]),
+                     "value": float(ordered.iloc[row, index])}
+                    for index in indices
+                ],
+            }
+            for row, probability in enumerate(predictions)
+        ]
+
+    def get_model_info(self) -> dict[str, Any]:
+        if self.metadata is None:
+            raise RuntimeError("Models are not loaded")
         return {
-            'feature_count': len(self.feature_names),
-            'features': self.feature_names,
-            'weights': self.weights,
-            'metrics': {
-                'xgb': {
-                    'accuracy': self.metadata['metrics']['xgb']['accuracy'],
-                    'auc': self.metadata['metrics']['xgb']['auc'],
-                },
-                'lgb': {
-                    'accuracy': self.metadata['metrics']['lgb']['accuracy'],
-                    'auc': self.metadata['metrics']['lgb']['auc'],
-                },
-                'cat': {
-                    'accuracy': self.metadata['metrics']['cat']['accuracy'],
-                    'auc': self.metadata['metrics']['cat']['auc'],
-                },
-                'ensemble': {
-                    'accuracy': self.metadata['metrics']['ensemble']['accuracy'],
-                    'auc': self.metadata['metrics']['ensemble']['auc'],
-                }
-            },
-            'timestamp': self.metadata['timestamp']
+            "feature_count": len(self.feature_names),
+            "features": list(self.feature_names),
+            "weights": dict(self.weights),
+            "metrics": self.metadata.get("metrics", {}),
+            "timestamp": self.metadata.get("timestamp"),
         }

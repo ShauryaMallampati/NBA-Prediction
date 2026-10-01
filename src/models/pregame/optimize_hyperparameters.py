@@ -1,4 +1,3 @@
-"""
 """Find the best hyperparameters for our models using Optuna.
 
 We optimize:
@@ -42,7 +41,6 @@ class HyperparameterOptimizer:
         logger.info("🔧 Hyperparameter optimizer initialized")
     
     def optimize_xgboost(self, X: pd.DataFrame, y: pd.Series, n_trials: int = 50) -> Dict:
-        """
         """Find the best XGBoost settings.
         
         Args:
