@@ -52,5 +52,5 @@ jobs:
         run: |
           trap 'docker logs nba-prediction-ci; docker rm -f nba-prediction-ci' EXIT
           docker run -d --name nba-prediction-ci -p 127.0.0.1:8000:8000 nba-prediction-ci
-          curl --fail --retry 20 --retry-delay 1 --retry-connrefused http://127.0.0.1:8000/health \
+          curl --fail --retry 20 --retry-delay 1 --retry-all-errors --retry-max-time 45 --max-time 3 http://127.0.0.1:8000/health \
             | python -c "import json,sys; result=json.load(sys.stdin); assert result['status']=='running'; assert result['models_loaded'] is False"

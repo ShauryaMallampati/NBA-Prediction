@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/.venv /app/.venv
 COPY src/ ./src/
+# Local editors can create owner-only files; the non-root runtime must read them.
+RUN chmod -R a+rX /app/src
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
